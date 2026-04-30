@@ -170,6 +170,7 @@ export default function Dashboard() {
   const trend = data?.monthlyTrend || [];
   const channelData = data?.channelBreakdown || [];
   const topProducts = data?.topProducts || [];
+  const funnel = data?.funnel || {};
 
   // Build a complete month sequence for the chosen range, inserting 0 for months with no orders
   const chartData = (() => {
@@ -189,9 +190,10 @@ export default function Dashboard() {
   const chanTotal  = channelData.reduce((s, c) => s + c.revenue, 0) || 1;
   const donutSegs  = channelData.map((c, i) => ({ value: c.revenue, color: CHAN_COLOR_MAP[c._id] ?? CHAN_COLORS[i % 4] }));
 
+  const fmtChange = (pct) => pct === null ? null : `${pct > 0 ? '+' : ''}${pct}% vs last period`;
   const KPIs = loading ? [] : [
-    { l: 'Revenue',       v: inr(ov.totalRevenue, true), sub: `AOV ${inr(Math.round(ov.avgOrderValue||0))}`, spark: sparkRev, up: true },
-    { l: 'Orders',        v: num(ov.totalOrders),         sub: `${ov.newCustomers||0} new this period`,      spark: sparkOrd, up: true },
+    { l: 'Revenue',       v: inr(ov.totalRevenue, true), sub: fmtChange(ov.revenueChange) || `AOV ${inr(Math.round(ov.avgOrderValue||0))}`, spark: sparkRev, up: ov.revenueChange === null ? true : ov.revenueChange >= 0 },
+    { l: 'Orders',        v: num(ov.totalOrders),         sub: fmtChange(ov.ordersChange) || `${ov.newCustomers||0} new this period`,      spark: sparkOrd, up: ov.ordersChange === null ? true : ov.ordersChange >= 0 },
     { l: 'New customers', v: num(ov.newCustomers),        sub: `${ov.repeatCustomers||0} returning`,         spark: sparkOrd.map(v => Math.max(0, v - 1)), up: true },
     { l: 'Delivered rate',v: `${delivPct.toFixed(1)}%`,  sub: delivPct >= 80 ? 'On track' : 'Needs attention', spark: [delivPct-6,delivPct-3,delivPct-1,delivPct], up: delivPct >= 80 },
   ];
@@ -277,6 +279,48 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* ── Conversion Funnel ────────────────────────── */}
+      {!loading && funnel.total > 0 && (
+        <div className="surface" style={{ padding: '18px 22px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Sales funnel</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>All-time lead pipeline · {funnel.total} total leads</div>
+            </div>
+            {ov.dormantCustomers > 0 && (
+              <a href="/customers" style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 11px', borderRadius:8, background:'var(--warn-bg)', color:'var(--warn)', fontSize:11.5, fontWeight:500, textDecoration:'none' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                {ov.dormantCustomers} dormant customers
+              </a>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto' }}>
+            {[
+              { label: 'Total leads',   value: funnel.total,        color: 'var(--fg)',     bg: 'var(--chip)' },
+              { label: 'Interested',    value: funnel.interested,   color: 'var(--info)',   bg: 'var(--info-bg)' },
+              { label: 'Follow Up',     value: funnel.followUp,     color: 'var(--warn)',   bg: 'var(--warn-bg)' },
+              { label: 'Converted',     value: funnel.converted,    color: 'var(--accent)', bg: 'var(--accent-bg)' },
+            ].map((step, i, arr) => {
+              const pct = funnel.total > 0 ? Math.round((step.value / funnel.total) * 100) : 0;
+              return (
+                <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: i < arr.length - 1 ? '1 1 0' : 'none' }}>
+                  <div style={{ padding: '12px 16px', borderRadius: 10, background: step.bg, minWidth: 110, textAlign: 'center' }}>
+                    <div className="num" style={{ fontSize: 22, fontWeight: 700, color: step.color, lineHeight: 1 }}>{step.value}</div>
+                    <div style={{ fontSize: 11, color: step.color, opacity: 0.8, marginTop: 3 }}>{step.label}</div>
+                    {i > 0 && <div className="num" style={{ fontSize: 10, color: step.color, opacity: 0.65, marginTop: 2 }}>{pct}% of total</div>}
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div style={{ flex: 1, height: 2, background: 'var(--rule)', margin: '0 6px', position: 'relative', minWidth: 20 }}>
+                      <div style={{ height: '100%', background: step.color, opacity: 0.4, width: `${pct}%`, transition: 'width 0.5s ease' }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Row 2: Revenue chart + Channels ──────────── */}
       <div className="dashboard-grid">

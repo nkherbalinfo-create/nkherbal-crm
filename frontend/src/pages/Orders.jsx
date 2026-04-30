@@ -106,6 +106,9 @@ export default function Orders() {
   const [confirmId, setConfirmId] = useState(null);
   const [exitId, setExitId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [leadSearch, setLeadSearch] = useState('');
+  const [leadResults, setLeadResults] = useState([]);
+  const [leadSearchOpen, setLeadSearchOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const { addToast } = useToast();
 
@@ -127,7 +130,29 @@ export default function Orders() {
     return [{ name:o.productName||PRODUCTS[0].name, sku:'', price:parseFloat((base/(o.quantity||1)).toFixed(2)), quantity:o.quantity||1, total:parseFloat(base.toFixed(2)), gst:parseFloat(gst.toFixed(2)) }];
   };
 
-  const openAdd  = () => { setEditing(null); setForm({...emptyForm, ...summarizeItems([makeLineItem()])}); setModal(true); };
+  const searchLeads = async (q) => {
+    setLeadSearch(q);
+    if (!q.trim()) { setLeadResults([]); return; }
+    try {
+      const { data } = await api.get('/leads', { params: { search: q, limit: 5 } });
+      setLeadResults(data.leads || []);
+      setLeadSearchOpen(true);
+    } catch {}
+  };
+
+  const selectLead = (lead) => {
+    setForm(f => ({ ...f, customerName: lead.name, mobile: lead.mobile, linkedLeadId: lead._id, salesChannel: lead.source === 'WhatsApp' ? 'WhatsApp' : 'Website' }));
+    setLeadSearch(lead.name);
+    setLeadSearchOpen(false);
+    setLeadResults([]);
+  };
+
+  const openAdd  = () => {
+    setEditing(null);
+    setForm({...emptyForm, ...summarizeItems([makeLineItem()])});
+    setLeadSearch(''); setLeadResults([]); setLeadSearchOpen(false);
+    setModal(true);
+  };
   const openEdit = (o) => { setEditing(o._id); setForm({...o, orderDate:o.orderDate?.split('T')[0]||'', lineItems:initLineItems(o)}); setModal(true); };
   const openView = (o) => { setViewOrder(o); setViewModal(true); };
 
@@ -393,6 +418,36 @@ export default function Orders() {
       {/* Add / Edit Order Modal */}
       <Modal open={modal} onClose={()=>setModal(false)} title={editing?'Edit order':'Add new order'} size="lg">
         <form onSubmit={save} style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+
+          {/* Lead link — only shown when adding new order */}
+          {!editing && (
+            <div style={{ gridColumn:'1/-1' }}>
+              <label className="label">Link to lead <span style={{ color:'var(--faint)', fontWeight:400 }}>(optional — auto-fills customer info)</span></label>
+              <div style={{ position:'relative' }}>
+                <input className="input" placeholder="Search lead by name or mobile…" value={leadSearch}
+                  onChange={e => searchLeads(e.target.value)}
+                  onFocus={() => leadResults.length && setLeadSearchOpen(true)}
+                  onBlur={() => setTimeout(() => setLeadSearchOpen(false), 150)} />
+                {form.linkedLeadId && (
+                  <span className="chip chip-ok" style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', fontSize:10 }}>✓ Linked</span>
+                )}
+                {leadSearchOpen && leadResults.length > 0 && (
+                  <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:300, background:'var(--card)', border:'1px solid var(--rule)', borderRadius:10, overflow:'hidden', boxShadow:'0 8px 24px rgba(37,35,32,.12)' }}>
+                    {leadResults.map(l => (
+                      <button key={l._id} type="button" onMouseDown={() => selectLead(l)}
+                        style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, textAlign:'left' }}
+                        onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+                        onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                        <span style={{ fontWeight:500, color:'var(--fg)' }}>{l.name}</span>
+                        <span style={{ color:'var(--faint)', fontSize:11 }}>{l.mobile} · <span className={`chip ${STATUS_CHIP[l.status]||'chip-muted'}`} style={{ fontSize:10 }}>{l.status}</span></span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {[
             {label:'Order Date', el:<DateInput value={form.orderDate} onChange={value=>set('orderDate',value)} required />},
             {label:'Customer Name', el:<input type="text" className="input" value={form.customerName} onChange={e=>set('customerName',e.target.value)} required />},

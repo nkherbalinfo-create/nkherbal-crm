@@ -1,6 +1,7 @@
 const express = require('express');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
+const Lead = require('../models/Lead');
 const { protect } = require('../middleware/auth');
 const router = express.Router();
 
@@ -60,6 +61,13 @@ router.post('/', protect, async (req, res) => {
   try {
     const customerType = await upsertCustomer(req.body);
     const order = await Order.create({ ...req.body, customerType });
+    // If linked to a lead, mark that lead as Converted and store the order reference
+    if (req.body.linkedLeadId) {
+      await Lead.findByIdAndUpdate(req.body.linkedLeadId, {
+        status: 'Converted',
+        convertedOrderId: order._id
+      });
+    }
     res.status(201).json(order);
   } catch (err) {
     res.status(400).json({ message: err.message });

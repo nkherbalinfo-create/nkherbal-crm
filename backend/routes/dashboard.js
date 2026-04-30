@@ -25,7 +25,20 @@ router.get('/stats', protect, async (req, res) => {
     // Lead filter uses same date range applied to lead creation date
     const leadFilter = { date: { $gte: start, $lte: end } };
 
-    const [orderStats, channelBreakdown, monthlyTrend, leadStats, topProducts, customerStats] = await Promise.all([
+    // Previous period (same duration, shifted back) for % change comparison
+    const periodMs = end - start;
+    const prevEnd = new Date(start.getTime() - 1);
+    const prevStart = new Date(start.getTime() - periodMs - 1);
+    const prevFilter = { orderDate: { $gte: prevStart, $lte: prevEnd } };
+    if (channel) prevFilter.salesChannel = channel;
+
+    // Dormant customers (no order in 90+ days)
+    const dormantCutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
+
+    // Full funnel: all-time lead counts by status
+    const allLeadFilter = {};
+
+    const [orderStats, channelBreakdown, monthlyTrend, leadStats, topProducts, customerStats, prevStats, funnelStats, dormantCount] = await Promise.all([
       Order.aggregate([
         { $match: matchFilter },
         {
@@ -85,12 +98,38 @@ router.get('/stats', protect, async (req, res) => {
             repeat: { $sum: { $cond: [{ $eq: ['$customerType', 'Repeat'] }, 1, 0] } }
           }
         }
-      ])
+      ]),
+      // Previous period totals for % change
+      Order.aggregate([
+        { $match: prevFilter },
+        { $group: { _id: null, totalOrders: { $sum: 1 }, totalRevenue: { $sum: '$orderValue' } } }
+      ]),
+      // Full funnel — all-time lead status breakdown
+      Lead.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]),
+      // Dormant customers (no order in 90+ days)
+      Customer.countDocuments({ lastOrderDate: { $lt: dormantCutoff } })
     ]);
 
     const stats = orderStats[0] || { totalOrders: 0, totalRevenue: 0, avgOrderValue: 0, newCustomers: 0, repeatCustomers: 0 };
     const leads = leadStats[0] || { total: 0, converted: 0 };
     const custStats = customerStats[0] || { total: 0, repeat: 0 };
+    const prev = prevStats[0] || { totalOrders: 0, totalRevenue: 0 };
+
+    // Build funnel from all-time lead status counts
+    const funnelMap = Object.fromEntries(funnelStats.map(f => [f._id, f.count]));
+    const totalLeadsAllTime = Object.values(funnelMap).reduce((s, v) => s + v, 0);
+    const funnel = {
+      total:       totalLeadsAllTime,
+      interested:  funnelMap['Interested']    || 0,
+      followUp:    funnelMap['Follow Up']     || 0,
+      converted:   funnelMap['Converted']     || 0,
+      notInterested: funnelMap['Not Interested'] || 0,
+    };
+
+    // % change vs previous period
+    const pctChange = (curr, prev) => prev > 0 ? +((( curr - prev) / prev) * 100).toFixed(1) : null;
 
     res.json({
       overview: {
@@ -99,11 +138,17 @@ router.get('/stats', protect, async (req, res) => {
         totalLeads: leads.total,
         convertedLeads: leads.converted,
         uniqueCustomers: custStats.total,
-        repeatCustomerCount: custStats.repeat
+        repeatCustomerCount: custStats.repeat,
+        prevOrders: prev.totalOrders,
+        prevRevenue: prev.totalRevenue,
+        ordersChange: pctChange(stats.totalOrders, prev.totalOrders),
+        revenueChange: pctChange(stats.totalRevenue, prev.totalRevenue),
+        dormantCustomers: dormantCount
       },
       channelBreakdown,
       monthlyTrend,
-      topProducts
+      topProducts,
+      funnel
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

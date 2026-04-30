@@ -297,7 +297,11 @@ export default function Leads() {
                       disabled={updatingId === l._id}
                     />
                   </td>
-                  <td style={{ padding:'11px 16px', maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:11.5, color:'var(--faint)' }}>{l.notes}</td>
+                  <td style={{ padding:'11px 16px', maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:11.5, color:'var(--faint)' }}>
+                    {l.convertedOrderId
+                      ? <span className="chip chip-ok" style={{ fontSize:10 }}>→ Order placed</span>
+                      : l.notes}
+                  </td>
                   <td style={{ padding:'11px 16px' }}>
                     <div style={{ display:'flex', gap:4 }}>
                       <button onClick={()=>{setEditing(l._id);setForm({...l,date:l.date?.split('T')[0]});setModal(true);}}
