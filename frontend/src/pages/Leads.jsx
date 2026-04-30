@@ -76,24 +76,29 @@ function StatusDropdown({ leadId, current, onUpdate, disabled }) {
       <button ref={triggerRef} onClick={toggle}
         style={{
           display:'inline-flex', alignItems:'center', gap:6,
-          padding:'4px 10px', borderRadius:999, border:'none',
+          padding:'4px 10px', borderRadius:999,
+          border: `1px solid ${meta.text}33`,
           cursor: disabled ? 'default' : 'pointer',
           background: meta.bg, color: meta.text,
           fontSize:11, fontWeight:500,
           opacity: disabled ? 0.6 : 1,
-          transition:'opacity 0.15s',
-        }}>
+          transition:'filter 0.15s',
+        }}
+        onMouseEnter={e => { if (!disabled) e.currentTarget.style.filter='brightness(0.92)'; }}
+        onMouseLeave={e => { e.currentTarget.style.filter=''; }}>
         <span style={{ width:6, height:6, borderRadius:'50%', background: meta.dot, flexShrink:0 }} />
         {current}
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
 
       {open && createPortal(
-        <div className="modal-enter" style={{
-          position:'fixed', top: pos.top, left: pos.left, zIndex:9999,
-          background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12,
-          padding:6, boxShadow:'0 8px 32px rgba(37,35,32,.16)', minWidth:170,
-        }}>
+        <div className="modal-enter"
+          onMouseDown={e => e.stopPropagation()}
+          style={{
+            position:'fixed', top: pos.top, left: pos.left, zIndex:9999,
+            background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12,
+            padding:6, boxShadow:'0 8px 32px rgba(37,35,32,.16)', minWidth:170,
+          }}>
           {STATUSES.map(s => {
             const m = STATUS_META[s];
             const active = s === current;
