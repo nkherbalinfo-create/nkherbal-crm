@@ -836,10 +836,14 @@
 }
 
 /* ── Scrollbar ────────────────────────────────────────── */
-::-webkit-scrollbar { width: 4px; height: 4px; }
+/* Vertical scrollbars — thin and subtle */
+::-webkit-scrollbar { width: 4px; height: 0; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+/* Hide horizontal scrollbars everywhere */
+::-webkit-scrollbar:horizontal { height: 0; display: none; }
+* { scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
 
 /* ── Segmented control (tabs) ─────────────────────────── */
 .seg-control {
