@@ -1,113 +1,125 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import api from '../utils/api';
 import { exportOrdersExcel, exportSummaryPDF } from '../utils/export';
 import { useToast } from '../components/Toast';
-import { FileSpreadsheet, FileText, Loader2, Filter } from 'lucide-react';
+import { DateInput, FilterBar, SelectInput } from '../components/FormControls';
+import { format } from 'date-fns';
 
-const fmt = (n) => n >= 100000 ? `₹${(n/100000).toFixed(1)}L` : n >= 1000 ? `₹${(n/1000).toFixed(1)}K` : `₹${n}`;
+const inr = (n, c=false) => {
+  if (!n) return '₹0';
+  if (c) {
+    if (n>=100000) return `₹${(n/100000).toFixed(1)}L`;
+    if (n>=1000)   return `₹${(n/1000).toFixed(1)}K`;
+    return `₹${n}`;
+  }
+  return '₹' + Number(n).toLocaleString('en-IN');
+};
+
+const EXPORTS = [
+  { key:'excel', label:'Orders Excel', desc:'All orders with full details as .xlsx spreadsheet', icon:'📊', color:'var(--accent)', colorBg:'var(--accent-bg)' },
+  { key:'pdf',   label:'Summary PDF',  desc:'Metrics, channel breakdown, top products as PDF', icon:'📄', color:'var(--warn)',   colorBg:'var(--warn-bg)'   },
+];
 
 export default function Reports() {
-  const [filters, setFilters] = useState({ startDate: '', endDate: '', channel: '' });
-  const [loading, setLoading] = useState({ excel: false, pdf: false });
+  const [filters, setFilters] = useState({ startDate:'', endDate:'', channel:'' });
+  const [loading, setLoading] = useState({ excel:false, pdf:false });
   const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
   const { addToast } = useToast();
 
   const fetchStats = async () => {
-    const params = Object.fromEntries(Object.entries(filters).filter(([,v]) => v));
+    const params = Object.fromEntries(Object.entries(filters).filter(([,v])=>v));
     const { data } = await api.get('/dashboard/stats', { params });
     return data;
   };
 
   const handleExcel = async () => {
-    setLoading(l => ({...l, excel: true}));
+    setLoading(l=>({...l,excel:true}));
     try {
-      const params = { limit: 10000, ...Object.fromEntries(Object.entries(filters).filter(([,v]) => v)) };
+      const params = { limit:10000, ...Object.fromEntries(Object.entries(filters).filter(([,v])=>v)) };
       const { data } = await api.get('/orders', { params });
       await exportOrdersExcel(data.orders);
       addToast('Excel exported successfully');
-    } catch { addToast('Export failed', 'error'); }
-    finally { setLoading(l => ({...l, excel: false})); }
+    } catch { addToast('Export failed','error'); }
+    finally { setLoading(l=>({...l,excel:false})); }
   };
 
   const handlePDF = async () => {
-    setLoading(l => ({...l, pdf: true}));
+    setLoading(l=>({...l,pdf:true}));
     try {
       const data = await fetchStats();
       setStats(data);
       exportSummaryPDF(data, data.channelBreakdown, data.topProducts);
       addToast('PDF exported successfully');
-    } catch { addToast('Export failed', 'error'); }
-    finally { setLoading(l => ({...l, pdf: false})); }
+    } catch { addToast('Export failed','error'); }
+    finally { setLoading(l=>({...l,pdf:false})); }
   };
 
-  const load = async () => {
-    try { setStats(await fetchStats()); } catch {}
+  const loadPreview = async () => {
+    setLoadingStats(true);
+    try { setStats(await fetchStats()); } catch { addToast('Failed to load','error'); }
+    finally { setLoadingStats(false); }
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Reports & Export</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Export your data and view summaries</p>
+        <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Reports &amp; Export</div>
+        <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Export your data and view summaries</div>
       </div>
 
-      {/* Filters */}
-      <div className="card">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter size={15} style={{ color: 'var(--accent)' }} />
-          <h2 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>Report Period</h2>
-        </div>
-        <div className="flex flex-wrap gap-3">
+      {/* Period filter */}
+      <div className="card" style={{ padding:'14px 18px' }}>
+        <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)', marginBottom:12 }}>Report period</div>
+        <FilterBar style={{ border:'none', padding:0 }}>
           <div>
-            <label className="label">Start Date</label>
-            <input type="date" className="input w-auto" value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} />
+            <label className="label">Start date</label>
+            <DateInput value={filters.startDate} onChange={value=>setFilters(f=>({...f,startDate:value}))} />
           </div>
           <div>
-            <label className="label">End Date</label>
-            <input type="date" className="input w-auto" value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} />
+            <label className="label">End date</label>
+            <DateInput value={filters.endDate} onChange={value=>setFilters(f=>({...f,endDate:value}))} />
           </div>
           <div>
             <label className="label">Channel</label>
-            <select className="input w-auto" value={filters.channel} onChange={e => setFilters({...filters, channel: e.target.value})}>
-              <option value="">All Channels</option>
-              {['Amazon','Website','WhatsApp','Offline'].map(c => <option key={c}>{c}</option>)}
-            </select>
+            <SelectInput value={filters.channel} onChange={e=>setFilters(f=>({...f,channel:e.target.value}))}>
+              <option value="">All channels</option>
+              {['Website','WhatsApp'].map(c=><option key={c}>{c}</option>)}
+            </SelectInput>
           </div>
-          <div className="flex items-end">
-            <button onClick={load} className="btn-secondary">Load Preview</button>
-          </div>
-        </div>
+          <button className="btn-primary" style={{ fontSize:12 }} onClick={loadPreview} disabled={loadingStats}>
+            {loadingStats?'Loading…':'Load preview'}
+          </button>
+        </FilterBar>
       </div>
 
-      {/* Export options */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="card flex flex-col items-center text-center">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 14px #10b98140' }}>
-            <FileSpreadsheet size={24} className="text-white" />
-          </div>
-          <h3 className="font-bold mb-1" style={{ color: 'var(--text)' }}>Orders Excel Export</h3>
-          <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
-            Download all orders with full details as an Excel spreadsheet (.xlsx)
-          </p>
-          <button onClick={handleExcel} disabled={loading.excel} className="btn-primary w-full flex items-center justify-center gap-2">
-            {loading.excel ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />}
-            {loading.excel ? 'Generating…' : 'Download Excel'}
+      {/* Export cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+        <div className="card" style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:'24px 20px' }}>
+          <div style={{ width:52, height:52, borderRadius:12, background:'var(--accent-bg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, marginBottom:14 }}>📊</div>
+          <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', marginBottom:6 }}>Orders Excel</div>
+          <div style={{ fontSize:12.5, color:'var(--muted)', marginBottom:20, lineHeight:1.5 }}>Download all orders with full details as an Excel spreadsheet (.xlsx)</div>
+          <button className="btn-primary" style={{ width:'100%', justifyContent:'center', fontSize:12.5 }} onClick={handleExcel} disabled={loading.excel}>
+            {loading.excel ? (
+              <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <span style={{ width:12, height:12, border:'2px solid rgba(255,255,255,.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />
+                Generating…
+              </span>
+            ) : '↓ Download Excel'}
           </button>
         </div>
 
-        <div className="card flex flex-col items-center text-center">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: 'linear-gradient(135deg, #ef4444, #f97316)', boxShadow: '0 4px 14px #ef444440' }}>
-            <FileText size={24} className="text-white" />
-          </div>
-          <h3 className="font-bold mb-1" style={{ color: 'var(--text)' }}>Summary PDF Report</h3>
-          <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>
-            Download a formatted report with metrics, channel breakdown, and top products
-          </p>
-          <button onClick={handlePDF} disabled={loading.pdf} className="btn-danger w-full flex items-center justify-center gap-2">
-            {loading.pdf ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-            {loading.pdf ? 'Generating…' : 'Download PDF'}
+        <div className="card" style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:'24px 20px' }}>
+          <div style={{ width:52, height:52, borderRadius:12, background:'var(--warn-bg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, marginBottom:14 }}>📄</div>
+          <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', marginBottom:6 }}>Summary PDF</div>
+          <div style={{ fontSize:12.5, color:'var(--muted)', marginBottom:20, lineHeight:1.5 }}>Download a formatted report with metrics, channel breakdown, and top products</div>
+          <button style={{ width:'100%', justifyContent:'center', fontSize:12.5, display:'flex', alignItems:'center', gap:6, background:'var(--warn)', color:'white', border:'none', borderRadius:9, padding:'7px 13px', fontWeight:500, cursor:'pointer', opacity:loading.pdf?0.7:1 }} onClick={handlePDF} disabled={loading.pdf}>
+            {loading.pdf ? (
+              <>
+                <span style={{ width:12, height:12, border:'2px solid rgba(255,255,255,.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />
+                Generating…
+              </>
+            ) : '↓ Download PDF'}
           </button>
         </div>
       </div>
@@ -115,39 +127,39 @@ export default function Reports() {
       {/* Preview */}
       {stats && (
         <div className="card">
-          <h2 className="font-bold text-sm mb-4" style={{ color: 'var(--text)' }}>Report Preview</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', marginBottom:14 }}>Report preview</div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
             {[
-              { label: 'Total Orders', value: stats.overview?.totalOrders || 0 },
-              { label: 'Total Revenue', value: fmt(stats.overview?.totalRevenue || 0) },
-              { label: 'Avg Order Value', value: fmt(Math.round(stats.overview?.avgOrderValue || 0)) },
-              { label: 'Conversion', value: `${stats.overview?.conversionRate || 0}%` }
-            ].map(({ label, value }) => (
-              <div key={label} className="rounded-xl p-4 text-center" style={{ background: 'var(--bg-subtle)' }}>
-                <p className="text-xs mb-1.5" style={{ color: 'var(--text-faint)' }}>{label}</p>
-                <p className="text-xl font-bold" style={{ color: 'var(--text)' }}>{value}</p>
+              { label:'Total Orders',   val:stats.overview?.totalOrders||0 },
+              { label:'Total Revenue',  val:inr(stats.overview?.totalRevenue,true) },
+              { label:'Avg Order Value',val:inr(Math.round(stats.overview?.avgOrderValue||0),true) },
+              { label:'Conversion',     val:`${stats.overview?.conversionRate||0}%` },
+            ].map(({label,val})=>(
+              <div key={label} style={{ background:'var(--bg)', borderRadius:9, padding:'12px 14px', textAlign:'center' }}>
+                <div style={{ fontSize:11, color:'var(--faint)', marginBottom:4 }}>{label}</div>
+                <div style={{ fontSize:18, fontWeight:600, color:'var(--fg)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{val}</div>
               </div>
             ))}
           </div>
 
-          {stats.channelBreakdown?.length > 0 && (
+          {stats.channelBreakdown?.length>0 && (
             <>
-              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-faint)' }}>Channel Breakdown</p>
-              <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-                <table className="w-full text-sm">
-                  <thead style={{ background: 'var(--bg-subtle)' }}>
+              <div style={{ fontSize:12, fontWeight:500, color:'var(--muted)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.04em' }}>Channel breakdown</div>
+              <div style={{ border:'1px solid var(--rule)', borderRadius:10, overflow:'hidden' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead style={{ borderBottom:'1px solid var(--rule)' }}>
                     <tr>
-                      {['Channel','Orders','Revenue'].map(h => (
-                        <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-faint)' }}>{h}</th>
+                      {['Channel','Orders','Revenue'].map(h=>(
+                        <th key={h} style={{ padding:'8px 14px', fontSize:10.5, fontWeight:500, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--faint)', textAlign:'left', background:'var(--card-soft)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                    {stats.channelBreakdown.map(c => (
-                      <tr key={c._id} style={{ borderColor: 'var(--border)' }}>
-                        <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--text)' }}>{c._id}</td>
-                        <td className="px-4 py-2.5" style={{ color: 'var(--text-muted)' }}>{c.orders}</td>
-                        <td className="px-4 py-2.5 font-semibold" style={{ color: 'var(--success)' }}>{fmt(c.revenue)}</td>
+                  <tbody>
+                    {stats.channelBreakdown.map(c=>(
+                      <tr key={c._id} style={{ borderBottom:'1px solid var(--rule)' }}>
+                        <td style={{ padding:'9px 14px', fontSize:13, fontWeight:500, color:'var(--fg)' }}>{c._id}</td>
+                        <td style={{ padding:'9px 14px', fontFamily:'Inter', fontSize:12, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{c.orders}</td>
+                        <td style={{ padding:'9px 14px', fontFamily:'Inter', fontSize:13, fontWeight:600, color:'var(--accent)', fontVariantNumeric:'tabular-nums' }}>{inr(c.revenue,true)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -157,6 +169,7 @@ export default function Reports() {
           )}
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

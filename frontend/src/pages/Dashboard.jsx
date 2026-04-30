@@ -1,271 +1,461 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer
 } from 'recharts';
-import MetricCard from '../components/MetricCard';
 import api from '../utils/api';
-import {
-  ShoppingCart, IndianRupee, Users, UserPlus, Repeat2,
-  PercentCircle, Receipt, PackageCheck, CalendarDays, TrendingUp
-} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { SelectInput } from '../components/FormControls';
 
-const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+// ── Formatters ─────────────────────────────────────────
+const inr = (n, compact = false) => {
+  const v = Number(n || 0);
+  if (compact) {
+    if (v >= 10000000) return `₹${(v / 10000000).toFixed(2)}Cr`;
+    if (v >= 100000)   return `₹${(v / 100000).toFixed(2)}L`;
+    if (v >= 1000)     return `₹${(v / 1000).toFixed(1)}K`;
+    return `₹${v}`;
+  }
+  return '₹' + v.toLocaleString('en-IN');
+};
+const num = (n) => Number(n || 0).toLocaleString('en-IN');
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-const fmt = (n) =>
-  n >= 10000000 ? `₹${(n/10000000).toFixed(1)}Cr`
-  : n >= 100000 ? `₹${(n/100000).toFixed(1)}L`
-  : n >= 1000   ? `₹${(n/1000).toFixed(1)}K`
-  : `₹${n}`;
+// ── Spark — smooth SVG sparkline with gradient fill ────
+function Spark({ data = [], w = 88, h = 44, id = 'sp' }) {
+  if (!data || data.length < 2) return <svg width={w} height={h} />;
+  const vals = data.map(Number);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max - min || 1;
+  const pad = 5;
+  const step = w / (vals.length - 1);
+  const pts = vals.map((v, i) => [
+    +(i * step).toFixed(2),
+    +(pad + (1 - (v - min) / range) * (h - pad * 2)).toFixed(2)
+  ]);
+  // Smooth bezier: midpoint control points produce a clean monotone curve
+  let line = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const mx = (x0 + x1) / 2;
+    line += ` C${mx},${y0} ${mx},${y1} ${x1},${y1}`;
+  }
+  const last = pts[pts.length - 1];
+  const area = `${line} L${last[0]},${h} L${pts[0][0]},${h} Z`;
+  const gid = `sg-${id.replace(/[^a-z0-9]/gi, '')}`;
+  return (
+    <svg width={w} height={h} style={{ display: 'block', overflow: 'visible' }}>
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="currentColor" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gid})`} />
+      <path d={line} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={last[0]} cy={last[1]} r="2.8" fill="currentColor" />
+    </svg>
+  );
+}
 
-const CustomTooltip = ({ active, payload, label }) => {
+// ── Donut — pure SVG (from design primitives) ──────────
+function Donut({ segments = [], size = 120, thickness = 18, track }) {
+  const r = (size - thickness) / 2;
+  const circ = 2 * Math.PI * r;
+  const total = segments.reduce((a, s) => a + s.value, 0) || 1;
+  let offset = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block', flexShrink: 0 }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={track || 'var(--rule)'} strokeWidth={thickness} />
+      {segments.map((s, i) => {
+        const len = (s.value / total) * circ;
+        const cur = offset;
+        offset += len;
+        return (
+          <circle key={i} cx={size/2} cy={size/2} r={r} fill="none"
+            stroke={s.color} strokeWidth={thickness}
+            strokeDasharray={`${len} ${circ - len}`}
+            strokeDashoffset={-cur}
+            transform={`rotate(-90 ${size/2} ${size/2})`}
+            strokeLinecap="butt" />
+        );
+      })}
+    </svg>
+  );
+}
+
+// ── Custom chart tooltip ───────────────────────────────
+function ChartTip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl px-3 py-2 text-xs shadow-xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text)' }}>
-      <p className="font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color }}>
-          {p.name}: {p.name === 'Revenue' ? fmt(p.value) : p.value}
-        </p>
-      ))}
+    <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 12px', fontSize: 12, boxShadow: '0 4px 16px rgba(37,35,32,.12)' }}>
+      <div style={{ color: 'var(--muted)', marginBottom: 3, fontSize: 11, fontFamily: 'Inter' }}>{label}</div>
+      <div style={{ color: 'var(--fg)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums', fontWeight: 600, fontSize: 13 }}>
+        {inr(payload[0]?.value)}
+      </div>
     </div>
   );
-};
+}
 
-const Skeleton = ({ h = 'h-28' }) => (
-  <div className={`skeleton ${h} rounded-2xl`} />
-);
+// ── Avatar ─────────────────────────────────────────────
+function Av({ name, size = 28 }) {
+  const i = (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--accent-bg)', color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.38), fontWeight: 600, flexShrink: 0, userSelect: 'none' }}>
+      {i}
+    </div>
+  );
+}
 
-const MONTHLY_TARGET = 200000;
+// ── Chip ───────────────────────────────────────────────
+function Chip({ tone = 'muted', children }) {
+  const t = { ok: ['var(--accent-bg)', 'var(--accent)'], warn: ['var(--warn-bg)', 'var(--warn)'], danger: ['var(--danger-bg)', 'var(--danger)'], info: ['var(--info-bg)', 'var(--info)'], muted: ['var(--chip)', 'var(--muted)'] }[tone] || ['var(--chip)', 'var(--muted)'];
+  return <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 999, background: t[0], color: t[1], fontWeight: 500, display: 'inline-block', whiteSpace: 'nowrap' }}>{children}</span>;
+}
 
+// ── Skeleton ───────────────────────────────────────────
+function Skel({ w = '100%', h = 14 }) {
+  return <div className="skeleton" style={{ width: w, height: h, borderRadius: 6 }} />;
+}
+
+const STATUS_TONE = { Delivered: 'ok', Shipped: 'muted', Processing: 'muted', Cancelled: 'danger', RTO: 'warn' };
+const CHAN_COLORS = ['#3d8a5c', '#a8d5be', '#2a6642', '#c8e8d8'];
+const CHAN_COLOR_MAP = { WhatsApp: '#3d8a5c', Website: '#a8d5be' };
+
+// ──────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [data, setData]       = useState(null);
-  const [today, setToday]     = useState(null);
+  const { user } = useAuth();
+  const [data, setData] = useState(null);
+  const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ startDate: '', endDate: '', channel: '' });
+  const [chartKey, setChartKey] = useState(0);
+  const [channel, setChannel] = useState('');
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [trendRange, setTrendRange] = useState(6);
+  const hasLoadedRef = useRef(false);
 
-  const load = async (overrideFilters) => {
-    setLoading(true);
+  const today = new Date();
+  const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
+  const dateStr = `${today.getDate()} ${MONTHS[today.getMonth()]}`;
+  const firstName = user?.name?.split(' ')[0] || 'there';
+
+  // Compute the displayed month from offset
+  const displayDate = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+  const displayYear = displayDate.getFullYear();
+  const displayMonth = displayDate.getMonth();
+  const monthStr = `${MONTHS[displayMonth]} ${displayYear}`;
+
+  const load = useCallback(async () => {
+    if (!hasLoadedRef.current) setLoading(true);
     try {
-      const active = overrideFilters ?? filters;
-      const params = Object.fromEntries(Object.entries(active).filter(([,v]) => v));
-      const [main, todayRes] = await Promise.all([
+      const d = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+      const yr = d.getFullYear(), mo = d.getMonth();
+      const start = `${yr}-${String(mo + 1).padStart(2, '0')}-01`;
+      const end   = `${yr}-${String(mo + 1).padStart(2, '0')}-${new Date(yr, mo + 1, 0).getDate()}`;
+      const params = { startDate: start, endDate: end, trendMonths: trendRange, ...(channel ? { channel } : {}) };
+      const [dash, orders] = await Promise.all([
         api.get('/dashboard/stats', { params }),
-        api.get('/dashboard/stats', { params: {
-          startDate: new Date().toISOString().split('T')[0],
-          endDate:   new Date().toISOString().split('T')[0],
-          ...(active.channel ? { channel: active.channel } : {})
-        }})
+        api.get('/orders', { params: { limit: 6, ...params } }),
       ]);
-      setData(main.data);
-      setToday(todayRes.data.overview);
-    } catch {}
-    finally { setLoading(false); }
-  };
+      hasLoadedRef.current = true;
+      setData(dash.data);
+      setChartKey(k => k + 1);
+      setRecentOrders(orders.data.orders || []);
+    } catch {} finally { setLoading(false); }
+  }, [channel, monthOffset, trendRange]);
 
-  useEffect(() => { load(); }, []);
-
-  const trend = data?.monthlyTrend?.map(m => ({
-    name: `${MONTHS[m._id.month - 1]} ${String(m._id.year).slice(2)}`,
-    Orders: m.orders,
-    Revenue: m.revenue,
-  })) || [];
-
-  const channelData = data?.channelBreakdown?.map(c => ({
-    name: c._id, Orders: c.orders, Revenue: c.revenue,
-  })) || [];
+  useEffect(() => { load(); }, [load]);
 
   const ov = data?.overview || {};
-  const gstCollected = Math.round((ov.totalRevenue || 0) - (ov.totalRevenue || 0) / 1.05);
-  const deliveredRate = ov.totalOrders ? Math.round((ov.deliveredOrders / ov.totalOrders) * 100) : 0;
-  const targetPct = Math.min(100, Math.round(((ov.totalRevenue || 0) / MONTHLY_TARGET) * 100));
+  const trend = data?.monthlyTrend || [];
+  const channelData = data?.channelBreakdown || [];
+  const topProducts = data?.topProducts || [];
+
+  // Build a complete month sequence for the chosen range, inserting 0 for months with no orders
+  const chartData = (() => {
+    const cur = today.getFullYear();
+    return Array.from({ length: trendRange }, (_, i) => {
+      const d = new Date(today.getFullYear(), today.getMonth() - (trendRange - 1 - i), 1);
+      const yr = d.getFullYear(), mo = d.getMonth() + 1;
+      const found = trend.find(t => t._id.year === yr && t._id.month === mo);
+      const label = yr === cur ? MONTHS[mo - 1] : `${MONTHS[mo - 1]} '${String(yr).slice(-2)}`;
+      return { label, Revenue: found ? found.revenue : 0 };
+    });
+  })();
+
+  const sparkRev   = trend.map(m => m.revenue);
+  const sparkOrd   = trend.map(m => m.orders);
+  const delivPct   = ov.totalOrders ? ((ov.deliveredOrders / ov.totalOrders) * 100) : 0;
+  const chanTotal  = channelData.reduce((s, c) => s + c.revenue, 0) || 1;
+  const donutSegs  = channelData.map((c, i) => ({ value: c.revenue, color: CHAN_COLOR_MAP[c._id] ?? CHAN_COLORS[i % 4] }));
+
+  const KPIs = loading ? [] : [
+    { l: 'Revenue',       v: inr(ov.totalRevenue, true), sub: `AOV ${inr(Math.round(ov.avgOrderValue||0))}`, spark: sparkRev, up: true },
+    { l: 'Orders',        v: num(ov.totalOrders),         sub: `${ov.newCustomers||0} new this period`,      spark: sparkOrd, up: true },
+    { l: 'New customers', v: num(ov.newCustomers),        sub: `${ov.repeatCustomers||0} returning`,         spark: sparkOrd.map(v => Math.max(0, v - 1)), up: true },
+    { l: 'Delivered rate',v: `${delivPct.toFixed(1)}%`,  sub: delivPct >= 80 ? 'On track' : 'Needs attention', spark: [delivPct-6,delivPct-3,delivPct-1,delivPct], up: delivPct >= 80 },
+  ];
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header + Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+      {/* ── Page header ──────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Dashboard</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Business performance overview</p>
+          <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>{dayName}, {dateStr}</div>
+          <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', margin: '4px 0 0', color: 'var(--fg)', lineHeight: 1.2 }}>Hello {firstName}</h1>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>Here's how NK Herbal is performing today.</div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <input type="date" className="input w-auto text-sm" value={filters.startDate}
-            onChange={e => setFilters(f => ({...f, startDate: e.target.value}))} />
-          <input type="date" className="input w-auto text-sm" value={filters.endDate}
-            onChange={e => setFilters(f => ({...f, endDate: e.target.value}))} />
-          <select className="input w-auto text-sm" value={filters.channel}
-            onChange={e => setFilters(f => ({...f, channel: e.target.value}))}>
-            <option value="">All Channels</option>
-            {['Amazon','Website','WhatsApp','Offline'].map(c => <option key={c}>{c}</option>)}
-          </select>
-          <button onClick={() => load()} className="btn-primary">Apply</button>
-          <button onClick={() => { const e = {startDate:'',endDate:'',channel:''}; setFilters(e); load(e); }} className="btn-secondary">Reset</button>
-        </div>
-      </div>
+        <div className="toolbar-row">
 
-      {/* Today's snapshot */}
-      {today && !loading && (
-        <div className="rounded-2xl border px-5 py-3 flex flex-wrap gap-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-          <div className="flex items-center gap-2">
-            <CalendarDays size={15} style={{ color: 'var(--accent)' }} />
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>TODAY</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <ShoppingCart size={13} style={{ color: 'var(--text-faint)' }} />
-            <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{today.totalOrders}</span>
-            <span className="text-xs" style={{ color: 'var(--text-faint)' }}>orders</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{fmt(today.totalRevenue || 0)}</span>
-            <span className="text-xs" style={{ color: 'var(--text-faint)' }}>revenue</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <UserPlus size={13} style={{ color: 'var(--text-faint)' }} />
-            <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{today.newCustomers}</span>
-            <span className="text-xs" style={{ color: 'var(--text-faint)' }}>new customers</span>
-          </div>
-        </div>
-      )}
-
-      {/* Metric cards */}
-      {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => <Skeleton key={i} />)}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard title="Total Orders"      value={ov.totalOrders || 0}          sub="This period"                           color="indigo"  icon={ShoppingCart} />
-          <MetricCard title="Total Revenue"     value={fmt(ov.totalRevenue || 0)}    sub={`AOV: ${fmt(Math.round(ov.avgOrderValue || 0))}`} color="emerald" icon={IndianRupee} />
-          <MetricCard title="Unique Customers"  value={ov.uniqueCustomers || 0}      sub={`${ov.repeatCustomerCount || 0} repeat`}  color="violet"  icon={Users} />
-          <MetricCard title="New Customers"     value={ov.newCustomers || 0}         sub="First-time buyers"                     color="sky"     icon={UserPlus} />
-          <MetricCard title="Repeat Customers"  value={ov.repeatCustomers || 0}      sub="Came back"                             color="amber"   icon={Repeat2} />
-          <MetricCard title="Conversion Rate"   value={`${ov.conversionRate || 0}%`} sub={`${ov.convertedLeads || 0}/${ov.totalLeads || 0} leads`} color="rose" icon={PercentCircle} />
-          <MetricCard title="GST Collected"     value={fmt(gstCollected)}            sub="5% on orders"                         color="teal"    icon={Receipt} />
-          <MetricCard title="Delivered Rate"    value={`${deliveredRate}%`}          sub={`${ov.deliveredOrders || 0} delivered`} color="orange"  icon={PackageCheck} />
-        </div>
-      )}
-
-      {/* Revenue target bar */}
-      {!loading && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <TrendingUp size={15} style={{ color: 'var(--accent)' }} />
-              <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Monthly Revenue Target</span>
+          {/* ← Month → navigator */}
+          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 9, overflow: 'hidden' }}>
+            <button onClick={() => setMonthOffset(o => o - 1)}
+              style={{ padding: '8px 10px', background: 'transparent', border: 'none', borderRight: '1px solid var(--rule)', color: 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'background .12s' }}
+              onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
+              onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', fontSize: 12, fontWeight: 500, color: 'var(--fg)', whiteSpace: 'nowrap' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+              {monthStr}
             </div>
-            <span className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>
-              {fmt(ov.totalRevenue || 0)} <span style={{ color: 'var(--text-faint)' }}>/ {fmt(MONTHLY_TARGET)}</span>
-            </span>
+            <button onClick={() => setMonthOffset(o => o + 1)}
+              disabled={monthOffset >= 0}
+              style={{ padding: '8px 10px', background: 'transparent', border: 'none', borderLeft: '1px solid var(--rule)', color: monthOffset >= 0 ? 'var(--faint)' : 'var(--muted)', cursor: monthOffset >= 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', transition: 'background .12s' }}
+              onMouseEnter={e => { if (monthOffset < 0) e.currentTarget.style.background='var(--hover)'; }}
+              onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
           </div>
-          <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-subtle)' }}>
-            <div className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${targetPct}%`, background: 'linear-gradient(90deg, var(--accent), #8b5cf6)' }} />
-          </div>
-          <p className="text-xs mt-1.5" style={{ color: 'var(--text-faint)' }}>{targetPct}% of monthly target reached</p>
-        </div>
-      )}
 
-      {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="card">
-          <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text)' }}>Orders by Channel</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={channelData} animationDuration={800}>
-              <defs>
-                <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text-faint)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--text-faint)' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="Orders" fill="url(#barGrad)" radius={[8,8,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+          <SelectInput
+            style={{ minWidth: 128 }}
+            triggerStyle={{ background: 'var(--card)' }}
+            value={channel}
+            onChange={(e) => setChannel(e.target.value)}
+          >
+            <option value="">All channels</option>
+            <option>Website</option>
+            <option>WhatsApp</option>
+          </SelectInput>
 
-        <div className="card">
-          <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text)' }}>Revenue by Channel</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={channelData} dataKey="Revenue" nameKey="name"
-                cx="50%" cy="50%" outerRadius={85} innerRadius={50}
-                paddingAngle={3} animationDuration={800}
-                label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`}
-                labelLine={false}>
-                {channelData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="none" />)}
-              </Pie>
-              <Tooltip formatter={(v) => fmt(v)} content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="card">
-          <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text)' }}>Monthly Orders Trend</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={trend} animationDuration={800}>
-              <defs>
-                <linearGradient id="lineGrad1" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text-faint)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--text-faint)' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="Orders" stroke="url(#lineGrad1)" strokeWidth={2.5}
-                dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="card">
-          <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text)' }}>Monthly Revenue Trend</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={trend} animationDuration={800}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text-faint)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--text-faint)' }} axisLine={false} tickLine={false}
-                tickFormatter={v => `₹${(v/1000).toFixed(0)}K`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="Revenue" stroke="#10b981" strokeWidth={2.5}
-                dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          {/* New order */}
+          <button onClick={() => window.location.href='/orders'}
+            className="btn-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            New order
+          </button>
         </div>
       </div>
 
-      {/* Top Products */}
-      {data?.topProducts?.length > 0 && (
-        <div className="card">
-          <h3 className="font-bold text-sm mb-4" style={{ color: 'var(--text)' }}>Top Products</h3>
-          <div className="space-y-3">
-            {data.topProducts.map((p, i) => {
-              const maxRev = data.topProducts[0]?.revenue || 1;
-              const pct = Math.round((p.revenue / maxRev) * 100);
-              return (
-                <div key={i} className="flex items-center gap-4">
-                  <span className="text-xs font-bold w-4 shrink-0" style={{ color: 'var(--text-faint)' }}>#{i+1}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="font-medium truncate" style={{ color: 'var(--text)' }}>{p._id}</span>
-                      <span className="shrink-0 ml-2" style={{ color: 'var(--text-muted)' }}>{p.orders} orders · {fmt(p.revenue)}</span>
+      {/* ── KPI strip ─────────────────────────────────── */}
+      <div className="surface metric-grid" style={{ padding: '20px 22px' }}>
+        {loading ? [0,1,2,3].map(i => (
+          <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Skel w="50%" h={11} />
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              <Skel w="60%" h={28} />
+              <Skel w={88} h={44} />
+            </div>
+            <Skel w="65%" h={11} />
+          </div>
+        )) : KPIs.map((m, i) => (
+          <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
+              <div className="num" style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
+                {m.v}
+              </div>
+              <div style={{ color: 'var(--accent)', flexShrink: 0, marginBottom: 2 }}>
+                <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={88} h={44} id={m.l} />
+              </div>
+            </div>
+            <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)', marginTop: 6 }}>
+              {m.up ? '↑' : '↓'} {m.sub}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Row 2: Revenue chart + Channels ──────────── */}
+      <div className="dashboard-grid">
+
+        {/* Revenue trend */}
+        <div className="surface" style={{ padding: '18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Revenue trend</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
+                {inr(chartData.reduce((s, d) => s + d.Revenue, 0), true)} over {trendRange} months
+              </div>
+            </div>
+            <div style={{ display: 'flex', background: 'var(--chip)', border: '1px solid var(--rule)', borderRadius: 8, overflow: 'hidden' }}>
+              {[3, 6, 12].map(n => (
+                <button key={n} onClick={() => setTrendRange(n)}
+                  style={{
+                    padding: '5px 11px', border: 'none', cursor: 'pointer', fontSize: 11.5, fontWeight: 500,
+                    background: trendRange === n ? 'var(--accent)' : 'transparent',
+                    color: trendRange === n ? 'var(--accent-ink)' : 'var(--muted)',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}>
+                  {n}M
+                </button>
+              ))}
+            </div>
+          </div>
+          {loading ? (
+            <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
+          ) : (
+            <div key={chartKey} className="fade-in">
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 4 }}>
+                <defs>
+                  <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor="var(--accent)" stopOpacity={0.55} />
+                    <stop offset="100%" stopColor="var(--accent-2)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--rule)" vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: 'var(--muted)', fontFamily: 'Inter, system-ui, sans-serif' }}
+                  axisLine={false} tickLine={false}
+                  interval={trendRange <= 6 ? 0 : 'preserveStartEnd'}
+                />
+                <YAxis hide />
+                <Tooltip content={<ChartTip />} />
+                <Area
+                  type="monotone"
+                  dataKey="Revenue"
+                  stroke="var(--accent)"
+                  strokeWidth={1.6}
+                  fill="url(#revArea)"
+                  dot={{ r: 2.5, fill: 'var(--accent)', strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: 'var(--accent)', strokeWidth: 0 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Channels donut */}
+        <div className="surface" style={{ padding: '18px 20px' }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Channels</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>By revenue share</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingTop: 20 }}>
+            {loading ? (
+              <div className="skeleton" style={{ width: 120, height: 120, borderRadius: '50%', flexShrink: 0 }} />
+            ) : (
+              <Donut size={124} thickness={20} track="var(--rule-strong)"
+                segments={donutSegs.length ? donutSegs : [{ value: 1, color: 'var(--rule-strong)' }]} />
+            )}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {loading ? [0,1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 32, borderRadius: 6 }} />) :
+                channelData.map((ch, i) => {
+                  const pct = Math.round((ch.revenue / chanTotal) * 100);
+                  const color = CHAN_COLOR_MAP[ch._id] ?? CHAN_COLORS[i % 4];
+                  return (
+                    <div key={ch._id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                        <span style={{ color: 'var(--fg)', fontSize: 12, fontWeight: 500, flex: 1 }}>{ch._id}</span>
+                        <span className="num" style={{ color: 'var(--muted)', fontSize: 11.5 }}>{inr(ch.revenue, true)}</span>
+                        <span className="num" style={{ color, fontSize: 11.5, fontWeight: 600, minWidth: 32, textAlign: 'right' }}>{pct}%</span>
+                      </div>
+                      <div style={{ height: 3, background: 'var(--rule)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.5s ease' }} />
+                      </div>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-subtle)' }}>
-                      <div className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${pct}%`, background: COLORS[i % COLORS.length] }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ── Row 3: Recent orders + Top products ──────── */}
+      <div className="dashboard-grid">
+
+        {/* Recent orders */}
+        <div className="surface" style={{ padding: '18px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Recent orders</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>Latest 6</div>
+            </div>
+            <a href="/orders" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
+              View all
+            </a>
+          </div>
+          {loading ? [0,1,2,3,4,5].map(i => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 80px 90px', gap: 12, padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center' }}>
+              <div className="skeleton" style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}><Skel w="70%" h={13} /><Skel w="50%" h={11} /></div>
+              <Skel w="80%" h={12} />
+              <Skel w="90%" h={13} />
+              <Skel w={70} h={22} />
+            </div>
+          )) : recentOrders.map((o, i) => (
+            <div key={o._id} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 80px 90px', gap: 12, padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center' }}>
+              <Av name={o.customerName} size={30} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.customerName}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {o.city} · {o.orderId}
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {o.productName}
+              </div>
+              <div className="num" style={{ fontSize: 12.5, color: 'var(--fg)', whiteSpace: 'nowrap' }}>
+                {inr(o.orderValue)}
+              </div>
+              <div>
+                <Chip tone={STATUS_TONE[o.orderStatus] || 'muted'}>{o.orderStatus}</Chip>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Top products */}
+        <div className="surface" style={{ padding: '18px 20px' }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 2 }}>Top products</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>By revenue this period</div>
+          {loading ? [0,1,2,3,4].map(i => (
+            <div key={i} style={{ padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div className="skeleton" style={{ width: 24, height: 24, borderRadius: 6 }} />
+                  <Skel w={90} h={12} />
+                </div>
+                <Skel w={40} h={12} />
+              </div>
+              <div className="skeleton" style={{ height: 4, borderRadius: 2 }} />
+            </div>
+          )) : topProducts.map((p, i) => (
+            <div key={i} style={{ padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                  <div className="num" style={{ width: 24, height: 24, borderRadius: 6, background: 'var(--chip)', color: 'var(--muted)', display: 'grid', placeItems: 'center', fontSize: 10.5, fontWeight: 600, flexShrink: 0 }}>
+                    {i + 1}
+                  </div>
+                  <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {p._id}
+                  </span>
+                </div>
+                <span className="num" style={{ fontSize: 12, color: 'var(--fg)', flexShrink: 0 }}>
+                  {inr(p.revenue, true)}
+                </span>
+              </div>
+              <div style={{ width: '100%', height: 4, background: 'var(--rule)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.round((p.revenue / (topProducts[0]?.revenue || 1)) * 100)}%`, height: '100%', background: 'var(--accent)', borderRadius: 2, transition: 'width .4s ease' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

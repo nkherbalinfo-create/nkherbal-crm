@@ -2,99 +2,82 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
-import { Loader2, Mail, Lock, User } from 'lucide-react';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name:'', email:'', password:'' });
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
   const handle = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault(); setLoading(true);
     try {
       if (isLogin) await login(form.email, form.password);
       else await register(form.name, form.email, form.password);
       navigate('/');
     } catch (err) {
-      addToast(err.response?.data?.message || 'Authentication failed', 'error');
-    } finally {
-      setLoading(false);
-    }
+      addToast(err.response?.data?.message||'Authentication failed','error');
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'radial-gradient(ellipse at 50% 0%, #1e1b4b 0%, #09090b 60%)' }}>
-
-      {/* Background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full opacity-20 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse, #6366f1, transparent 70%)', filter: 'blur(40px)' }} />
-
-      <div className="w-full max-w-sm relative z-10 animate-fadeIn">
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)', padding:24 }}>
+      <div style={{ width:'100%', maxWidth:380 }}>
         {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-white text-2xl font-bold mb-4"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 0 40px #6366f150' }}>
-            C
+        <div style={{ textAlign:'center', marginBottom:32 }}>
+          <div style={{ width:48, height:48, borderRadius:14, background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', boxShadow:'0 4px 16px rgba(61,138,92,.35)' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 21c0-9 7-16 18-16-1 11-7 18-18 16z"/>
+              <path d="M3 21c4-4 8-7 14-10"/>
+            </svg>
           </div>
-          <h1 className="text-white text-xl font-bold tracking-tight">CRM Dashboard</h1>
-          <p className="text-sm mt-1" style={{ color: '#71717a' }}>Sales & Analytics Platform</p>
+          <div style={{ fontSize:18, fontWeight:600, color:'var(--fg)', letterSpacing:'-0.02em' }}>NK Herbal CRM</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:4 }}>Sales & Analytics Platform</div>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl p-7 border" style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)' }}>
-          <h2 className="text-white text-lg font-bold mb-6">{isLogin ? 'Welcome back' : 'Create account'}</h2>
+        <div className="card" style={{ padding:'28px 28px 24px' }}>
+          <div style={{ fontSize:16, fontWeight:600, color:'var(--fg)', marginBottom:20 }}>
+            {isLogin ? 'Sign in' : 'Create account'}
+          </div>
 
-          <form onSubmit={handle} className="space-y-4">
+          <form onSubmit={handle} style={{ display:'flex', flexDirection:'column', gap:14 }}>
             {!isLogin && (
               <div>
-                <label className="label" style={{ color: '#a1a1aa' }}>Full Name</label>
-                <div className="relative">
-                  <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#52525b' }} />
-                  <input className="input pl-9" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff' }}
-                    placeholder="Your name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
-                </div>
+                <label className="label">Full Name</label>
+                <input className="input" placeholder="Your name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required />
               </div>
             )}
-
             <div>
-              <label className="label" style={{ color: '#a1a1aa' }}>Email</label>
-              <div className="relative">
-                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#52525b' }} />
-                <input type="email" className="input pl-9" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff' }}
-                  placeholder="you@company.com" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
-              </div>
+              <label className="label">Email</label>
+              <input type="email" className="input" placeholder="you@company.com" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required />
             </div>
-
             <div>
-              <label className="label" style={{ color: '#a1a1aa' }}>Password</label>
-              <div className="relative">
-                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#52525b' }} />
-                <input type="password" className="input pl-9" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff' }}
-                  placeholder="••••••••" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
-              </div>
+              <label className="label">Password</label>
+              <input type="password" className="input" placeholder="••••••••" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} required />
             </div>
-
-            <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm text-white transition-all mt-2 disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 4px 20px #6366f140' }}>
-              {loading ? <Loader2 size={16} className="animate-spin" /> : null}
-              {loading ? 'Please wait…' : isLogin ? 'Sign In' : 'Create Account'}
+            <button type="submit" className="btn-primary" disabled={loading}
+              style={{ width:'100%', justifyContent:'center', padding:'9px 16px', marginTop:4, opacity:loading?0.7:1 }}>
+              {loading ? (
+                <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ width:14, height:14, border:'2px solid rgba(255,255,255,.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />
+                  Please wait…
+                </span>
+              ) : isLogin ? 'Sign in' : 'Create account'}
             </button>
           </form>
 
-          <p className="text-center text-sm mt-5" style={{ color: '#71717a' }}>
+          <div style={{ textAlign:'center', marginTop:18, fontSize:12.5, color:'var(--muted)' }}>
             {isLogin ? "Don't have an account? " : 'Already have an account? '}
-            <button onClick={() => setIsLogin(!isLogin)} className="font-semibold hover:opacity-80 transition-opacity" style={{ color: '#818cf8' }}>
-              {isLogin ? 'Register' : 'Sign In'}
+            <button onClick={()=>setIsLogin(!isLogin)} style={{ color:'var(--accent)', background:'none', border:'none', cursor:'pointer', fontWeight:500, fontSize:12.5, padding:0 }}>
+              {isLogin ? 'Register' : 'Sign in'}
             </button>
-          </p>
+          </div>
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

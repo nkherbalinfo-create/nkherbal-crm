@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/Toast';
@@ -12,8 +12,27 @@ import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import FollowUps from './pages/FollowUps';
+import WhatsApp from './pages/WhatsApp';
 import api from './utils/api';
-import { Search, Menu, X } from 'lucide-react';
+
+function SplashScreen({ onDone }) {
+  return (
+    <div className="splash-screen" onAnimationEnd={(e) => { if (e.animationName === 'splash-exit') onDone(); }}>
+      <div className="splash-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 21c0-9 7-16 18-16-1 11-7 18-18 16z"/>
+          <path d="M3 21c4-4 8-7 14-10"/>
+        </svg>
+      </div>
+      <h1 className="splash-title">CRM Dashboard</h1>
+      <p className="splash-brand">NK Herbal · Sales workspace</p>
+      <p className="splash-by">by Jassim Sayed</p>
+      <div className="splash-bar-wrap">
+        <div className="splash-bar-fill" />
+      </div>
+    </div>
+  );
+}
 
 function GlobalSearch({ open, onClose }) {
   const [q, setQ] = useState('');
@@ -33,73 +52,67 @@ function GlobalSearch({ open, onClose }) {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const [ordRes, custRes] = await Promise.all([
+        const [o, c] = await Promise.all([
           api.get('/orders', { params: { search: q, limit: 5 } }),
-          api.get('/customers', { params: { search: q, limit: 5 } })
+          api.get('/customers', { params: { search: q, limit: 5 } }),
         ]);
-        setResults({ orders: ordRes.data.orders || [], customers: custRes.data.customers || [] });
-      } catch {}
-      finally { setLoading(false); }
+        setResults({ orders: o.data.orders || [], customers: c.data.customers || [] });
+      } catch {} finally { setLoading(false); }
     }, 300);
   }, [q]);
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    if (open) window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const h = (e) => { if (e.key === 'Escape') onClose(); };
+    if (open) window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
   }, [open, onClose]);
 
   if (!open) return null;
-
   const go = (path) => { navigate(path); onClose(); };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 px-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-xl modal-enter" onClick={e => e.stopPropagation()}>
-        <div className="rounded-2xl border shadow-2xl overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-          <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-            <Search size={16} style={{ color: 'var(--text-faint)' }} />
-            <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)}
-              placeholder="Search orders, customers…" className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: 'var(--text)' }} />
-            {loading && <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />}
-            <button onClick={onClose}><X size={16} style={{ color: 'var(--text-faint)' }} /></button>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 80, padding: '80px 16px 16px' }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(37,35,32,.5)', backdropFilter: 'blur(4px)' }} />
+      <div className="modal-enter" style={{ position: 'relative', width: '100%', maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 32px rgba(37,35,32,.12)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--rule)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--faint)', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders, customers…"
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'var(--fg)', fontFamily: 'inherit' }} />
+            {loading && <div style={{ width: 14, height: 14, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />}
+            <button onClick={onClose} style={{ color: 'var(--faint)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
-          {(results.orders.length > 0 || results.customers.length > 0) && (
-            <div className="p-2 max-h-80 overflow-y-auto">
-              {results.orders.length > 0 && (
-                <>
-                  <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-faint)' }}>Orders</p>
-                  {results.orders.map(o => (
-                    <button key={o._id} onClick={() => go('/orders')} className="w-full text-left px-3 py-2 rounded-lg flex items-center justify-between hover:opacity-80 transition-opacity" style={{ background: 'var(--bg-subtle)' }}>
-                      <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{o.customerName}</span>
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{o.orderId} · ₹{o.orderValue?.toLocaleString()}</span>
-                    </button>
-                  ))}
-                </>
-              )}
-              {results.customers.length > 0 && (
-                <>
-                  <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-widest mt-2" style={{ color: 'var(--text-faint)' }}>Customers</p>
-                  {results.customers.map(c => (
-                    <button key={c._id} onClick={() => go('/customers')} className="w-full text-left px-3 py-2 rounded-lg flex items-center justify-between hover:opacity-80 transition-opacity" style={{ background: 'var(--bg-subtle)' }}>
-                      <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{c.name}</span>
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.mobile} · {c.city}</span>
-                    </button>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-          {q && !loading && results.orders.length === 0 && results.customers.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm" style={{ color: 'var(--text-faint)' }}>No results for "{q}"</p>
-          )}
-          {!q && (
-            <p className="px-4 py-5 text-center text-sm" style={{ color: 'var(--text-faint)' }}>Type to search across orders and customers</p>
-          )}
+          <div style={{ maxHeight: 320, overflowY: 'auto', padding: 8 }}>
+            {results.orders.length > 0 && <>
+              <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--faint)', padding: '6px 10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Orders</div>
+              {results.orders.map(o => (
+                <button key={o._id} onClick={() => go('/orders')} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontSize: 12 }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--hover)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <span style={{ fontWeight: 500 }}>{o.customerName}</span>
+                  <span style={{ color: 'var(--faint)', fontFamily: 'Inter', fontSize: 11 }}>{o.orderId} · ₹{o.orderValue?.toLocaleString('en-IN')}</span>
+                </button>
+              ))}
+            </>}
+            {results.customers.length > 0 && <>
+              <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--faint)', padding: '6px 10px', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 4 }}>Customers</div>
+              {results.customers.map(c => (
+                <button key={c._id} onClick={() => go('/customers')} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontSize: 12 }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--hover)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <span style={{ fontWeight: 500 }}>{c.name}</span>
+                  <span style={{ color: 'var(--faint)', fontFamily: 'Inter', fontSize: 11 }}>{c.mobile}</span>
+                </button>
+              ))}
+            </>}
+            {!q && <div style={{ padding: '16px 10px', color: 'var(--faint)', fontSize: 12, textAlign: 'center' }}>Type to search orders and customers</div>}
+            {q && !loading && !results.orders.length && !results.customers.length && (
+              <div style={{ padding: '16px 10px', color: 'var(--faint)', fontSize: 12, textAlign: 'center' }}>No results for "{q}"</div>
+            )}
+          </div>
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -107,34 +120,41 @@ function GlobalSearch({ open, onClose }) {
 function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    const handler = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true); } };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true); } };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
   }, []);
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="app-shell" style={{ display: 'flex' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} />
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-20 backdrop-blur-md border-b px-4 py-3 flex items-center gap-3 lg:hidden"
-          style={{ background: 'color-mix(in srgb, var(--bg-card) 85%, transparent)', borderColor: 'var(--border)' }}>
-          <button onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
-            style={{ color: 'var(--text-muted)' }}>
-            <Menu size={20} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }} className="lg-main">
+        {/* Mobile header */}
+        <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--card)', borderBottom: '1px solid var(--rule)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }} className="mobile-header">
+          <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 4, display: 'flex' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          <span className="font-bold text-sm flex-1" style={{ color: 'var(--text)' }}>CRM Dashboard</span>
-          <button onClick={() => setSearchOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
-            style={{ color: 'var(--text-muted)' }}>
-            <Search size={18} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', flex: 1 }}>NK Herbal</span>
+          <button onClick={() => setSearchOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 4, display: 'flex' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
         </header>
-        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
-          <Outlet />
+        <main className="content-shell" style={{ flex: 1 }}>
+          <div key={location.key} className="page-enter">
+            <Outlet />
+          </div>
         </main>
       </div>
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <style>{`
+        @media (min-width: 1024px) {
+          .lg-main { margin-left: 232px; }
+          .mobile-header { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -142,19 +162,23 @@ function Layout() {
 function ProtectedRoute() {
   const { user, loading } = useAuth();
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
-      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+      <div style={{ width: 28, height: 28, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
   return user ? <Layout /> : <Navigate to="/login" replace />;
 }
 
 export default function App() {
+  const [splashDone, setSplashDone] = useState(false);
+
   return (
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
+            {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<ProtectedRoute />}>
@@ -164,6 +188,7 @@ export default function App() {
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/followups" element={<FollowUps />} />
+                <Route path="/whatsapp" element={<WhatsApp />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />

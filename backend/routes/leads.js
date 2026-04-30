@@ -10,18 +10,20 @@ router.get('/', protect, async (req, res) => {
     if (status) filter.status = status;
     if (source) filter.source = source;
     if (search) {
+      const s = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { mobile: { $regex: search, $options: 'i' } },
-        { leadId: { $regex: search, $options: 'i' } }
+        { name: { $regex: s, $options: 'i' } },
+        { mobile: { $regex: s, $options: 'i' } },
+        { leadId: { $regex: s, $options: 'i' } }
       ];
     }
-    const total = await Lead.countDocuments(filter);
-    const leads = await Lead.find(filter)
-      .sort({ date: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-    res.json({ leads, total, page: Number(page), pages: Math.ceil(total / limit) });
+    const [total, leads, statusAgg] = await Promise.all([
+      Lead.countDocuments(filter),
+      Lead.find(filter).sort({ date: -1 }).skip((page - 1) * limit).limit(Number(limit)),
+      Lead.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }])
+    ]);
+    const statusCounts = Object.fromEntries(statusAgg.map(s => [s._id, s.count]));
+    res.json({ leads, total, page: Number(page), pages: Math.ceil(total / limit), statusCounts });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

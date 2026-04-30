@@ -11,9 +11,10 @@ router.get('/', protect, async (req, res) => {
     if (type === 'repeat') filter.isRepeat = true;
     if (type === 'new') filter.isRepeat = false;
     if (search) {
+      const s = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { mobile: { $regex: search, $options: 'i' } }
+        { name: { $regex: s, $options: 'i' } },
+        { mobile: { $regex: s, $options: 'i' } }
       ];
     }
     const total = await Customer.countDocuments(filter);

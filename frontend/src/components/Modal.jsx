@@ -1,33 +1,32 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 
 export default function Modal({ open, onClose, title, children, size = 'md' }) {
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    if (open) document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    const h = (e) => { if (e.key === 'Escape') onClose(); };
+    if (open) document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
   }, [open, onClose]);
 
   if (!open) return null;
 
-  const sizes = { sm: 'max-w-md', md: 'max-w-2xl', lg: 'max-w-4xl' };
+  const maxW = { sm: 440, md: 620, lg: 780 }[size] || 620;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div
-        className={`w-full ${sizes[size]} max-h-[90vh] flex flex-col rounded-2xl shadow-2xl modal-enter border`}
-        style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-          <h2 className="text-base font-bold" style={{ color: 'var(--text)' }}>{title}</h2>
-          <button onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:opacity-70"
-            style={{ color: 'var(--text-faint)', background: 'var(--bg-subtle)' }}>
-            <X size={16} />
+    <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+      onClick={onClose}>
+      <div style={{ position:'absolute', inset:0, background:'rgba(37,35,32,.45)', backdropFilter:'blur(4px)' }} />
+      <div className="modal-enter" style={{ position:'relative', width:'100%', maxWidth:maxW, maxHeight:'90vh', display:'flex', flexDirection:'column', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:14, boxShadow:'0 8px 40px rgba(37,35,32,.14)', overflow:'hidden' }}
+        onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
+          <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)' }}>{title}</div>
+          <button onClick={onClose} style={{ width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:7, border:'none', background:'var(--chip)', color:'var(--muted)', cursor:'pointer' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 p-6" style={{ color: 'var(--text)' }}>
+        {/* Body */}
+        <div style={{ overflowY:'auto', flex:1, padding:'18px 20px', color:'var(--fg)' }}>
           {children}
         </div>
       </div>

@@ -38,10 +38,11 @@ router.get('/', protect, async (req, res) => {
       if (endDate) filter.orderDate.$lte = new Date(endDate + 'T23:59:59');
     }
     if (search) {
+      const s = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { customerName: { $regex: search, $options: 'i' } },
-        { mobile: { $regex: search, $options: 'i' } },
-        { orderId: { $regex: search, $options: 'i' } }
+        { customerName: { $regex: s, $options: 'i' } },
+        { mobile: { $regex: s, $options: 'i' } },
+        { orderId: { $regex: s, $options: 'i' } }
       ];
     }
     const total = await Order.countDocuments(filter);

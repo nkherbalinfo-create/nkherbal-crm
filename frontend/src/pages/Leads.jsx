@@ -1,9 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../utils/api';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/Toast';
+import { DateInput, FilterBar, SelectInput } from '../components/FormControls';
+import Pagination from '../components/Pagination';
 import { format } from 'date-fns';
-import { Pencil, Trash2, Zap, X, CheckCircle, Clock, Megaphone, MessageCircle, Globe, Phone, Users } from 'lucide-react';
 
 const SOURCES  = ['Ads', 'WhatsApp', 'Website', 'Referral', 'Direct'];
 const STATUSES = ['Interested', 'Not Interested', 'Converted', 'Follow Up'];
@@ -14,221 +17,334 @@ const PRODUCTS = [
   'Muejaza Plus For Men (300g)', 'Other / Not Sure'
 ];
 
-const STATUS_STYLE = {
-  Interested:      { cls: 'badge-info',    icon: Zap },
-  'Not Interested':{ cls: 'badge-danger',  icon: X },
-  Converted:       { cls: 'badge-success', icon: CheckCircle },
-  'Follow Up':     { cls: 'badge-warning', icon: Clock },
-};
+const STATUS_CHIP = { Interested:'chip-info', 'Not Interested':'chip-danger', Converted:'chip-ok', 'Follow Up':'chip-warn' };
+const SOURCE_CHIP = { Ads:'chip-info', WhatsApp:'chip-ok', Website:'chip-info', Referral:'chip-muted', Direct:'chip-muted' };
 
-const SOURCE_STYLE = {
-  Ads:      { icon: Megaphone },
-  WhatsApp: { icon: MessageCircle },
-  Website:  { icon: Globe },
-  Referral: { icon: Users },
-  Direct:   { icon: Phone },
-};
+const STAT_CARDS = [
+  { key:'Interested',      label:'Interested',      cls:'chip-info'   },
+  { key:'Not Interested',  label:'Not Interested',  cls:'chip-danger' },
+  { key:'Converted',       label:'Converted',       cls:'chip-ok'     },
+  { key:'Follow Up',       label:'Follow Up',       cls:'chip-warn'   },
+];
 
 const emptyForm = {
   date: new Date().toISOString().split('T')[0],
-  name: '', mobile: '', source: 'Ads',
-  interestedProduct: PRODUCTS[0], status: 'Interested', notes: ''
+  name:'', mobile:'', source:'Ads',
+  interestedProduct: PRODUCTS[0], status:'Interested', notes:''
 };
 
-const HEADERS = ['Lead ID','Date','Name','Mobile','Source','Product','Status','Notes','Actions'];
+function Av({ name }) {
+  const i = (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  return <span className="avatar avatar-md">{i}</span>;
+}
+
+const COLS = ['LEAD ID','DATE','NAME','MOBILE','SOURCE','PRODUCT','STATUS','NOTES',''];
+
+const STATUS_META = {
+  'Interested':     { dot:'var(--info)',   text:'var(--info)',   bg:'var(--info-bg)'   },
+  'Not Interested': { dot:'var(--danger)', text:'var(--danger)', bg:'var(--danger-bg)' },
+  'Converted':      { dot:'var(--accent)', text:'var(--accent)', bg:'var(--accent-bg)' },
+  'Follow Up':      { dot:'var(--warn)',   text:'var(--warn)',   bg:'var(--warn-bg)'   },
+};
+
+function StatusDropdown({ leadId, current, onUpdate, disabled }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
+  const meta = STATUS_META[current] || { dot:'var(--faint)', text:'var(--muted)', bg:'var(--chip)' };
+
+  const toggle = () => {
+    if (disabled) return;
+    if (!open) {
+      const r = triggerRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, left: r.left });
+    }
+    setOpen(o => !o);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (triggerRef.current && !triggerRef.current.contains(e.target)) setOpen(false); };
+    const s = () => setOpen(false);
+    document.addEventListener('mousedown', h);
+    window.addEventListener('scroll', s, true);
+    return () => { document.removeEventListener('mousedown', h); window.removeEventListener('scroll', s, true); };
+  }, [open]);
+
+  return (
+    <>
+      <button ref={triggerRef} onClick={toggle}
+        style={{
+          display:'inline-flex', alignItems:'center', gap:6,
+          padding:'4px 10px', borderRadius:999, border:'none',
+          cursor: disabled ? 'default' : 'pointer',
+          background: meta.bg, color: meta.text,
+          fontSize:11, fontWeight:500,
+          opacity: disabled ? 0.6 : 1,
+          transition:'opacity 0.15s',
+        }}>
+        <span style={{ width:6, height:6, borderRadius:'50%', background: meta.dot, flexShrink:0 }} />
+        {current}
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+
+      {open && createPortal(
+        <div className="modal-enter" style={{
+          position:'fixed', top: pos.top, left: pos.left, zIndex:9999,
+          background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12,
+          padding:6, boxShadow:'0 8px 32px rgba(37,35,32,.16)', minWidth:170,
+        }}>
+          {STATUSES.map(s => {
+            const m = STATUS_META[s];
+            const active = s === current;
+            return (
+              <button key={s} onClick={() => { onUpdate(leadId, s); setOpen(false); }}
+                style={{
+                  width:'100%', display:'flex', alignItems:'center', gap:9,
+                  padding:'8px 10px', border:'none', borderRadius:8, cursor:'pointer',
+                  background: active ? m.bg : 'transparent',
+                  color: active ? m.text : 'var(--fg)',
+                  fontSize:12.5, fontWeight: active ? 600 : 400,
+                  transition:'background 0.12s',
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background='var(--hover)'; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background='transparent'; }}>
+                <span style={{ width:8, height:8, borderRadius:'50%', background: m.dot, flexShrink:0 }} />
+                {s}
+                {active && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ marginLeft:'auto' }}><polyline points="20 6 9 17 4 12"/></svg>}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 export default function Leads() {
-  const [leads, setLeads]   = useState([]);
-  const [meta, setMeta]     = useState({ total: 0, pages: 1, page: 1 });
-  const [filters, setFilters] = useState({ status: '', source: '', search: '' });
-  const [page, setPage]     = useState(1);
-  const [modal, setModal]   = useState(false);
+  const [leads, setLeads] = useState([]);
+  const [meta, setMeta] = useState({ total:0, pages:1, page:1 });
+  const [listKey, setListKey] = useState(0);
+  const [statusCounts, setStatusCounts] = useState({});
+  const [filters, setFilters] = useState({ status:'', source:'', search:'' });
+  const [page, setPage] = useState(1);
+  const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm]     = useState(emptyForm);
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [confirmId, setConfirmId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [exitId, setExitId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const { addToast } = useToast();
-
-  // Funnel counts
-  const counts = STATUSES.reduce((acc, s) => ({ ...acc, [s]: leads.filter(l => l.status === s).length }), {});
 
   const load = useCallback(async () => {
     try {
-      const params = { page, limit: 20, ...Object.fromEntries(Object.entries(filters).filter(([,v]) => v)) };
+      const params = { page, limit:8, ...Object.fromEntries(Object.entries(filters).filter(([,v])=>v)) };
       const { data } = await api.get('/leads', { params });
       setLeads(data.leads);
-      setMeta({ total: data.total, page: data.page, pages: data.pages });
-    } catch { addToast('Failed to load leads', 'error'); }
+      setMeta({ total:data.total, page:data.page, pages:data.pages });
+      if (data.statusCounts) setStatusCounts(data.statusCounts);
+      setListKey(k => k + 1);
+    } catch { addToast('Failed to load leads','error'); }
   }, [page, filters]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Auto-refresh every 15 seconds to pick up new WhatsApp leads without manual reload
-  useEffect(() => {
-    const interval = setInterval(load, 15000);
-    return () => clearInterval(interval);
-  }, [load]);
+  // Auto-refresh every 8s — picks up WhatsApp bot status changes
+  useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, [load]);
 
-  const set = (field, value) => setForm(f => ({ ...f, [field]: value }));
+  const updateStatus = async (id, newStatus) => {
+    setUpdatingId(id);
+    try {
+      await api.put(`/leads/${id}`, { status: newStatus });
+      setLeads(prev => prev.map(l => l._id === id ? { ...l, status: newStatus } : l));
+      setStatusCounts(prev => {
+        const updated = { ...prev };
+        const old = leads.find(l => l._id === id)?.status;
+        if (old) updated[old] = Math.max(0, (updated[old] || 1) - 1);
+        updated[newStatus] = (updated[newStatus] || 0) + 1;
+        return updated;
+      });
+    } catch { addToast('Update failed','error'); }
+    finally { setUpdatingId(null); }
+  };
 
+  const set = (f,v) => setForm(p=>({...p,[f]:v}));
   const save = async (e) => {
     e.preventDefault(); setSaving(true);
     try {
       if (editing) await api.put(`/leads/${editing}`, form);
       else await api.post('/leads', form);
-      addToast(editing ? 'Lead updated' : 'Lead added');
-      setModal(false); load();
-    } catch (err) { addToast(err.response?.data?.message || 'Save failed', 'error'); }
+      addToast(editing?'Lead updated':'Lead added'); setModal(false); load();
+    } catch (err) { addToast(err.response?.data?.message||'Save failed','error'); }
     finally { setSaving(false); }
   };
-
-  const del = async (id) => {
-    if (!confirm('Delete this lead?')) return;
-    try { await api.delete(`/leads/${id}`); addToast('Lead deleted'); load(); }
-    catch { addToast('Delete failed', 'error'); }
+  const del = async () => {
+    if (!confirmId) return;
+    const id = confirmId;
+    setConfirmId(null);
+    setExitId(id);
+    await new Promise(r => setTimeout(r, 460));
+    const row = document.querySelector(`tr[data-row-id="${id}"]`);
+    if (row) {
+      const h = row.offsetHeight;
+      row.style.height = h + 'px';
+      row.style.overflow = 'hidden';
+      row.style.transition = 'height 0.24s ease-out';
+      void row.offsetHeight;
+      row.style.height = '0';
+      await new Promise(r => setTimeout(r, 260));
+    }
+    setLeads(prev => prev.filter(l => l._id !== id));
+    setMeta(m => ({ ...m, total: Math.max(0, m.total - 1) }));
+    setExitId(null);
+    try { await api.delete(`/leads/${id}`); addToast('Lead deleted'); }
+    catch { addToast('Delete failed','error'); load(); }
   };
 
   return (
-    <div className="space-y-4 animate-fadeIn">
-      <div className="flex items-center justify-between">
+    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Leads</h1>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{meta.total} total leads</p>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Leads</div>
+            <span style={{ display:'flex', alignItems:'center', gap:5, padding:'2px 8px', borderRadius:999, background:'var(--accent-bg)', fontSize:10.5, fontWeight:500, color:'var(--accent)' }}>
+              <span style={{ width:6, height:6, borderRadius:'50%', background:'var(--accent)', display:'inline-block', animation:'pulse-dot 2s ease-in-out infinite' }} />
+              Live
+            </span>
+          </div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>auto-captured from WhatsApp · status syncs every 8s</div>
         </div>
-        <button onClick={() => { setEditing(null); setForm(emptyForm); setModal(true); }} className="btn-primary">+ Add Lead</button>
+        <button className="btn-primary" onClick={()=>{setEditing(null);setForm(emptyForm);setModal(true);}} style={{ display:'flex', alignItems:'center', gap:5 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add lead
+        </button>
       </div>
 
-      {/* Funnel summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {STATUSES.map(s => {
-          const { cls, icon: Icon } = STATUS_STYLE[s] || {};
-          return (
-            <div key={s} className="card flex items-center gap-3 py-3">
-              <div className={`badge w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${cls}`}>
-                {Icon && <Icon size={14} />}
-              </div>
-              <div>
-                <p className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>{s}</p>
-                <p className="text-lg font-bold" style={{ color: 'var(--text)' }}>{counts[s] || 0}</p>
-              </div>
+      {/* Stat cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+        {STAT_CARDS.map(({key,label,cls}) => (
+          <div key={key} className="card" style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{ width:36, height:36, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} className={cls}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                {cls==='chip-ok'&&<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01l-3-3"/>}
+                {cls==='chip-danger'&&<><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>}
+                {cls==='chip-info'&&<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>}
+                {cls==='chip-warn'&&<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>}
+              </svg>
             </div>
-          );
-        })}
+            <div>
+              <div style={{ fontSize:11, color:'var(--faint)' }}>{label}</div>
+              <div style={{ fontSize:22, fontWeight:600, color:'var(--fg)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums', lineHeight:1.2 }}>{statusCounts[key]||0}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="card">
-        <div className="flex flex-wrap gap-2">
-          <input className="input flex-1 min-w-[160px] text-sm" placeholder="Search name, mobile…"
-            value={filters.search} onChange={e => setFilters(f => ({...f, search: e.target.value}))} />
-          <select className="input w-auto text-sm" value={filters.status} onChange={e => setFilters(f => ({...f, status: e.target.value}))}>
-            <option value="">All Status</option>
-            {STATUSES.map(s => <option key={s}>{s}</option>)}
-          </select>
-          <select className="input w-auto text-sm" value={filters.source} onChange={e => setFilters(f => ({...f, source: e.target.value}))}>
-            <option value="">All Sources</option>
-            {SOURCES.map(s => <option key={s}>{s}</option>)}
-          </select>
-          <button onClick={() => { setPage(1); load(); }} className="btn-primary text-sm">Filter</button>
-          <button onClick={() => setFilters({status:'',source:'',search:''})} className="btn-secondary text-sm">Clear</button>
-        </div>
-      </div>
+      {/* Filter bar */}
+      <FilterBar>
+          <input className="input" placeholder="Search name, mobile…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
+          <SelectInput value={filters.status} onChange={e=>setFilters(f=>({...f,status:e.target.value}))}>
+            <option value="">All status</option>
+            {STATUSES.map(s=><option key={s}>{s}</option>)}
+          </SelectInput>
+          <SelectInput value={filters.source} onChange={e=>setFilters(f=>({...f,source:e.target.value}))}>
+            <option value="">All sources</option>
+            {SOURCES.map(s=><option key={s}>{s}</option>)}
+          </SelectInput>
+          <button className="btn-primary" style={{ fontSize:12 }} onClick={()=>{setPage(1);load();}}>Filter</button>
+          <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({status:'',source:'',search:''})}>Clear</button>
+      </FilterBar>
 
       {/* Table */}
-      <div className="card overflow-x-auto p-0">
-        <table className="w-full text-sm">
-          <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
-            <tr>
-              {HEADERS.map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
-                  style={{ color: 'var(--text-faint)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {leads.map(l => {
-              const st = STATUS_STYLE[l.status] || { cls: 'badge-neutral' };
-              const sr = SOURCE_STYLE[l.source] || {};
-              const SrcIcon = sr.icon;
-              const StIcon = st.icon;
-              return (
-                <tr key={l._id} className="transition-colors" style={{ borderBottom: '1px solid var(--border)' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-faint)' }}>{l.leadId}</td>
-                  <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{format(new Date(l.date), 'dd MMM yy')}</td>
-                  <td className="px-4 py-3 font-semibold" style={{ color: 'var(--text)' }}>{l.name}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>{l.mobile}</td>
-                  <td className="px-4 py-3">
-                    <span className="badge badge-neutral gap-1.5">
-                      {SrcIcon && <SrcIcon size={11} />}{l.source}
-                    </span>
+      <div key={listKey} className="fade-in">
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom:'1px solid var(--rule)' }}>
+                {COLS.map(h=>(
+                  <th key={h} style={{ textAlign:'left', padding:'11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {leads.map(l=>(
+                <tr key={l._id} data-row-id={l._id} className={`tr-hover${exitId===l._id?' row-deleting':''}`}
+                  style={{ borderBottom:'1px solid var(--rule)' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:11, color:'var(--faint)', fontVariantNumeric:'tabular-nums' }}>{l.leadId}</td>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:13, color:'var(--muted)', whiteSpace:'nowrap', fontVariantNumeric:'tabular-nums' }}>{format(new Date(l.date),'dd MMM yy')}</td>
+                  <td style={{ padding:'11px 16px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+                      <Av name={l.name} />
+                      <div style={{ fontSize:12.5, fontWeight:500, color:'var(--fg)' }}>{l.name}</div>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 max-w-[130px] truncate" style={{ color: 'var(--text-muted)' }}>{l.interestedProduct}</td>
-                  <td className="px-4 py-3">
-                    <span className={`badge gap-1 ${st.cls}`}>
-                      {StIcon && <StIcon size={10} />}{l.status}
-                    </span>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:11.5, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{l.mobile}</td>
+                  <td style={{ padding:'11px 16px' }}><span className={`chip ${SOURCE_CHIP[l.source]||'chip-muted'}`}>{l.source}</span></td>
+                  <td style={{ padding:'11px 16px', maxWidth:130, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:12, color:'var(--muted)' }}>{l.interestedProduct}</td>
+                  <td style={{ padding:'10px 16px' }}>
+                    <StatusDropdown
+                      leadId={l._id}
+                      current={l.status}
+                      onUpdate={updateStatus}
+                      disabled={updatingId === l._id}
+                    />
                   </td>
-                  <td className="px-4 py-3 text-xs max-w-[120px] truncate" style={{ color: 'var(--text-faint)' }}>{l.notes}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <button onClick={() => { setEditing(l._id); setForm({...l, date: l.date?.split('T')[0]}); setModal(true); }}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:opacity-80"
-                        style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
-                        <Pencil size={13} />
+                  <td style={{ padding:'11px 16px', maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:11.5, color:'var(--faint)' }}>{l.notes}</td>
+                  <td style={{ padding:'11px 16px' }}>
+                    <div style={{ display:'flex', gap:4 }}>
+                      <button onClick={()=>{setEditing(l._id);setForm({...l,date:l.date?.split('T')[0]});setModal(true);}}
+                        style={{ width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:7, border:'none', cursor:'pointer', background:'var(--chip)', color:'var(--muted)' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                       </button>
-                      <button onClick={() => del(l._id)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:opacity-80"
-                        style={{ background: '#ef444415', color: 'var(--danger)' }}>
-                        <Trash2 size={13} />
+                      <button onClick={()=>setConfirmId(l._id)}
+                        style={{ width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:7, border:'none', cursor:'pointer', background:'var(--danger-bg)', color:'var(--danger)' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       </button>
                     </div>
                   </td>
                 </tr>
-              );
-            })}
-            {!leads.length && (
-              <tr><td colSpan={9} className="text-center py-12" style={{ color: 'var(--text-faint)' }}>No leads found</td></tr>
-            )}
-          </tbody>
-        </table>
+              ))}
+              {!leads.length&&<tr><td colSpan={9} style={{ padding:'48px 16px', textAlign:'center', color:'var(--faint)', fontSize:13 }}>No leads found</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {meta.pages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Page {meta.page} of {meta.pages} · {meta.total} records</p>
-          <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage(p => p-1)} className="btn-secondary disabled:opacity-40">← Prev</button>
-            <button disabled={page >= meta.pages} onClick={() => setPage(p => p+1)} className="btn-secondary disabled:opacity-40">Next →</button>
-          </div>
-        </div>
-      )}
+      </div>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Edit Lead' : 'Add New Lead'}>
-        <form onSubmit={save} className="grid grid-cols-2 gap-4">
-          <div><label className="label">Date</label>
-            <input type="date" className="input" value={form.date} onChange={e => set('date', e.target.value)} required /></div>
-          <div><label className="label">Full Name</label>
-            <input type="text" className="input" value={form.name} onChange={e => set('name', e.target.value)} required /></div>
-          <div><label className="label">Mobile</label>
-            <input type="text" className="input" value={form.mobile} onChange={e => set('mobile', e.target.value)} required /></div>
-          <div><label className="label">Source</label>
-            <select className="input" value={form.source} onChange={e => set('source', e.target.value)}>
-              {SOURCES.map(o => <option key={o}>{o}</option>)}</select></div>
-          <div><label className="label">Interested Product</label>
-            <select className="input" value={form.interestedProduct} onChange={e => set('interestedProduct', e.target.value)}>
-              {PRODUCTS.map(o => <option key={o}>{o}</option>)}</select></div>
-          <div><label className="label">Status</label>
-            <select className="input" value={form.status} onChange={e => set('status', e.target.value)}>
-              {STATUSES.map(o => <option key={o}>{o}</option>)}</select></div>
-          <div className="col-span-2"><label className="label">Notes</label>
-            <textarea className="input h-20 resize-none" value={form.notes || ''} onChange={e => set('notes', e.target.value)} /></div>
-          <div className="col-span-2 flex justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-            <button type="button" onClick={() => setModal(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : editing ? 'Update' : 'Add Lead'}</button>
+      <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
+
+      <Modal open={modal} onClose={()=>setModal(false)} title={editing?'Edit lead':'Add new lead'}>
+        <form onSubmit={save} style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+          <div><label className="label">Date</label><DateInput value={form.date} onChange={value=>set('date',value)} required /></div>
+          <div><label className="label">Full Name</label><input type="text" className="input" value={form.name} onChange={e=>set('name',e.target.value)} required /></div>
+          <div><label className="label">Mobile</label><input type="text" className="input" value={form.mobile} onChange={e=>set('mobile',e.target.value)} required /></div>
+          <div><label className="label">Source</label><SelectInput value={form.source} onChange={e=>set('source',e.target.value)}>{SOURCES.map(o=><option key={o}>{o}</option>)}</SelectInput></div>
+          <div><label className="label">Interested Product</label><SelectInput value={form.interestedProduct} onChange={e=>set('interestedProduct',e.target.value)}>{PRODUCTS.map(o=><option key={o}>{o}</option>)}</SelectInput></div>
+          <div><label className="label">Status</label><SelectInput value={form.status} onChange={e=>set('status',e.target.value)}>{STATUSES.map(o=><option key={o}>{o}</option>)}</SelectInput></div>
+          <div style={{ gridColumn:'1/-1' }}><label className="label">Notes</label><textarea className="input" style={{ height:72, resize:'none' }} value={form.notes||''} onChange={e=>set('notes',e.target.value)} /></div>
+          <div style={{ gridColumn:'1/-1', display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid var(--rule)', paddingTop:14 }}>
+            <button type="button" className="btn-secondary" onClick={()=>setModal(false)}>Cancel</button>
+            <button type="submit" className="btn-primary" disabled={saving}>{saving?'Saving…':editing?'Update':'Add lead'}</button>
           </div>
         </form>
       </Modal>
+      <ConfirmModal
+        open={!!confirmId}
+        onClose={() => { if (!deleting) setConfirmId(null); }}
+        onConfirm={del}
+        title="Delete this lead?"
+        message="This will permanently remove the lead. This action cannot be undone."
+        loading={deleting}
+      />
     </div>
   );
 }

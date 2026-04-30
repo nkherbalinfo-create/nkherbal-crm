@@ -1,45 +1,48 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
+import Pagination from '../components/Pagination';
 import { format, differenceInDays } from 'date-fns';
-import { Mail, CheckCircle, SkipForward, Clock, Loader2, RefreshCw, Edit3 } from 'lucide-react';
 
-const MONTH_LABEL = { 1: 'Month 1', 2: 'Month 2', 3: 'Month 3' };
-const MONTH_COLOR = {
-  1: { cls: 'badge-info',    label: '1st Month' },
-  2: { cls: 'badge-warning', label: '2nd Month' },
-  3: { cls: 'badge-success', label: '3rd Month' },
-};
+const STAGES = [
+  { month:1, day:30,  label:'Month 1',  desc:'First course done — prompt for Month 2',  cls:'chip-info'   },
+  { month:2, day:60,  label:'Month 2',  desc:'Halfway there — encourage Month 3',       cls:'chip-warn'   },
+  { month:3, day:90,  label:'Month 3',  desc:'Full course — celebrate & suggest more',  cls:'chip-ok'     },
+];
 
-function OverdueBadge({ dueDate }) {
-  const days = differenceInDays(new Date(), new Date(dueDate));
-  if (days <= 0) return null;
-  return (
-    <span className="badge badge-danger text-xs">{days}d overdue</span>
-  );
+const TABS = [
+  { key:'pending',  label:'Pending'  },
+  { key:'sent',     label:'Sent'     },
+  { key:'skipped',  label:'Skipped'  },
+];
+
+function Av({ name }) {
+  const i = (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  return <span className="avatar avatar-md">{i}</span>;
 }
 
+const M_CLS = ['chip-info','chip-warn','chip-ok'];
+
 export default function FollowUps() {
-  const [tab, setTab]         = useState('pending');
-  const [items, setItems]     = useState([]);
-  const [meta, setMeta]       = useState({ total: 0, pages: 1, page: 1 });
-  const [page, setPage]       = useState(1);
+  const [tab, setTab] = useState('pending');
+  const [items, setItems] = useState([]);
+  const [meta, setMeta] = useState({ total:0, pages:1, page:1 });
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [emailModal, setEmailModal]   = useState(false);
-  const [selected, setSelected]       = useState(null);
-  const [emailData, setEmailData]     = useState({ subject: '', html: '', toEmail: '' });
-  const [sending, setSending]         = useState(false);
-  const [generating, setGenerating]   = useState(false);
+  const [emailModal, setEmailModal] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [emailData, setEmailData] = useState({ subject:'', html:'', toEmail:'' });
+  const [sending, setSending] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const { addToast } = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/followups', { params: { status: tab, page, limit: 20 } });
-      setItems(data.followups);
-      setMeta({ total: data.total, page: data.page, pages: data.pages });
-    } catch { addToast('Failed to load follow-ups', 'error'); }
+      const { data } = await api.get('/followups', { params:{ status:tab, page, limit:8 } });
+      setItems(data.followups); setMeta({ total:data.total, page:data.page, pages:data.pages });
+    } catch { addToast('Failed to load','error'); }
     finally { setLoading(false); }
   }, [tab, page]);
 
@@ -47,12 +50,8 @@ export default function FollowUps() {
   useEffect(() => { load(); }, [load]);
 
   const openEmail = async (fu) => {
-    setSelected(fu);
-    setEmailData({ subject: '', html: '', toEmail: fu.email || '' });
-    try {
-      const { data } = await api.get(`/followups/${fu._id}/preview`);
-      setEmailData(d => ({ ...d, subject: data.subject, html: data.html }));
-    } catch {}
+    setSelected(fu); setEmailData({ subject:'', html:'', toEmail:fu.email||'' });
+    try { const { data } = await api.get(`/followups/${fu._id}/preview`); setEmailData(d=>({...d, subject:data.subject, html:data.html})); } catch {}
     setEmailModal(true);
   };
 
@@ -60,236 +59,167 @@ export default function FollowUps() {
     setSending(true);
     try {
       const { data } = await api.post(`/followups/${selected._id}/send`, emailData);
-      addToast(data.message, 'success');
-      setEmailModal(false);
-      load();
-    } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to send email', 'error');
-    } finally { setSending(false); }
+      addToast(data.message,'success'); setEmailModal(false); load();
+    } catch (err) { addToast(err.response?.data?.message||'Failed to send','error'); }
+    finally { setSending(false); }
   };
 
   const skip = async (id) => {
-    try {
-      await api.put(`/followups/${id}`, { status: 'skipped' });
-      addToast('Marked as skipped');
-      load();
-    } catch { addToast('Failed', 'error'); }
+    try { await api.put(`/followups/${id}`,{status:'skipped'}); addToast('Skipped'); load(); }
+    catch { addToast('Failed','error'); }
   };
 
-  const generateNow = async () => {
+  const refresh = async () => {
     setGenerating(true);
-    try {
-      // Trigger follow-up generation via a quick page reload after a small delay
-      await api.post('/sync/woocommerce', {});
-      await new Promise(r => setTimeout(r, 1000));
-      load();
-      addToast('Follow-ups refreshed');
-    } catch { addToast('Refresh failed', 'error'); }
+    try { await api.post('/sync/followups',{}); load(); addToast('Follow-ups refreshed'); }
+    catch { addToast('Refresh failed','error'); }
     finally { setGenerating(false); }
   };
 
-  const TABS = [
-    { key: 'pending', label: 'Pending',  icon: Clock },
-    { key: 'sent',    label: 'Sent',     icon: CheckCircle },
-    { key: 'skipped', label: 'Skipped',  icon: SkipForward },
-  ];
+  const pendingCount = items.filter(i=>i.status==='pending').length;
 
   return (
-    <div className="space-y-5 animate-fadeIn">
-      <div className="flex items-center justify-between">
+    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Follow-up Reminders</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Send monthly follow-up emails to customers to encourage their 3–6 month Ayurvedic journey
-          </p>
+          <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Follow-up reminders</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Send monthly follow-ups to encourage the 3–6 month Ayurvedic journey</div>
         </div>
-        <button onClick={generateNow} disabled={generating} className="btn-secondary flex items-center gap-1.5 text-sm">
-          <RefreshCw size={14} className={generating ? 'animate-spin' : ''} />
-          {generating ? 'Refreshing…' : 'Refresh'}
+        <button className="btn-secondary" onClick={refresh} disabled={generating} style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:generating?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          {generating?'Refreshing…':'Refresh'}
         </button>
       </div>
 
-      {/* How it works */}
-      <div className="card" style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', borderColor: '#bbf7d0' }}>
-        <div className="flex flex-wrap gap-6 text-sm">
-          {[
-            { month: 1, label: 'Month 1 (Day 30)', desc: 'First course done — prompt for Month 2' },
-            { month: 2, label: 'Month 2 (Day 60)', desc: 'Halfway through — encourage Month 3' },
-            { month: 3, label: 'Month 3 (Day 90)', desc: 'Full course — celebrate & suggest continuing' },
-          ].map(({ month, label, desc }) => (
-            <div key={month} className="flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                style={{ background: month === 1 ? '#3b82f6' : month === 2 ? '#f59e0b' : '#10b981' }}>
-                {month}
-              </div>
-              <div>
-                <p className="font-semibold" style={{ color: '#166534' }}>{label}</p>
-                <p style={{ color: '#16a34a' }}>{desc}</p>
-              </div>
+      {/* Stage cards */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
+        {STAGES.map(({month,day,label,desc,cls})=>(
+          <div key={month} className="card" style={{ padding:'14px 16px', display:'flex', alignItems:'flex-start', gap:12 }}>
+            <span className={`chip ${cls}`} style={{ width:28, height:28, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', padding:0, fontSize:12, fontWeight:700, flexShrink:0 }}>{month}</span>
+            <div>
+              <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)', marginBottom:2 }}>{label} <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums', fontSize:11, color:'var(--faint)', fontWeight:400 }}>(Day {day})</span></div>
+              <div style={{ fontSize:11.5, color:'var(--muted)' }}>{desc}</div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: 'var(--bg-subtle)' }}>
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => setTab(key)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150"
-            style={{
-              background: tab === key ? 'var(--bg-card)' : 'transparent',
-              color: tab === key ? 'var(--text)' : 'var(--text-muted)',
-              boxShadow: tab === key ? 'var(--shadow-sm)' : 'none',
-            }}>
-            <Icon size={14} />
-            {label}
-          </button>
-        ))}
+      {/* Segmented tabs */}
+      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+        <div className="seg-control">
+          {TABS.map(t=>(
+            <button key={t.key} className={`seg-btn${tab===t.key?' active':''}`} onClick={()=>setTab(t.key)}>
+              {t.label}
+              {t.key==='pending'&&meta.total>0&&tab==='pending'&&(
+                <span style={{ marginLeft:5, padding:'1px 6px', borderRadius:999, background:'var(--accent)', color:'var(--accent-ink)', fontSize:10, fontWeight:600 }}>{meta.total}</span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* List */}
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-24" />)}
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {[0,1,2].map(i=><div key={i} className="skeleton" style={{ height:80, borderRadius:12 }} />)}
         </div>
-      ) : items.length === 0 ? (
-        <div className="card text-center py-16">
-          <CheckCircle size={40} className="mx-auto mb-3" style={{ color: 'var(--text-faint)' }} />
-          <p className="font-semibold" style={{ color: 'var(--text)' }}>
-            {tab === 'pending' ? 'No pending follow-ups' : `No ${tab} follow-ups`}
-          </p>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {tab === 'pending' ? 'Follow-ups appear 30, 60, and 90 days after each order.' : ''}
-          </p>
+      ) : items.length===0 ? (
+        <div className="card" style={{ padding:'56px 20px', textAlign:'center' }}>
+          <div className="chip chip-ok" style={{ width:44, height:44, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px', padding:0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div style={{ fontSize:14, fontWeight:500, color:'var(--fg)', marginBottom:6 }}>No {tab} follow-ups</div>
+          <div style={{ fontSize:12.5, color:'var(--muted)' }}>Follow-ups appear 30, 60, and 90 days after each order.</div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {items.map(fu => (
-            <div key={fu._id} className="card">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4 flex-1 min-w-0">
-                  {/* Month indicator */}
-                  <div className="w-12 h-12 rounded-2xl flex flex-col items-center justify-center shrink-0 text-white"
-                    style={{ background: fu.monthNumber === 1 ? 'linear-gradient(135deg,#3b82f6,#6366f1)' : fu.monthNumber === 2 ? 'linear-gradient(135deg,#f59e0b,#ef4444)' : 'linear-gradient(135deg,#10b981,#059669)' }}>
-                    <span className="text-xs font-bold leading-none">M{fu.monthNumber}</span>
-                    <span className="text-xs opacity-80 leading-none mt-0.5">{fu.monthNumber === 1 ? '30d' : fu.monthNumber === 2 ? '60d' : '90d'}</span>
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {items.map(fu=>{
+            const overdue = differenceInDays(new Date(), new Date(fu.dueDate));
+            return (
+              <div key={fu._id} className="card" style={{ padding:'14px 16px' }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:14 }}>
+                  {/* Month badge */}
+                  <div className={`chip ${M_CLS[fu.monthNumber-1]||'chip-muted'}`}
+                    style={{ width:44, height:44, borderRadius:10, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:0, flexShrink:0 }}>
+                    <span style={{ fontSize:13, fontWeight:700, lineHeight:1 }}>M{fu.monthNumber}</span>
+                    <span style={{ fontSize:9, opacity:0.75, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>D+{fu.monthNumber*30}</span>
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="font-bold text-sm" style={{ color: 'var(--text)' }}>{fu.customerName}</span>
-                      <span className={`badge text-xs ${MONTH_COLOR[fu.monthNumber]?.cls}`}>{MONTH_COLOR[fu.monthNumber]?.label} Complete</span>
-                      {fu.status === 'pending' && <OverdueBadge dueDate={fu.dueDate} />}
-                      {fu.status === 'sent' && <span className="badge badge-success text-xs">Sent</span>}
-                      {fu.status === 'skipped' && <span className="badge badge-neutral text-xs">Skipped</span>}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:7, marginBottom:3 }}>
+                      <span style={{ fontSize:13, fontWeight:500, color:'var(--fg)' }}>{fu.customerName}</span>
+                      <span className={`chip ${M_CLS[fu.monthNumber-1]||'chip-muted'}`} style={{ fontSize:10 }}>Month {fu.monthNumber} complete</span>
+                      {fu.status==='pending'&&overdue>0&&<span className="chip chip-danger" style={{ fontSize:10 }}>{overdue}d overdue</span>}
+                      {fu.status==='sent'&&<span className="chip chip-ok" style={{ fontSize:10 }}>Sent</span>}
+                      {fu.status==='skipped'&&<span className="chip chip-muted" style={{ fontSize:10 }}>Skipped</span>}
                     </div>
-
-                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-muted)' }}>{fu.productName}</p>
-
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs" style={{ color: 'var(--text-faint)' }}>
-                      <span>Order: {format(new Date(fu.orderDate), 'dd MMM yyyy')}</span>
-                      <span>Due: {format(new Date(fu.dueDate), 'dd MMM yyyy')}</span>
-                      {fu.email && <span>✉ {fu.email}</span>}
-                      {fu.mobile && <span>📱 {fu.mobile}</span>}
-                      {fu.sentAt && <span>Sent: {format(new Date(fu.sentAt), 'dd MMM yyyy')}</span>}
+                    <div style={{ fontSize:12.5, color:'var(--muted)', marginBottom:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fu.productName}</div>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:12, fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
+                      <span>Order: {format(new Date(fu.orderDate),'dd MMM yyyy')}</span>
+                      <span>Due: {format(new Date(fu.dueDate),'dd MMM yyyy')}</span>
+                      {fu.email&&<span>{fu.email}</span>}
+                      {fu.sentAt&&<span>Sent: {format(new Date(fu.sentAt),'dd MMM yyyy')}</span>}
                     </div>
                   </div>
+
+                  {fu.status==='pending'&&(
+                    <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                      <button className="btn-primary" onClick={()=>openEmail(fu)} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        Send email
+                      </button>
+                      <button className="btn-secondary" onClick={()=>skip(fu._id)} style={{ fontSize:12 }}>Skip</button>
+                    </div>
+                  )}
+                  {fu.status==='sent'&&(
+                    <button className="btn-secondary" onClick={()=>openEmail(fu)} style={{ fontSize:12, flexShrink:0 }}>Resend</button>
+                  )}
                 </div>
-
-                {/* Actions */}
-                {fu.status === 'pending' && (
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => openEmail(fu)}
-                      className="btn-primary flex items-center gap-1.5 text-sm py-2">
-                      <Mail size={14} /> Send Email
-                    </button>
-                    <button onClick={() => skip(fu._id)}
-                      className="btn-secondary flex items-center gap-1.5 text-sm py-2">
-                      <SkipForward size={14} /> Skip
-                    </button>
-                  </div>
-                )}
-                {fu.status === 'sent' && (
-                  <button onClick={() => openEmail(fu)}
-                    className="btn-secondary flex items-center gap-1.5 text-sm py-2">
-                    <Mail size={14} /> Resend
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {meta.pages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Page {meta.page} of {meta.pages} · {meta.total} records</p>
-          <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage(p => p-1)} className="btn-secondary disabled:opacity-40">← Prev</button>
-            <button disabled={page >= meta.pages} onClick={() => setPage(p => p+1)} className="btn-secondary disabled:opacity-40">Next →</button>
-          </div>
-        </div>
-      )}
+      <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
 
-      {/* Email Compose Modal */}
-      <Modal open={emailModal} onClose={() => setEmailModal(false)}
-        title={`Send Follow-up — ${selected?.customerName} (Month ${selected?.monthNumber})`} size="lg">
-        {selected && (
-          <div className="space-y-4">
-            {/* Customer info */}
-            <div className="rounded-xl p-3 flex flex-wrap gap-4 text-sm" style={{ background: 'var(--bg-subtle)' }}>
-              <div><span style={{ color: 'var(--text-faint)' }}>Customer:</span> <strong style={{ color: 'var(--text)' }}>{selected.customerName}</strong></div>
-              <div><span style={{ color: 'var(--text-faint)' }}>Product:</span> <span style={{ color: 'var(--text-muted)' }}>{selected.productName}</span></div>
-              <div><span style={{ color: 'var(--text-faint)' }}>Month:</span> <span style={{ color: 'var(--text-muted)' }}>{selected.monthNumber}</span></div>
+      {/* Email modal */}
+      <Modal open={emailModal} onClose={()=>setEmailModal(false)} title={`Follow-up — ${selected?.customerName} (Month ${selected?.monthNumber})`} size="lg">
+        {selected&&(
+          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+            <div style={{ background:'var(--bg)', borderRadius:9, padding:'10px 14px', fontSize:12.5, display:'flex', flexWrap:'wrap', gap:16 }}>
+              <span><span style={{ color:'var(--faint)' }}>Customer:</span> <strong style={{ color:'var(--fg)' }}>{selected.customerName}</strong></span>
+              <span><span style={{ color:'var(--faint)' }}>Product:</span> <span style={{ color:'var(--muted)' }}>{selected.productName}</span></span>
+              <span><span style={{ color:'var(--faint)' }}>Month:</span> <span style={{ color:'var(--muted)' }}>{selected.monthNumber}</span></span>
             </div>
-
-            {/* To email */}
             <div>
-              <label className="label">To (Customer Email)</label>
-              <input className="input" type="email" value={emailData.toEmail}
-                onChange={e => setEmailData(d => ({...d, toEmail: e.target.value}))}
-                placeholder="customer@email.com" />
-              {!emailData.toEmail && (
-                <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>⚠ No email stored for this customer. Enter it manually.</p>
-              )}
+              <label className="label">To (customer email)</label>
+              <input type="email" className="input" value={emailData.toEmail} onChange={e=>setEmailData(d=>({...d,toEmail:e.target.value}))} placeholder="customer@email.com" />
+              {!emailData.toEmail&&<div style={{ fontSize:11, color:'var(--danger)', marginTop:4 }}>⚠ No email found. Enter manually.</div>}
             </div>
-
-            {/* Subject */}
             <div>
               <label className="label">Subject</label>
-              <input className="input" value={emailData.subject}
-                onChange={e => setEmailData(d => ({...d, subject: e.target.value}))} />
+              <input className="input" value={emailData.subject} onChange={e=>setEmailData(d=>({...d,subject:e.target.value}))} />
             </div>
-
-            {/* Email preview */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="label m-0">Email Preview</label>
-                <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-faint)' }}>
-                  <Edit3 size={11} /> Editable HTML below
-                </span>
-              </div>
-              <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-                <iframe
-                  srcDoc={emailData.html}
-                  className="w-full"
-                  style={{ height: '320px', border: 'none' }}
-                  title="Email Preview"
-                />
+              <label className="label">Email preview</label>
+              <div style={{ border:'1px solid var(--rule)', borderRadius:9, overflow:'hidden' }}>
+                <iframe srcDoc={emailData.html} style={{ width:'100%', height:300, border:'none' }} title="Preview" />
               </div>
             </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-              <button onClick={() => setEmailModal(false)} className="btn-secondary">Cancel</button>
-              <button onClick={sendEmail} disabled={sending || !emailData.toEmail}
-                className="btn-primary flex items-center gap-2 disabled:opacity-50">
-                {sending ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
-                {sending ? 'Sending…' : 'Send Email'}
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid var(--rule)', paddingTop:14 }}>
+              <button className="btn-secondary" onClick={()=>setEmailModal(false)}>Cancel</button>
+              <button className="btn-primary" onClick={sendEmail} disabled={sending||!emailData.toEmail} style={{ display:'flex', alignItems:'center', gap:6, opacity:!emailData.toEmail?0.5:1 }}>
+                {sending&&<span style={{ width:12, height:12, border:'2px solid rgba(255,255,255,.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />}
+                {sending?'Sending…':'Send email'}
               </button>
             </div>
           </div>
         )}
       </Modal>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

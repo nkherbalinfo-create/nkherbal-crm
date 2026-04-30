@@ -11,7 +11,7 @@ const orderSchema = new mongoose.Schema({
   orderValue: { type: Number, required: true },
   salesChannel: {
     type: String,
-    enum: ['Amazon', 'Website', 'WhatsApp', 'Offline'],
+    enum: ['Website', 'WhatsApp'],
     required: true
   },
   leadSource: {
@@ -42,6 +42,7 @@ const orderSchema = new mongoose.Schema({
     sku: { type: String },
     price: { type: Number },
     quantity: { type: Number },
+    discountPct: { type: Number, default: 0 },
     total: { type: Number },
     gst: { type: Number }
   }]

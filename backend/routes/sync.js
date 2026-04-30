@@ -1,5 +1,6 @@
 const express = require('express');
 const { syncOrders, recalculateCustomers } = require('../services/woocommerceSync');
+const { generateFollowUps } = require('../services/followUpScheduler');
 const { protect } = require('../middleware/auth');
 const router = express.Router();
 
@@ -19,6 +20,16 @@ router.post('/recalculate', protect, async (req, res) => {
   try {
     const count = await recalculateCustomers();
     res.json({ success: true, message: `Recalculated stats for ${count} customers` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Trigger follow-up generation on demand
+router.post('/followups', protect, async (req, res) => {
+  try {
+    const count = await generateFollowUps();
+    res.json({ success: true, message: `Generated follow-ups (${count} processed)` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

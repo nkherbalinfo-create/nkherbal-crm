@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 import Modal from '../components/Modal';
+import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/Toast';
+import { DateInput, FilterBar, SelectInput } from '../components/FormControls';
+import Pagination from '../components/Pagination';
 import { format } from 'date-fns';
-import { Eye, Pencil, Trash2, RefreshCw, Copy, CheckCheck } from 'lucide-react';
 
 const PRODUCTS = [
   { name: 'Muejaza For Men (300g)', price: 4499 },
@@ -17,30 +19,83 @@ const PRODUCTS = [
 ];
 const PRODUCT_NAMES = PRODUCTS.map(p => p.name);
 const PRODUCT_PRICE_MAP = Object.fromEntries(PRODUCTS.map(p => [p.name, p.price]));
-const CHANNELS = ['Amazon', 'Website', 'WhatsApp', 'Offline'];
-const SOURCES = ['Ads', 'Organic', 'Referral', 'Direct'];
-const PAYMENT = ['Paid', 'COD', 'Pending'];
-const STATUS = ['Processing', 'Shipped', 'Delivered', 'Cancelled', 'RTO'];
+const CHANNELS = ['Website', 'WhatsApp'];
+const SOURCES  = ['Ads', 'Organic', 'Referral', 'Direct'];
+const PAYMENT  = ['Paid', 'COD', 'Pending'];
+const STATUS   = ['Processing', 'Shipped', 'Delivered', 'Cancelled', 'RTO'];
 
-const STATUS_CLASS = {
-  Delivered: 'badge-success', Cancelled: 'badge-danger',
-  RTO: 'badge-warning', Shipped: 'badge-info', Processing: 'badge-purple',
-};
-const PAY_CLASS = { Paid: 'badge-success', COD: 'badge-warning', Pending: 'badge-danger' };
+const STATUS_CHIP = { Delivered:'chip-ok', Cancelled:'chip-danger', RTO:'chip-warn', Shipped:'chip-info', Processing:'chip-muted' };
+const PAY_CHIP    = { Paid:'chip-ok', COD:'chip-warn', Pending:'chip-danger' };
+const CHAN_CHIP   = { Website:'chip-info', WhatsApp:'chip-ok' };
+const TYPE_CHIP   = { New:'chip-info', Repeat:'chip-ok' };
+
+const COLS = ['ORDER ID','DATE','CUSTOMER','MOBILE','PRODUCT','QTY','VALUE','CHANNEL','PAYMENT','STATUS','TYPE',''];
+const ITEM_GRID = 'minmax(170px,1fr) 62px 48px 76px 56px 68px 82px 20px';
+
+const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const emptyForm = {
   orderDate: new Date().toISOString().split('T')[0],
-  customerName: '', mobile: '', city: '',
-  productName: PRODUCTS[0].name, quantity: 1, orderValue: PRODUCTS[0].price,
-  salesChannel: 'WhatsApp', leadSource: 'Organic',
-  paymentStatus: 'Paid', orderStatus: 'Processing',
-  followUpDone: false, upsellDone: false, notes: ''
+  customerName:'', mobile:'', city:'',
+  productName: PRODUCTS[0].name, quantity:1, orderValue: PRODUCTS[0].price,
+  salesChannel:'WhatsApp', leadSource:'Organic',
+  paymentStatus:'Paid', orderStatus:'Processing',
+  followUpDone:false, upsellDone:false, notes:''
 };
+
+const makeLineItem = (name = PRODUCTS[0].name, quantity = 1) => {
+  const incl = PRODUCT_PRICE_MAP[name] || 0;
+  const qty = Number(quantity || 1);
+  const discountPct = 0;
+  const discountedIncl = incl * (1 - discountPct / 100);
+  const lineIncl = discountedIncl * qty;
+  const base = lineIncl / 1.05;
+  return {
+    name,
+    sku: '',
+    price: parseFloat(incl.toFixed(2)),
+    discountPct,
+    quantity: qty,
+    total: parseFloat(base.toFixed(2)),
+    gst: parseFloat((lineIncl - base).toFixed(2))
+  };
+};
+
+const summarizeItems = (items) => {
+  const safeItems = items?.length ? items : [makeLineItem()];
+  const orderValue = parseFloat(safeItems.reduce((s,it)=>s+(Number(it.total)||0)+(Number(it.gst)||0),0).toFixed(2));
+  return {
+    lineItems: safeItems,
+    orderValue,
+    productName: safeItems.map(i => i.name).filter(Boolean).join(', ') || PRODUCTS[0].name,
+    quantity: safeItems.reduce((s,it)=>s+(Number(it.quantity)||0),0) || 1
+  };
+};
+
+function Av({ name }) {
+  const i = (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  return <span className="avatar avatar-md">{i}</span>;
+}
+
+function IconBtn({ onClick, title, bg, color, children }) {
+  return (
+    <button onClick={onClick} title={title}
+      style={{ width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:7, border:'none', cursor:'pointer', background:bg, color, flexShrink:0, transition:'opacity 0.15s' }}
+      onMouseEnter={e=>e.currentTarget.style.opacity='0.75'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+      {children}
+    </button>
+  );
+}
+
+const SVG = ({ d, size=13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>
+);
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
-  const [meta, setMeta] = useState({ total: 0, page: 1, pages: 1 });
-  const [filters, setFilters] = useState({ channel: '', status: '', paymentStatus: '', search: '', startDate: '', endDate: '' });
+  const [meta, setMeta] = useState({ total:0, page:1, pages:1 });
+  const [listKey, setListKey] = useState(0);
+  const [filters, setFilters] = useState({ channel:'', status:'', paymentStatus:'', search:'', startDate:'', endDate:'' });
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -48,275 +103,286 @@ export default function Orders() {
   const [saving, setSaving] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [viewOrder, setViewOrder] = useState(null);
+  const [confirmId, setConfirmId] = useState(null);
+  const [exitId, setExitId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const { addToast } = useToast();
 
   const load = useCallback(async () => {
     try {
-      const params = { page, limit: 20, ...Object.fromEntries(Object.entries(filters).filter(([,v]) => v)) };
+      const params = { page, limit:8, ...Object.fromEntries(Object.entries(filters).filter(([,v])=>v)) };
       const { data } = await api.get('/orders', { params });
       setOrders(data.orders);
-      setMeta({ total: data.total, page: data.page, pages: data.pages });
-    } catch { addToast('Failed to load orders', 'error'); }
+      setMeta({ total:data.total, page:data.page, pages:data.pages });
+      setListKey(k => k + 1);
+    } catch { addToast('Failed to load orders','error'); }
   }, [page, filters]);
 
   useEffect(() => { load(); }, [load]);
 
   const initLineItems = (o) => {
     if (o.lineItems?.length) return o.lineItems.map(i => ({ ...i }));
-    const base = (o.orderValue || 0) / 1.05;
-    const gst = (o.orderValue || 0) - base;
-    return [{ name: o.productName || PRODUCTS[0].name, sku: '', price: parseFloat((base / (o.quantity || 1)).toFixed(2)), quantity: o.quantity || 1, total: parseFloat(base.toFixed(2)), gst: parseFloat(gst.toFixed(2)) }];
+    const base = (o.orderValue||0)/1.05, gst = (o.orderValue||0)-base;
+    return [{ name:o.productName||PRODUCTS[0].name, sku:'', price:parseFloat((base/(o.quantity||1)).toFixed(2)), quantity:o.quantity||1, total:parseFloat(base.toFixed(2)), gst:parseFloat(gst.toFixed(2)) }];
   };
 
-  const openAdd = () => { setEditing(null); setForm({ ...emptyForm, lineItems: [] }); setModal(true); };
-  const openEdit = (o) => { setEditing(o._id); setForm({ ...o, orderDate: o.orderDate?.split('T')[0] || '', lineItems: initLineItems(o) }); setModal(true); };
+  const openAdd  = () => { setEditing(null); setForm({...emptyForm, ...summarizeItems([makeLineItem()])}); setModal(true); };
+  const openEdit = (o) => { setEditing(o._id); setForm({...o, orderDate:o.orderDate?.split('T')[0]||'', lineItems:initLineItems(o)}); setModal(true); };
   const openView = (o) => { setViewOrder(o); setViewModal(true); };
 
   const updateLineItem = (i, field, value) => {
     setForm(f => {
-      const items = f.lineItems.map((it, idx) => {
-        if (idx !== i) return it;
-        const updated = { ...it, [field]: value };
-        if (field === 'price' || field === 'quantity') {
-          const p = field === 'price' ? Number(value) : Number(it.price);
-          const q = field === 'quantity' ? Number(value) : Number(it.quantity);
-          updated.price = p; updated.quantity = q;
-          updated.total = parseFloat((p * q).toFixed(2));
-          updated.gst = parseFloat((p * q * 0.05).toFixed(2));
+      const items = f.lineItems.map((it,idx) => {
+        if (idx!==i) return it;
+        const u = {...it,[field]:value};
+        if (field === 'name') {
+          const next = makeLineItem(value, it.quantity || 1);
+          const p = next.price, q = Number(it.quantity || 1), d = Number(it.discountPct || 0);
+          const incl = (p * (1 - d / 100)) * q;
+          const base = incl / 1.05;
+          return { ...u, price: p, quantity: q, discountPct: d, total: parseFloat(base.toFixed(2)), gst: parseFloat((incl-base).toFixed(2)) };
         }
-        return updated;
+        if (field==='price'||field==='quantity'||field==='discountPct') {
+          const p=field==='price'?Number(value):Number(it.price), q=field==='quantity'?Number(value):Number(it.quantity);
+          const d=field==='discountPct'?Number(value):Number(it.discountPct||0);
+          const incl = (p * (1 - d / 100)) * q;
+          const base = incl / 1.05;
+          u.price=p; u.quantity=q; u.discountPct=d; u.total=parseFloat(base.toFixed(2)); u.gst=parseFloat((incl-base).toFixed(2));
+        }
+        return u;
       });
-      const orderValue = parseFloat(items.reduce((s, it) => s + (it.total || 0) + (it.gst || 0), 0).toFixed(2));
-      return { ...f, lineItems: items, orderValue, productName: items[0]?.name || f.productName, quantity: items.reduce((s, it) => s + (it.quantity || 0), 0) };
+      return {...f, ...summarizeItems(items)};
     });
   };
 
-  const addLineItem = () => setForm(f => ({ ...f, lineItems: [...(f.lineItems || []), { name: PRODUCTS[0].name, sku: '', price: 0, quantity: 1, total: 0, gst: 0 }] }));
-
+  const addLineItem = () => setForm(f=>{
+    const items = [...(f.lineItems?.length ? f.lineItems : [makeLineItem()]), makeLineItem()];
+    return {...f, ...summarizeItems(items)};
+  });
   const removeLineItem = (i) => setForm(f => {
-    const items = f.lineItems.filter((_, idx) => idx !== i);
-    const orderValue = parseFloat(items.reduce((s, it) => s + (it.total || 0) + (it.gst || 0), 0).toFixed(2));
-    return { ...f, lineItems: items, orderValue, productName: items[0]?.name || f.productName, quantity: items.reduce((s, it) => s + (it.quantity || 0), 0) };
+    const items = f.lineItems.filter((_,idx)=>idx!==i);
+    return {...f, ...summarizeItems(items)};
   });
 
   const save = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault(); setSaving(true);
     try {
-      if (editing) await api.put(`/orders/${editing}`, form);
-      else await api.post('/orders', form);
-      addToast(editing ? 'Order updated' : 'Order added');
-      setModal(false);
-      load();
-    } catch (err) { addToast(err.response?.data?.message || 'Save failed', 'error'); }
+      const payload = { ...form, ...summarizeItems(form.lineItems) };
+      if (editing) await api.put(`/orders/${editing}`, payload);
+      else await api.post('/orders', payload);
+      addToast(editing?'Order updated':'Order added'); setModal(false); load();
+    } catch (err) { addToast(err.response?.data?.message||'Save failed','error'); }
     finally { setSaving(false); }
   };
 
-  const del = async (id) => {
-    if (!confirm('Delete this order?')) return;
-    try { await api.delete(`/orders/${id}`); addToast('Order deleted'); load(); }
-    catch { addToast('Delete failed', 'error'); }
+  const del = async () => {
+    if (!confirmId) return;
+    const id = confirmId;
+    setConfirmId(null);
+    setExitId(id);
+    // Phase 1: fade animation
+    await new Promise(r => setTimeout(r, 460));
+    // Phase 2: collapse row height so rows below slide up smoothly
+    const row = document.querySelector(`tr[data-row-id="${id}"]`);
+    if (row) {
+      const h = row.offsetHeight;
+      row.style.height = h + 'px';
+      row.style.overflow = 'hidden';
+      row.style.transition = 'height 0.24s ease-out, padding 0.24s ease-out';
+      void row.offsetHeight; // force reflow
+      row.style.height = '0';
+      await new Promise(r => setTimeout(r, 260));
+    }
+    setOrders(prev => prev.filter(o => o._id !== id));
+    setMeta(m => ({ ...m, total: Math.max(0, m.total - 1) }));
+    setExitId(null);
+    try { await api.delete(`/orders/${id}`); addToast('Order deleted'); }
+    catch { addToast('Delete failed','error'); load(); }
   };
 
   const syncWooCommerce = async () => {
     setSyncing(true);
-    try {
-      const { data } = await api.post('/sync/woocommerce', {});
-      addToast(data.message, 'success');
-      load();
-    } catch (err) {
-      addToast(err.response?.data?.message || 'Sync failed', 'error');
-    } finally { setSyncing(false); }
+    try { const {data}=await api.post('/sync/woocommerce',{}); addToast(data.message,'success'); load(); }
+    catch (err) { addToast(err.response?.data?.message||'Sync failed','error'); }
+    finally { setSyncing(false); }
   };
 
-  const set = (field, value) => setForm(f => ({ ...f, [field]: value }));
-
-  const onProductChange = (name) => {
-    const price = PRODUCT_PRICE_MAP[name] || 0;
-    setForm(f => ({ ...f, productName: name, orderValue: price * (f.quantity || 1) }));
-  };
-
-  const onQtyChange = (qty) => {
-    const price = PRODUCT_PRICE_MAP[form.productName] || 0;
-    setForm(f => ({ ...f, quantity: Number(qty), orderValue: price * Number(qty) }));
-  };
+  const set = (field, value) => setForm(f=>({...f,[field]:value}));
+  const onProductChange = (name) => { const price=PRODUCT_PRICE_MAP[name]||0; setForm(f=>({...f,productName:name,orderValue:price*(f.quantity||1)})); };
+  const onQtyChange = (qty) => { const price=PRODUCT_PRICE_MAP[form.productName]||0; setForm(f=>({...f,quantity:Number(qty),orderValue:price*Number(qty)})); };
 
   return (
-    <div className="space-y-4 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Orders</h1>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{meta.total} total orders</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={syncWooCommerce} disabled={syncing} className="btn-secondary flex items-center gap-1.5 disabled:opacity-50">
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-            {syncing ? 'Syncing…' : 'Sync WooCommerce'}
-          </button>
-          <button onClick={openAdd} className="btn-primary">+ Add Order</button>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="flex flex-wrap gap-2">
-          <input className="input w-auto flex-1 min-w-[180px] text-sm" placeholder="Search name, mobile, order ID..." value={filters.search} onChange={e => setFilters(f => ({...f, search: e.target.value}))} />
-          <input type="date" className="input w-auto text-sm" value={filters.startDate} onChange={e => setFilters(f => ({...f, startDate: e.target.value}))} />
-          <input type="date" className="input w-auto text-sm" value={filters.endDate} onChange={e => setFilters(f => ({...f, endDate: e.target.value}))} />
-          {[{k:'channel',opts:CHANNELS},{k:'status',opts:STATUS},{k:'paymentStatus',opts:PAYMENT}].map(({k,opts}) => (
-            <select key={k} className="input w-auto text-sm capitalize" value={filters[k]} onChange={e => setFilters(f => ({...f, [k]: e.target.value}))}>
-              <option value="">All {k}</option>
-              {opts.map(o => <option key={o}>{o}</option>)}
-            </select>
-          ))}
-          <button onClick={() => { setPage(1); load(); }} className="btn-primary text-sm">Filter</button>
-          <button onClick={() => setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})} className="btn-secondary text-sm">Clear</button>
-        </div>
-      </div>
-
-      <div className="card overflow-x-auto p-0">
-        <table className="w-full text-sm">
-          <thead style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
-            <tr>
-              {['Order ID','Date','Customer','Mobile','Product','Qty','Value','Channel','Payment','Status','Type','Actions'].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
-                  style={{ color: 'var(--text-faint)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map(o => (
-              <tr key={o._id} className="transition-colors" style={{ borderBottom: '1px solid var(--border)' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-faint)' }}>{o.orderId}</td>
-                <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{format(new Date(o.orderDate), 'dd MMM yy')}</td>
-                <td className="px-4 py-3 font-semibold" style={{ color: 'var(--text)' }}>{o.customerName}</td>
-                <td className="px-4 py-3" style={{ color: 'var(--text-muted)' }}>{o.mobile}</td>
-                <td className="px-4 py-3 max-w-[140px] truncate" style={{ color: 'var(--text-muted)' }}>{o.productName}</td>
-                <td className="px-4 py-3 text-center" style={{ color: 'var(--text-muted)' }}>{o.quantity}</td>
-                <td className="px-4 py-3 font-bold" style={{ color: 'var(--success)' }}>₹{o.orderValue?.toLocaleString()}</td>
-                <td className="px-4 py-3"><span className="badge badge-accent">{o.salesChannel}</span></td>
-                <td className="px-4 py-3"><span className={`badge ${PAY_CLASS[o.paymentStatus] || 'badge-neutral'}`}>{o.paymentStatus}</span></td>
-                <td className="px-4 py-3"><span className={`badge ${STATUS_CLASS[o.orderStatus] || 'badge-neutral'}`}>{o.orderStatus}</span></td>
-                <td className="px-4 py-3">
-                  <span className={`badge ${o.customerType === 'Repeat' ? 'badge-purple' : 'badge-cyan'}`}>{o.customerType}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1">
-                    <button onClick={() => openView(o)} className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors" style={{ background: 'var(--accent-subtle)', color: 'var(--accent)' }}><Eye size={13} /></button>
-                    <button onClick={() => openEdit(o)} className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors" style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}><Pencil size={13} /></button>
-                    <button onClick={() => del(o._id)} className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors" style={{ background: '#fee2e2', color: '#dc2626' }}><Trash2 size={13} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!orders.length && (
-              <tr><td colSpan={12} className="text-center py-12" style={{ color: 'var(--text-faint)' }}>No orders found</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {meta.pages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Page {meta.page} of {meta.pages} · {meta.total} records</p>
-          <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage(p => p-1)} className="btn-secondary disabled:opacity-50">← Prev</button>
-            <button disabled={page >= meta.pages} onClick={() => setPage(p => p+1)} className="btn-secondary disabled:opacity-50">Next →</button>
+          <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>
+            <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{meta.total}</span> total orders
           </div>
         </div>
-      )}
+        <div style={{ display:'flex', gap:8 }}>
+          <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            {syncing ? 'Syncing…' : 'Sync WooCommerce'}
+          </button>
+          <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New order
+          </button>
+        </div>
+      </div>
 
-      <Modal open={viewModal} onClose={() => setViewModal(false)} title={`Order Details — ${viewOrder?.orderId}`} size="lg">
+      {/* Filter bar */}
+      <FilterBar>
+          <input className="input" placeholder="Search name, mobile, order ID…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
+          <DateInput value={filters.startDate} onChange={value=>setFilters(f=>({...f,startDate:value}))} />
+          <DateInput value={filters.endDate} onChange={value=>setFilters(f=>({...f,endDate:value}))} />
+          {[{k:'channel',opts:CHANNELS,label:'All channels'},{k:'status',opts:STATUS,label:'All status'},{k:'paymentStatus',opts:PAYMENT,label:'All payments'}].map(({k,opts,label})=>(
+            <SelectInput key={k} value={filters[k]} onChange={e=>setFilters(f=>({...f,[k]:e.target.value}))}>
+              <option value="">{label}</option>
+              {opts.map(o=><option key={o}>{o}</option>)}
+            </SelectInput>
+          ))}
+          <button className="btn-primary" style={{ fontSize:12 }} onClick={()=>{setPage(1);load();}}>Filter</button>
+          <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
+      </FilterBar>
+
+      {/* Table */}
+      <div key={listKey} className="fade-in">
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom:'1px solid var(--rule)' }}>
+                {COLS.map(h=>(
+                  <th key={h} style={{ textAlign:'left', padding:'11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map(o=>(
+                <tr key={o._id} data-row-id={o._id} className={`tr-hover${exitId===o._id?' row-deleting':''}`}
+                  style={{ borderBottom:'1px solid var(--rule)' }}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:12, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{o.orderId}</td>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:12.5, color:'var(--muted)', whiteSpace:'nowrap', fontVariantNumeric:'tabular-nums' }}>{format(new Date(o.orderDate),'dd MMM yy')}</td>
+                  <td style={{ padding:'10px 16px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+                      <Av name={o.customerName} />
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:500, color:'var(--fg)', whiteSpace:'nowrap' }}>{o.customerName}</div>
+                        <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{o.city}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:12.5, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{o.mobile}</td>
+                  <td style={{ padding:'11px 16px', maxWidth:140, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:13, color:'var(--muted)' }}>{o.productName}</td>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:13, color:'var(--fg)', textAlign:'right', fontVariantNumeric:'tabular-nums' }}>{o.quantity}</td>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:13, fontWeight:600, color:'var(--fg)', fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' }}>₹{o.orderValue?.toLocaleString('en-IN')}</td>
+                  <td style={{ padding:'10px 16px' }}><span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`}>{o.salesChannel}</span></td>
+                  <td style={{ padding:'10px 16px' }}><span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`}>{o.paymentStatus}</span></td>
+                  <td style={{ padding:'10px 16px' }}><span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`}>{o.orderStatus}</span></td>
+                  <td style={{ padding:'10px 16px' }}><span className={`chip ${TYPE_CHIP[o.customerType]||'chip-muted'}`}>{o.customerType}</span></td>
+                  <td style={{ padding:'10px 16px' }}>
+                    <div style={{ display:'flex', gap:4 }}>
+                      <IconBtn onClick={()=>openView(o)} title="View" bg="var(--accent-bg)" color="var(--accent)"><SVG d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></IconBtn>
+                      <IconBtn onClick={()=>openEdit(o)} title="Edit" bg="var(--chip)" color="var(--muted)"><SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconBtn>
+                      <IconBtn onClick={()=>setConfirmId(o._id)} title="Delete" bg="var(--danger-bg)" color="var(--danger)"><SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></IconBtn>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!orders.length && (
+                <tr><td colSpan={12} style={{ padding:'48px 16px', textAlign:'center', color:'var(--faint)', fontSize:13 }}>No orders found</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+
+      <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
+
+      {/* View Order Modal */}
+      <Modal open={viewModal} onClose={()=>setViewModal(false)} title={`Order — ${viewOrder?.orderId}`} size="lg">
         {viewOrder && (() => {
-          const hasLineItems = viewOrder.lineItems?.length > 0;
-          const baseTotal = viewOrder.orderValue / 1.05;
-          const gstTotal = viewOrder.orderValue - baseTotal;
-          const displayItems = hasLineItems
-            ? viewOrder.lineItems
-            : [{ name: viewOrder.productName, sku: '', price: baseTotal / (viewOrder.quantity || 1), quantity: viewOrder.quantity || 1, total: baseTotal, gst: gstTotal }];
-          const itemsSubtotal = displayItems.reduce((s, i) => s + (i.total || 0), 0);
-          const totalGst = displayItems.reduce((s, i) => s + (i.gst || 0), 0);
-          const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
+          const hasLI = viewOrder.lineItems?.length > 0;
+          const baseTotal = viewOrder.orderValue/1.05, gstTotal = viewOrder.orderValue-baseTotal;
+          const items = hasLI ? viewOrder.lineItems : [{name:viewOrder.productName,sku:'',price:baseTotal/(viewOrder.quantity||1),quantity:viewOrder.quantity||1,total:baseTotal,gst:gstTotal}];
+          const subtotal = items.reduce((s,i)=>s+(i.total||0),0), totalGst = items.reduce((s,i)=>s+(i.gst||0),0);
           return (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm pb-3 border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
-                <span>{format(new Date(viewOrder.orderDate), 'dd MMM yyyy')}</span>
-                <span>·</span>
-                <span>{viewOrder.salesChannel}</span>
-                {viewOrder.paymentMethod && <><span>·</span><span>via {viewOrder.paymentMethod}</span></>}
-                <span className="ml-auto">
-                  <span className={`badge ${STATUS_CLASS[viewOrder.orderStatus]||'badge-neutral'}`}>{viewOrder.orderStatus}</span>
-                  <span className={`badge ml-1 ${PAY_CLASS[viewOrder.paymentStatus]||'badge-neutral'}`}>{viewOrder.paymentStatus}</span>
-                </span>
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:8, paddingBottom:14, borderBottom:'1px solid var(--rule)', fontSize:12, color:'var(--muted)' }}>
+                <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{format(new Date(viewOrder.orderDate),'dd MMM yyyy')}</span>
+                <span>·</span><span>{viewOrder.salesChannel}</span>
+                {viewOrder.paymentMethod&&<><span>·</span><span>via {viewOrder.paymentMethod}</span></>}
+                <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
+                  <span className={`chip ${STATUS_CHIP[viewOrder.orderStatus]||'chip-muted'}`}>{viewOrder.orderStatus}</span>
+                  <span className={`chip ${PAY_CHIP[viewOrder.paymentStatus]||'chip-muted'}`}>{viewOrder.paymentStatus}</span>
+                </div>
               </div>
 
-              <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-                <table className="w-full text-sm">
-                  <thead style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ border:'1px solid var(--rule)', borderRadius:10, overflow:'hidden' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead style={{ borderBottom:'1px solid var(--rule)' }}>
                     <tr>
-                      {['Item','Price','Qty','Total','GST'].map((h,i) => (
-                        <th key={h} className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wide ${i===0?'text-left':'text-right'} ${i===2?'text-center':''}`} style={{ color: 'var(--text-faint)' }}>{h}</th>
+                      {['Item','Price','Qty','Total','GST'].map((h,i)=>(
+                        <th key={h} style={{ padding:'8px 14px', fontSize:10.5, fontWeight:500, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--faint)', textAlign:i===0?'left':'right', background:'var(--card-soft)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {displayItems.map((item, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td className="px-4 py-3">
-                          <p className="font-medium" style={{ color: 'var(--text)' }}>{item.name}</p>
-                          {item.sku && <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>SKU: {item.sku}</p>}
+                    {items.map((item,i)=>(
+                      <tr key={i} style={{ borderBottom:'1px solid var(--rule)' }}>
+                        <td style={{ padding:'10px 14px' }}>
+                          <div style={{ fontSize:13, fontWeight:500, color:'var(--fg)' }}>{item.name}</div>
+                          {item.sku&&<div style={{ fontSize:11, color:'var(--faint)', marginTop:2 }}>SKU: {item.sku}</div>}
                         </td>
-                        <td className="px-4 py-3 text-right" style={{ color: 'var(--text-muted)' }}>₹{fmt(item.price)}</td>
-                        <td className="px-4 py-3 text-center" style={{ color: 'var(--text-muted)' }}>×{item.quantity}</td>
-                        <td className="px-4 py-3 text-right font-medium" style={{ color: 'var(--text)' }}>₹{fmt(item.total)}</td>
-                        <td className="px-4 py-3 text-right" style={{ color: 'var(--text-faint)' }}>₹{fmt(item.gst)}</td>
+                        <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'Inter', fontSize:12, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{inr(item.price)}</td>
+                        <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'Inter', fontSize:12, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>×{item.quantity}</td>
+                        <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'Inter', fontSize:12.5, fontWeight:500, color:'var(--fg)', fontVariantNumeric:'tabular-nums' }}>{inr(item.total)}</td>
+                        <td style={{ padding:'10px 14px', textAlign:'right', fontFamily:'Inter', fontSize:12, color:'var(--faint)', fontVariantNumeric:'tabular-nums' }}>{inr(item.gst)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              <div className="flex justify-end">
-                <div className="w-64 space-y-1.5 text-sm">
-                  <div className="flex justify-between" style={{ color: 'var(--text-muted)' }}>
-                    <span>Items Subtotal</span><span>₹{fmt(itemsSubtotal)}</span>
+              <div style={{ display:'flex', justifyContent:'flex-end' }}>
+                <div style={{ width:240, display:'flex', flexDirection:'column', gap:6, fontSize:12 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', color:'var(--muted)' }}>
+                    <span>Items subtotal</span><span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{inr(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between" style={{ color: 'var(--text-muted)' }}>
-                    <span>GST (5%)</span><span>₹{fmt(totalGst)}</span>
+                  <div style={{ display:'flex', justifyContent:'space-between', color:'var(--muted)' }}>
+                    <span>GST (5%)</span><span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{inr(totalGst)}</span>
                   </div>
-                  <div className="flex justify-between font-bold pt-1.5 border-t" style={{ color: 'var(--text)', borderColor: 'var(--border)' }}>
-                    <span>Order Total</span>
-                    <span style={{ color: 'var(--success)' }}>₹{fmt(viewOrder.orderValue)}</span>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontWeight:600, color:'var(--fg)', paddingTop:8, borderTop:'1px solid var(--rule)' }}>
+                    <span>Order total</span><span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums', color:'var(--accent)' }}>{inr(viewOrder.orderValue)}</span>
                   </div>
-                  {viewOrder.paymentStatus === 'Paid' && (
-                    <div className="flex justify-between text-xs pt-0.5" style={{ color: 'var(--text-faint)' }}>
-                      <span>Paid{viewOrder.paymentMethod ? ` via ${viewOrder.paymentMethod}` : ''}</span>
-                      <span>₹{fmt(viewOrder.orderValue)}</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {(viewOrder.billingAddress || viewOrder.email) && (
-                <div className="border-t pt-3" style={{ borderColor: 'var(--border)' }}>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--text-faint)' }}>Billing</p>
-                  <div className="rounded-xl p-3 text-sm space-y-0.5" style={{ background: 'var(--bg-subtle)' }}>
-                    <p className="font-semibold" style={{ color: 'var(--text)' }}>{viewOrder.customerName}</p>
-                    {viewOrder.billingAddress && <p style={{ color: 'var(--text-muted)' }}>{viewOrder.billingAddress}</p>}
-                    {viewOrder.email && <p style={{ color: 'var(--accent)' }}>{viewOrder.email}</p>}
-                    <p style={{ color: 'var(--text-muted)' }}>{viewOrder.mobile}</p>
+              {(viewOrder.billingAddress||viewOrder.email) && (
+                <div style={{ borderTop:'1px solid var(--rule)', paddingTop:14 }}>
+                  <div style={{ fontSize:10.5, fontWeight:500, textTransform:'uppercase', letterSpacing:'0.04em', color:'var(--faint)', marginBottom:8 }}>Billing</div>
+                  <div style={{ background:'var(--bg)', borderRadius:9, padding:'10px 14px', fontSize:12.5, display:'flex', flexDirection:'column', gap:3 }}>
+                    <div style={{ fontWeight:500, color:'var(--fg)' }}>{viewOrder.customerName}</div>
+                    {viewOrder.billingAddress&&<div style={{ color:'var(--muted)' }}>{viewOrder.billingAddress}</div>}
+                    {viewOrder.email&&<div style={{ color:'var(--accent)' }}>{viewOrder.email}</div>}
+                    <div style={{ color:'var(--muted)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{viewOrder.mobile}</div>
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-between items-center border-t pt-3" style={{ borderColor: 'var(--border)' }}>
-                <span className={`badge ${viewOrder.customerType==='Repeat'?'badge-purple':'badge-cyan'}`}>{viewOrder.customerType} Customer</span>
-                <div className="flex gap-2">
-                  {viewOrder.followUpDone && <span className="badge badge-success">Follow-up Done</span>}
-                  {viewOrder.upsellDone && <span className="badge badge-warning">Upsell Done</span>}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:'1px solid var(--rule)', paddingTop:12 }}>
+                <span className={`chip ${TYPE_CHIP[viewOrder.customerType]||'chip-muted'}`}>{viewOrder.customerType} Customer</span>
+                <div style={{ display:'flex', gap:6 }}>
+                  {viewOrder.followUpDone&&<span className="chip chip-ok">Follow-up done</span>}
+                  {viewOrder.upsellDone&&<span className="chip chip-warn">Upsell done</span>}
                 </div>
               </div>
             </div>
@@ -324,153 +390,106 @@ export default function Orders() {
         })()}
       </Modal>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Edit Order' : 'Add New Order'} size="lg">
-        <form onSubmit={save} className="grid grid-cols-2 gap-4">
+      {/* Add / Edit Order Modal */}
+      <Modal open={modal} onClose={()=>setModal(false)} title={editing?'Edit order':'Add new order'} size="lg">
+        <form onSubmit={save} style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+          {[
+            {label:'Order Date', el:<DateInput value={form.orderDate} onChange={value=>set('orderDate',value)} required />},
+            {label:'Customer Name', el:<input type="text" className="input" value={form.customerName} onChange={e=>set('customerName',e.target.value)} required />},
+            {label:'Mobile', el:<input type="text" className="input" value={form.mobile} onChange={e=>set('mobile',e.target.value)} required />},
+            {label:'City', el:<input type="text" className="input" value={form.city} onChange={e=>set('city',e.target.value)} />},
+          ].map(({label,el})=>(
+            <div key={label}><label className="label">{label}</label>{el}</div>
+          ))}
 
-          <div>
-            <label className="label">Order Date</label>
-            <input type="date" className="input" value={form.orderDate} onChange={e => set('orderDate', e.target.value)} required />
+          <div><label className="label">Sales Channel</label>
+            <SelectInput value={form.salesChannel} onChange={e=>set('salesChannel',e.target.value)} required>
+              {CHANNELS.map(o=><option key={o}>{o}</option>)}
+            </SelectInput>
           </div>
-
-          <div>
-            <label className="label">Customer Name</label>
-            <input type="text" className="input" value={form.customerName} onChange={e => set('customerName', e.target.value)} required />
+          <div><label className="label">Lead Source</label>
+            <SelectInput value={form.leadSource} onChange={e=>set('leadSource',e.target.value)}>
+              {SOURCES.map(o=><option key={o}>{o}</option>)}
+            </SelectInput>
           </div>
-
-          <div>
-            <label className="label">Mobile Number</label>
-            <input type="text" className="input" value={form.mobile} onChange={e => set('mobile', e.target.value)} required />
+          <div><label className="label">Payment Status</label>
+            <SelectInput value={form.paymentStatus} onChange={e=>set('paymentStatus',e.target.value)}>
+              {PAYMENT.map(o=><option key={o}>{o}</option>)}
+            </SelectInput>
           </div>
-
-          <div>
-            <label className="label">City</label>
-            <input type="text" className="input" value={form.city} onChange={e => set('city', e.target.value)} />
+          <div><label className="label">Order Status</label>
+            <SelectInput value={form.orderStatus} onChange={e=>set('orderStatus',e.target.value)}>
+              {STATUS.map(o=><option key={o}>{o}</option>)}
+            </SelectInput>
           </div>
-
-          <div>
-            <label className="label">Product</label>
-            <select className="input" value={form.productName} onChange={e => onProductChange(e.target.value)} required>
-              {PRODUCT_NAMES.map(o => <option key={o}>{o}</option>)}
-            </select>
+          <div style={{ display:'flex', gap:20 }}>
+            {[{id:'followUpDone',label:'Follow-up done'},{id:'upsellDone',label:'Upsell done'}].map(({id,label})=>(
+              <label key={id} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5, color:'var(--muted)', cursor:'pointer' }}>
+                <input type="checkbox" id={id} checked={!!form[id]} onChange={e=>set(id,e.target.checked)} style={{ accentColor:'var(--accent)' }} />
+                {label}
+              </label>
+            ))}
           </div>
-
-          <div>
-            <label className="label">Quantity</label>
-            <input type="number" className="input" min="1" value={form.quantity} onChange={e => onQtyChange(e.target.value)} required />
-          </div>
-
-          <div>
-            <label className="label">Order Value (₹)</label>
-            <input type="number" className="input" value={form.orderValue} onChange={e => set('orderValue', Number(e.target.value))} required />
-          </div>
-
-          <div>
-            <label className="label">Sales Channel</label>
-            <select className="input" value={form.salesChannel} onChange={e => set('salesChannel', e.target.value)} required>
-              {CHANNELS.map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="label">Lead Source</label>
-            <select className="input" value={form.leadSource} onChange={e => set('leadSource', e.target.value)}>
-              {SOURCES.map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="label">Payment Status</label>
-            <select className="input" value={form.paymentStatus} onChange={e => set('paymentStatus', e.target.value)}>
-              {PAYMENT.map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="label">Order Status</label>
-            <select className="input" value={form.orderStatus} onChange={e => set('orderStatus', e.target.value)}>
-              {STATUS.map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-
-          <div className="flex gap-6 items-start pt-1">
-            <div>
-              <label className="label">Follow-up Done</label>
-              <div className="flex items-center gap-2 mt-1">
-                <input type="checkbox" id="followUpDone" checked={!!form.followUpDone} onChange={e => set('followUpDone', e.target.checked)} className="w-4 h-4 accent-indigo-600" />
-                <label htmlFor="followUpDone" className="text-sm" style={{ color: 'var(--text-muted)' }}>Yes</label>
-              </div>
-            </div>
-            <div>
-              <label className="label">Upsell Done</label>
-              <div className="flex items-center gap-2 mt-1">
-                <input type="checkbox" id="upsellDone" checked={!!form.upsellDone} onChange={e => set('upsellDone', e.target.checked)} className="w-4 h-4 accent-indigo-600" />
-                <label htmlFor="upsellDone" className="text-sm" style={{ color: 'var(--text-muted)' }}>Yes</label>
-              </div>
-            </div>
-          </div>
-
-          <div className="col-span-2">
-            <label className="label">Notes</label>
-            <textarea className="input h-20 resize-none" value={form.notes || ''} onChange={e => set('notes', e.target.value)} />
-          </div>
-
-          {editing && (
-            <div className="col-span-2 border-t border-slate-100 pt-3">
-              <div className="flex items-center justify-between mb-2">
+          <div style={{ gridColumn:'1/-1', borderTop:'1px solid var(--rule)', paddingTop:14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Line Items</p>
-                  <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Set individual product prices for GST breakdown. Order value auto-updates.</p>
+                  <div style={{ fontSize:13, fontWeight:500, color:'var(--fg)' }}>Items in this order</div>
+                  <div style={{ fontSize:11, color:'var(--faint)', marginTop:2 }}>Add one or more products. The order total updates automatically.</div>
                 </div>
-                <button type="button" onClick={addLineItem} className="px-2 py-1 text-xs rounded transition-colors" style={{ background: 'var(--accent-subtle)', color: 'var(--accent)' }}>+ Add Item</button>
+                <button type="button" onClick={addLineItem} className="btn-secondary" style={{ fontSize:12 }}>+ Add item</button>
               </div>
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead style={{ background: 'var(--bg-hover)', borderBottom: '1px solid var(--border)' }}>
-                    <tr>
-                      {['Product','SKU','Qty','Price (ex-GST)','GST (5%)','Total (incl.)',''].map((h,i) => (
-                        <th key={i} className={`px-3 py-2 text-xs font-semibold uppercase ${i===0||i===1?'text-left':i===2?'text-center':'text-right'}`}
-                          style={{ color: 'var(--text-faint)' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {(form.lineItems || []).map((item, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td className="px-2 py-1.5">
-                          <select className="input text-xs py-1" value={item.name} onChange={e => updateLineItem(i, 'name', e.target.value)}>
-                            {PRODUCT_NAMES.map(n => <option key={n}>{n}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <input className="input text-xs py-1 w-full" placeholder="SKU" value={item.sku || ''} onChange={e => updateLineItem(i, 'sku', e.target.value)} />
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <input type="number" min="1" className="input text-xs py-1 w-full text-center" value={item.quantity} onChange={e => updateLineItem(i, 'quantity', e.target.value)} />
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <input type="number" min="0" step="0.01" className="input text-xs py-1 w-full text-right" value={item.price} onChange={e => updateLineItem(i, 'price', e.target.value)} />
-                        </td>
-                        <td className="px-2 py-1.5 text-right" style={{ color: 'var(--text-faint)' }}>₹{Number(item.gst || 0).toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-right font-semibold" style={{ color: 'var(--text)' }}>₹{(Number(item.total || 0) + Number(item.gst || 0)).toFixed(2)}</td>
-                        <td className="px-2 py-1.5 text-center">
-                          {(form.lineItems || []).length > 1 && (
-                            <button type="button" onClick={() => removeLineItem(i)} className="font-bold leading-none" style={{ color: 'var(--danger)' }}>×</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ border:'1px solid var(--rule)', borderRadius:9, overflow:'visible' }}>
+                <div style={{ display:'grid', gridTemplateColumns:ITEM_GRID, gap:6, alignItems:'center', padding:'8px 8px', background:'var(--card-soft)', borderRadius:'9px 9px 0 0', borderBottom:'1px solid var(--rule)' }}>
+                  {['Product','SKU','Qty','Price','Disc. %','GST','Total',''].map((h,i)=>(
+                    <div key={i} style={{ fontSize:10, fontWeight:500, textTransform:'uppercase', color:'var(--faint)', textAlign:i<2?'left':i===2?'center':'right' }}>{h}</div>
+                  ))}
+                </div>
+                {(form.lineItems||[]).map((item,i)=>(
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:ITEM_GRID, gap:6, alignItems:'center', padding:'6px 8px', borderBottom:i < (form.lineItems||[]).length-1 ? '1px solid var(--rule)' : 'none' }}>
+                    <SelectInput style={{ minWidth: 0 }} value={item.name} onChange={e=>updateLineItem(i,'name',e.target.value)}>
+                      {PRODUCT_NAMES.map(n=><option key={n}>{n}</option>)}
+                    </SelectInput>
+                    <input className="input" style={{ fontSize:11, padding:'4px 8px', width:'100%' }} placeholder="SKU" value={item.sku||''} onChange={e=>updateLineItem(i,'sku',e.target.value)} />
+                    <input type="number" min="1" className="input" style={{ fontSize:11, padding:'4px 8px', width:'100%', textAlign:'center' }} value={item.quantity} onChange={e=>updateLineItem(i,'quantity',e.target.value)} />
+                    <input type="number" min="0" step="0.01" className="input" style={{ fontSize:11, padding:'4px 8px', width:'100%', textAlign:'right' }} value={item.price} onChange={e=>updateLineItem(i,'price',e.target.value)} />
+                    <input type="number" min="0" max="100" step="0.01" className="input" style={{ fontSize:11, padding:'4px 8px', width:'100%', textAlign:'right' }} value={item.discountPct || 0} onChange={e=>updateLineItem(i,'discountPct',e.target.value)} />
+                    <div className="num" style={{ textAlign:'right', color:'var(--faint)', fontSize:11 }}>₹{Number(item.gst||0).toFixed(2)}</div>
+                    <div className="num" style={{ textAlign:'right', fontWeight:600, color:'var(--fg)', fontSize:12 }}>₹{(Number(item.total||0)+Number(item.gst||0)).toFixed(2)}</div>
+                    <div style={{ display:'grid', placeItems:'center' }}>
+                      {(form.lineItems||[]).length>1&&(
+                        <button type="button" onClick={()=>removeLineItem(i)} style={{ width:18, height:18, display:'grid', placeItems:'center', background:'none', border:'none', color:'var(--danger)', cursor:'pointer', fontWeight:600, fontSize:15, lineHeight:1, padding:0 }}>×</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:'flex', justifyContent:'flex-end', gap:22, paddingTop:10, fontSize:12 }}>
+                <span style={{ color:'var(--muted)' }}>Total qty <strong className="num" style={{ color:'var(--fg)', fontWeight:600 }}>{form.quantity}</strong></span>
+                <span style={{ color:'var(--muted)' }}>Order value <strong className="num" style={{ color:'var(--fg)', fontWeight:600 }}>₹{Number(form.orderValue||0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span>
               </div>
             </div>
-          )}
 
-          <div className="col-span-2 flex justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-            <button type="button" onClick={() => setModal(false)} className="btn-secondary">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving…' : editing ? 'Update Order' : 'Add Order'}</button>
+          <div style={{ gridColumn:'1/-1' }}>
+            <label className="label">Notes</label>
+            <textarea className="input" style={{ height:72, resize:'none' }} value={form.notes||''} onChange={e=>set('notes',e.target.value)} />
+          </div>
+
+          <div style={{ gridColumn:'1/-1', display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid var(--rule)', paddingTop:14 }}>
+            <button type="button" className="btn-secondary" onClick={()=>setModal(false)}>Cancel</button>
+            <button type="submit" className="btn-primary" disabled={saving}>{saving?'Saving…':editing?'Update order':'Add order'}</button>
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        open={!!confirmId}
+        onClose={() => { if (!deleting) setConfirmId(null); }}
+        onConfirm={del}
+        title="Delete this order?"
+        message="This will permanently remove the order. This action cannot be undone."
+        loading={deleting}
+      />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

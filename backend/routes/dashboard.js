@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/stats', protect, async (req, res) => {
   try {
-    const { startDate, endDate, channel } = req.query;
+    const { startDate, endDate, channel, trendMonths: trendMonthsParam } = req.query;
     const now = new Date();
     const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
     const end = endDate ? new Date(endDate + 'T23:59:59') : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -15,9 +15,11 @@ router.get('/stats', protect, async (req, res) => {
     const matchFilter = { orderDate: { $gte: start, $lte: end } };
     if (channel) matchFilter.salesChannel = channel;
 
-    // Trend uses selected period when dates provided, otherwise last 6 months
-    const trendStart = startDate ? start : new Date(now.getFullYear(), now.getMonth() - 5, 1);
-    const trendFilter = { orderDate: { $gte: trendStart, $lte: end } };
+    // Trend always covers the last N months from today, independent of the KPI date filter
+    const trendN = Math.min(24, Math.max(1, parseInt(trendMonthsParam) || 6));
+    const trendStart = new Date(now.getFullYear(), now.getMonth() - (trendN - 1), 1);
+    const trendEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const trendFilter = { orderDate: { $gte: trendStart, $lte: trendEnd } };
     if (channel) trendFilter.salesChannel = channel;
 
     // Lead filter uses same date range applied to lead creation date

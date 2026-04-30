@@ -87,6 +87,7 @@ app.use('/api/sync', require('./routes/sync'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/followups', require('./routes/followups'));
 app.use('/api/whatsapp', require('./routes/whatsapp'));
+app.use('/api/wa', require('./routes/waconversations'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
