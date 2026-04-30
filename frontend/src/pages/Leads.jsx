@@ -391,8 +391,7 @@ export default function Leads() {
 
       {/* Floating bulk action bar */}
       {selected.size > 0 && (
-        <div className="fade-in" style={{
-          position:'fixed', bottom:28, left:'50%', transform:'translateX(-50%)',
+        <div className="bulk-bar fade-in" style={{
           zIndex:500, display:'flex', alignItems:'center', gap:8,
           background:'var(--fg)', color:'var(--bg)',
           borderRadius:14, padding:'10px 14px',

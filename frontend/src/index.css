@@ -583,6 +583,21 @@
 }
 .toast-enter { animation: toast-in 0.25s ease-out; }
 
+/* ── Bulk action bar ──────────────────────────────────── */
+.bulk-bar {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+}
+@media (min-width: 1024px) {
+  /* Shift right by half of sidebar (232px / 2 = 116px) to centre in content area */
+  .bulk-bar {
+    left: calc(50% + 116px);
+  }
+}
+
 /* ── Live pulse dot ───────────────────────────────────── */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
