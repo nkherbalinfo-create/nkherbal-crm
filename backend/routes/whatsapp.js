@@ -142,35 +142,61 @@ function detectProduct(text) {
 function detectLeadIntent(text) {
   const t = text.toLowerCase().trim();
 
+  // Check NOT INTERESTED first (highest priority — avoids "nahi chahiye" matching INTERESTED)
   const NOT_INTERESTED = [
     // English
     'not interested', 'no thanks', 'no thank you', 'dont want', "don't want",
     'not needed', 'no need', 'not required', 'not buying', 'wont buy', "won't buy",
-    'stop messaging', 'stop', 'remove me', 'unsubscribe', 'i am not interested',
-    'i\'m not interested', 'im not interested',
+    'stop messaging', 'remove me', 'unsubscribe', 'i am not interested',
+    "i'm not interested", 'im not interested',
     // Hinglish
     'nahi chahiye', 'nahin chahiye', 'nahi lena', 'lena nahi', 'nahi kharidna',
     'kharidna nahi', 'interest nahi', 'nahi interested', 'interested nahi',
     'mat bhejo', 'band karo', 'nahi chahie', 'nahi lene', 'mujhe nahi chahiye',
-    'abhi nahi chahiye', 'filhaal nahi', 'nahi karna', 'zaroorat nahi',
-    // Devanagari Hindi
-    'नहीं चाहिए', 'नहीं लेना', 'इंटरेस्ट नहीं', 'जरूरत नहीं',
+    'abhi nahi chahiye', 'filhaal nahi', 'zaroorat nahi', 'nahi chahie',
+    'nahi mangna', 'nahi mangta', 'nahi mangti',
+    // Devanagari
+    'नहीं चाहिए', 'नहीं लेना', 'इंटरेस्ट नहीं', 'जरूरत नहीं', 'नहीं खरीदना',
   ];
 
   const CONVERTED = [
     'order kar diya', 'order kiya', 'buy kar liya', 'khareed liya', 'le liya',
     'order de diya', 'payment kar diya', 'payment kiya', 'order placed',
-    'already ordered', 'already bought', 'khareed liya', 'mil gaya',
+    'already ordered', 'already bought', 'mil gaya', 'pa gaya',
+    'ऑर्डर कर दिया', 'खरीद लिया',
   ];
 
   const FOLLOW_UP = [
     'baad mein batata', 'baad mein bataata', 'soch ke batata', 'sochke batata',
     'later batata', 'will let you know', 'let me think', 'will think',
-    'sochna hai', 'thoda sochta', 'soch ke', 'think karke batata',
-    'baad mein', 'kal batata', 'kal bata', 'think karta', 'discuss karke',
+    'sochna hai', 'thoda sochta', 'think karke batata',
+    'kal batata', 'kal bata', 'think karta', 'discuss karke',
+    'soch ke bata', 'discuss karke batata',
+    'सोचकर बताता', 'बाद में बताता',
+  ];
+
+  // INTERESTED — someone expressing want/desire to buy
+  const INTERESTED = [
+    // English
+    'interested', 'want to buy', 'want to order', 'i want', 'want this',
+    'how to order', 'how to buy', 'place order', 'where to buy',
+    'tell me more', 'want more info',
+    // Hinglish — "chahiye" = want/need (very common)
+    'chahiye', 'chahie', 'chaiye', 'lena hai', 'kharidna hai',
+    'order karna hai', 'buy karna hai', 'mangna hai', 'mangwana hai',
+    'order chahiye', 'lena chahta', 'lena chahti', 'khareedna chahta',
+    'price batao', 'kitna hai', 'kitne ka', 'rate batao',
+    'kaise milega', 'kaise order', 'kab milega', 'kitne din mein',
+    'mujhe chahiye', 'mujhe lena', 'mujhe order', 'hamein chahiye',
+    'haan chahiye', 'ha chahiye', 'yes chahiye',
+    // Devanagari
+    'चाहिए', 'लेना है', 'खरीदना है', 'ऑर्डर करना है', 'मुझे चाहिए',
   ];
 
   if (NOT_INTERESTED.some(p => t.includes(p))) return 'Not Interested';
+  if (CONVERTED.some(p => t.includes(p)))      return 'Converted';
+  if (FOLLOW_UP.some(p => t.includes(p)))      return 'Follow Up';
+  if (INTERESTED.some(p => t.includes(p)))     return 'Interested';
   if (CONVERTED.some(p => t.includes(p)))      return 'Converted';
   if (FOLLOW_UP.some(p => t.includes(p)))      return 'Follow Up';
   return null;
