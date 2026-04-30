@@ -256,4 +256,76 @@ async function getAIReply(conversationMessages) {
   return callAI(messages);
 }
 
-module.exports = { getAIReply };
+// Classify customer intent in any language using AI
+// Returns: 'Interested' | 'Not Interested' | 'Converted' | 'Follow Up' | null
+async function classifyIntent(text) {
+  if (!text || text.trim().length < 2) return null;
+  try {
+    const prompt = [
+      {
+        role: 'system',
+        content: `You classify customer messages for an Ayurvedic product sales chat (NK Herbal, India). The customer may write in English, Hindi, Hinglish, or any Indian language. Reply with ONLY one of these exact labels — nothing else:
+Interested
+Not Interested
+Converted
+Follow Up
+None
+
+Definitions:
+- Interested: customer wants to buy, asking price/order/how to get it, expressing desire for the product
+- Not Interested: customer doesn't want to buy, rejecting, saying no to product
+- Converted: customer has already placed order or made payment
+- Follow Up: customer wants to think/decide later, will get back
+- None: greeting, general product question, unclear intent`
+      },
+      { role: 'user', content: `Customer message: "${text}"` }
+    ];
+
+    const body = JSON.stringify({
+      model: 'anthropic/claude-3.5-haiku',
+      messages: prompt,
+      max_tokens: 8,
+      temperature: 0
+    });
+
+    const result = await new Promise((resolve, reject) => {
+      const https = require('https');
+      const req = https.request({
+        hostname: 'openrouter.ai',
+        path: '/api/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://nkherbal.com',
+          'X-Title': 'NK Herbal Bot',
+          'Content-Length': Buffer.byteLength(body)
+        }
+      }, (res) => {
+        let data = '';
+        res.on('data', c => { data += c; });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve(parsed.choices?.[0]?.message?.content?.trim() || 'None');
+          } catch { resolve('None'); }
+        });
+      });
+      req.on('error', () => resolve('None'));
+      req.setTimeout(8000, () => { req.destroy(); resolve('None'); });
+      req.write(body);
+      req.end();
+    });
+
+    const label = result.toLowerCase();
+    if (label.includes('not interested')) return 'Not Interested';
+    if (label.includes('converted'))      return 'Converted';
+    if (label.includes('follow up'))      return 'Follow Up';
+    if (label.includes('interested'))     return 'Interested';
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { getAIReply, classifyIntent };

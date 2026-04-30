@@ -3,7 +3,7 @@ const https    = require('https');
 const http     = require('http');
 const Lead     = require('../models/Lead');
 const WaConversation = require('../models/WaConversation');
-const { getAIReply } = require('../services/aiService');
+const { getAIReply, classifyIntent } = require('../services/aiService');
 const router   = express.Router();
 
 // ── Media ID cache (upload once, reuse for 25 days) ─────
@@ -138,11 +138,9 @@ function detectProduct(text) {
   return null;
 }
 
-// ── Intent detector — updates lead status automatically ─
+// ── Legacy keyword detector (kept as fallback, AI is primary) ─
 function detectLeadIntent(text) {
   const t = text.toLowerCase().trim();
-
-  // Check NOT INTERESTED first (highest priority — avoids "nahi chahiye" matching INTERESTED)
   const NOT_INTERESTED = [
     // English
     'not interested', 'no thanks', 'no thank you', 'dont want', "don't want",
@@ -368,20 +366,21 @@ router.post('/webhook', async (req, res) => {
             await sendWhatsAppMessage(phone, welcome);
           }
 
-          // ── Auto-update lead status from customer intent ─
-          const detectedIntent = detectLeadIntent(text);
-          if (detectedIntent && conv.leadId) {
-            await Lead.findByIdAndUpdate(conv.leadId, { status: detectedIntent });
-            console.log(`[WhatsApp] 📊 Lead status → ${detectedIntent} (${mobile10})`);
-          }
-
-          // ── Add user message & get AI reply ────────────
+          // ── Add user message ────────────────────────────
           conv.messages.push({ role: 'user', content: text });
           conv.lastMessageAt = new Date();
 
-          const aiReply = await getAIReply(
-            conv.messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
-          );
+          // ── Run AI reply + intent classification in parallel (no added delay) ──
+          const [aiReply, detectedIntent] = await Promise.all([
+            getAIReply(conv.messages.slice(-6).map(m => ({ role: m.role, content: m.content }))),
+            classifyIntent(text)
+          ]);
+
+          // ── Auto-update lead status from AI-detected intent ─
+          if (detectedIntent && conv.leadId) {
+            await Lead.findByIdAndUpdate(conv.leadId, { status: detectedIntent });
+            console.log(`[WhatsApp] 📊 Lead status → ${detectedIntent} for "${text}" (${mobile10})`);
+          }
 
           conv.messages.push({ role: 'assistant', content: aiReply });
           await conv.save();
