@@ -353,10 +353,10 @@ export default function Dashboard() {
           ) : (
             <div key={chartKey} className="fade-in">
             <ResponsiveContainer width="100%" height={210}>
-              <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 16, right: 4, left: 4, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stopColor="#3d8a5c" stopOpacity={0.4} />
+                    <stop offset="0%"   stopColor="#3d8a5c" stopOpacity={0.45} />
                     <stop offset="100%" stopColor="#3d8a5c" stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -366,15 +366,16 @@ export default function Dashboard() {
                   tick={{ fontSize: 10.5, fill: 'var(--muted)', fontFamily: 'Inter, system-ui, sans-serif' }}
                   axisLine={false} tickLine={false}
                   dy={8}
+                  padding={{ left: 8, right: 8 }}
                   interval={trendRange <= 6 ? 0 : 'preserveStartEnd'}
                 />
                 <YAxis hide domain={[0, 'auto']} />
                 <Tooltip content={<ChartTip />} cursor={{ stroke: 'var(--rule)', strokeWidth: 1 }} />
                 <Area
-                  type="monotone"
+                  type="linear"
                   dataKey="Revenue"
                   stroke="#3d8a5c"
-                  strokeWidth={2}
+                  strokeWidth={1.8}
                   fill="url(#revArea)"
                   dot={false}
                   activeDot={{ r: 5, fill: '#3d8a5c', strokeWidth: 2, stroke: 'var(--card)' }}
