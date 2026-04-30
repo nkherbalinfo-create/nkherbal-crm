@@ -138,6 +138,44 @@ function detectProduct(text) {
   return null;
 }
 
+// ── Intent detector — updates lead status automatically ─
+function detectLeadIntent(text) {
+  const t = text.toLowerCase().trim();
+
+  const NOT_INTERESTED = [
+    // English
+    'not interested', 'no thanks', 'no thank you', 'dont want', "don't want",
+    'not needed', 'no need', 'not required', 'not buying', 'wont buy', "won't buy",
+    'stop messaging', 'stop', 'remove me', 'unsubscribe', 'i am not interested',
+    'i\'m not interested', 'im not interested',
+    // Hinglish
+    'nahi chahiye', 'nahin chahiye', 'nahi lena', 'lena nahi', 'nahi kharidna',
+    'kharidna nahi', 'interest nahi', 'nahi interested', 'interested nahi',
+    'mat bhejo', 'band karo', 'nahi chahie', 'nahi lene', 'mujhe nahi chahiye',
+    'abhi nahi chahiye', 'filhaal nahi', 'nahi karna', 'zaroorat nahi',
+    // Devanagari Hindi
+    'नहीं चाहिए', 'नहीं लेना', 'इंटरेस्ट नहीं', 'जरूरत नहीं',
+  ];
+
+  const CONVERTED = [
+    'order kar diya', 'order kiya', 'buy kar liya', 'khareed liya', 'le liya',
+    'order de diya', 'payment kar diya', 'payment kiya', 'order placed',
+    'already ordered', 'already bought', 'khareed liya', 'mil gaya',
+  ];
+
+  const FOLLOW_UP = [
+    'baad mein batata', 'baad mein bataata', 'soch ke batata', 'sochke batata',
+    'later batata', 'will let you know', 'let me think', 'will think',
+    'sochna hai', 'thoda sochta', 'soch ke', 'think karke batata',
+    'baad mein', 'kal batata', 'kal bata', 'think karta', 'discuss karke',
+  ];
+
+  if (NOT_INTERESTED.some(p => t.includes(p))) return 'Not Interested';
+  if (CONVERTED.some(p => t.includes(p)))      return 'Converted';
+  if (FOLLOW_UP.some(p => t.includes(p)))      return 'Follow Up';
+  return null;
+}
+
 function isGreeting(text) {
   const t = text.toLowerCase().trim();
   const greetings = ['hi', 'hello', 'hey', 'hii', 'helo', 'namaste', 'namaskar', 'hy', 'hlo',
@@ -302,6 +340,13 @@ router.post('/webhook', async (req, res) => {
               `Main hoon aapka NK Herbal Assistant — products ki jaankari, price, comparison, ya order karne mein — sab mein help karunga! 🌿\n\n` +
               `Batao, kaise help kar sakta hoon? 😊`;
             await sendWhatsAppMessage(phone, welcome);
+          }
+
+          // ── Auto-update lead status from customer intent ─
+          const detectedIntent = detectLeadIntent(text);
+          if (detectedIntent && conv.leadId) {
+            await Lead.findByIdAndUpdate(conv.leadId, { status: detectedIntent });
+            console.log(`[WhatsApp] 📊 Lead status → ${detectedIntent} (${mobile10})`);
           }
 
           // ── Add user message & get AI reply ────────────
