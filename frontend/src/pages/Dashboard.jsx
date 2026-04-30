@@ -352,38 +352,32 @@ export default function Dashboard() {
             <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
           ) : (
             <div key={chartKey} className="fade-in">
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
+            <ResponsiveContainer width="100%" height={210}>
+              <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stopColor="#3d8a5c" stopOpacity={0.45} />
-                    <stop offset="75%"  stopColor="#3d8a5c" stopOpacity={0.08} />
+                    <stop offset="0%"   stopColor="#3d8a5c" stopOpacity={0.4} />
                     <stop offset="100%" stopColor="#3d8a5c" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="2 4" stroke="var(--rule)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 6" stroke="var(--rule)" vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: 'var(--muted)', fontFamily: 'Inter, system-ui, sans-serif' }}
+                  tick={{ fontSize: 10.5, fill: 'var(--muted)', fontFamily: 'Inter, system-ui, sans-serif' }}
                   axisLine={false} tickLine={false}
+                  dy={8}
                   interval={trendRange <= 6 ? 0 : 'preserveStartEnd'}
                 />
-                <YAxis
-                  tickFormatter={v => v === 0 ? '₹0' : inr(v, true)}
-                  tick={{ fontSize: 9.5, fill: 'var(--faint)', fontFamily: 'Inter, system-ui, sans-serif' }}
-                  axisLine={false} tickLine={false}
-                  width={44}
-                  tickCount={4}
-                />
-                <Tooltip content={<ChartTip />} />
+                <YAxis hide domain={[0, 'auto']} />
+                <Tooltip content={<ChartTip />} cursor={{ stroke: 'var(--rule)', strokeWidth: 1 }} />
                 <Area
                   type="monotone"
                   dataKey="Revenue"
                   stroke="#3d8a5c"
                   strokeWidth={2}
                   fill="url(#revArea)"
-                  dot={{ r: 3, fill: '#3d8a5c', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#3d8a5c', strokeWidth: 2, stroke: '#fff' }}
+                  dot={false}
+                  activeDot={{ r: 5, fill: '#3d8a5c', strokeWidth: 2, stroke: 'var(--card)' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
