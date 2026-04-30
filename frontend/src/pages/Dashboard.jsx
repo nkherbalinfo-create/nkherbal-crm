@@ -352,12 +352,13 @@ export default function Dashboard() {
             <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
           ) : (
             <div key={chartKey} className="fade-in">
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 4 }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
                 <defs>
                   <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stopColor="var(--accent)" stopOpacity={0.55} />
-                    <stop offset="100%" stopColor="var(--accent-2)" stopOpacity={0.02} />
+                    <stop offset="0%"   stopColor="#3d8a5c" stopOpacity={0.45} />
+                    <stop offset="75%"  stopColor="#3d8a5c" stopOpacity={0.08} />
+                    <stop offset="100%" stopColor="#3d8a5c" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="2 4" stroke="var(--rule)" vertical={false} />
@@ -367,16 +368,22 @@ export default function Dashboard() {
                   axisLine={false} tickLine={false}
                   interval={trendRange <= 6 ? 0 : 'preserveStartEnd'}
                 />
-                <YAxis hide />
+                <YAxis
+                  tickFormatter={v => v === 0 ? '₹0' : inr(v, true)}
+                  tick={{ fontSize: 9.5, fill: 'var(--faint)', fontFamily: 'Inter, system-ui, sans-serif' }}
+                  axisLine={false} tickLine={false}
+                  width={44}
+                  tickCount={4}
+                />
                 <Tooltip content={<ChartTip />} />
                 <Area
                   type="monotone"
                   dataKey="Revenue"
-                  stroke="var(--accent)"
-                  strokeWidth={1.6}
+                  stroke="#3d8a5c"
+                  strokeWidth={2}
                   fill="url(#revArea)"
-                  dot={{ r: 2.5, fill: 'var(--accent)', strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: 'var(--accent)', strokeWidth: 0 }}
+                  dot={{ r: 3, fill: '#3d8a5c', strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: '#3d8a5c', strokeWidth: 2, stroke: '#fff' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
