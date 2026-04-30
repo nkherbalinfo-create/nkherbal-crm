@@ -179,7 +179,7 @@ export default function Dashboard() {
       const d = new Date(today.getFullYear(), today.getMonth() - (trendRange - 1 - i), 1);
       const yr = d.getFullYear(), mo = d.getMonth() + 1;
       const found = trend.find(t => t._id.year === yr && t._id.month === mo);
-      const label = yr === cur ? MONTHS[mo - 1] : `${MONTHS[mo - 1]} '${String(yr).slice(-2)}`;
+      const label = yr === cur ? MONTHS[mo - 1] : `${MONTHS[mo - 1]} ${String(yr).slice(-2)}`;
       return { label, Revenue: found ? found.revenue : 0 };
     });
   })();
@@ -353,7 +353,7 @@ export default function Dashboard() {
           ) : (
             <div key={chartKey} className="fade-in">
             <ResponsiveContainer width="100%" height={210}>
-              <AreaChart data={chartData} margin={{ top: 16, right: 4, left: 4, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%"   stopColor="#3d8a5c" stopOpacity={0.45} />
