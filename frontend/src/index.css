@@ -586,16 +586,19 @@
 /* ── Bulk action bar ──────────────────────────────────── */
 .bulk-bar {
   position: fixed;
-  bottom: 28px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 500;
+  /* Dark frosted glass — works in both light and dark mode */
+  background: rgba(20, 18, 15, 0.92) !important;
+  color: #f0ece4 !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.09);
 }
 @media (min-width: 1024px) {
-  /* Shift right by half of sidebar (232px / 2 = 116px) to centre in content area */
-  .bulk-bar {
-    left: calc(50% + 116px);
-  }
+  .bulk-bar { left: calc(50% + 116px); }
 }
 
 /* ── Live pulse dot ───────────────────────────────────── */

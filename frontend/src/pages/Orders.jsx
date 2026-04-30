@@ -266,7 +266,7 @@ export default function Orders() {
   const onQtyChange = (qty) => { const price=PRODUCT_PRICE_MAP[form.productName]||0; setForm(f=>({...f,quantity:Number(qty),orderValue:price*Number(qty)})); };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0 }}>
 
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
@@ -583,7 +583,7 @@ export default function Orders() {
       {selected.size > 0 && (
         <div className="bulk-bar fade-in" style={{
           zIndex:500, display:'flex', alignItems:'center', gap:8,
-          background:'var(--fg)', color:'var(--bg)',
+          
           borderRadius:14, padding:'10px 14px',
           boxShadow:'0 8px 32px rgba(37,35,32,.3)',
           fontSize:12, fontWeight:500, whiteSpace:'nowrap',
