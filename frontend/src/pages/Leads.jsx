@@ -38,7 +38,7 @@ function Av({ name }) {
   return <span className="avatar avatar-md">{i}</span>;
 }
 
-const COLS = ['LEAD ID','DATE','NAME','MOBILE','SOURCE','PRODUCT','STATUS','NOTES',''];
+const COLS = ['','LEAD ID','DATE','NAME','MOBILE','SOURCE','PRODUCT','STATUS','NOTES',''];
 
 const STATUS_META = {
   'Interested':     { dot:'var(--info)',   text:'var(--info)',   bg:'var(--info-bg)'   },
@@ -142,7 +142,35 @@ export default function Leads() {
   const [updatingId, setUpdatingId] = useState(null);
   const [exitId, setExitId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
   const { addToast } = useToast();
+
+  const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = () => setSelected(s => s.size === leads.length ? new Set() : new Set(leads.map(l => l._id)));
+
+  const bulkUpdateStatus = async (status) => {
+    setBulkWorking(true);
+    try {
+      await Promise.all([...selected].map(id => api.put(`/leads/${id}`, { status })));
+      setLeads(prev => prev.map(l => selected.has(l._id) ? { ...l, status } : l));
+      addToast(`${selected.size} leads updated to "${status}"`);
+      setSelected(new Set());
+    } catch { addToast('Bulk update failed', 'error'); }
+    finally { setBulkWorking(false); }
+  };
+
+  const bulkDelete = async () => {
+    setBulkWorking(true);
+    try {
+      await Promise.all([...selected].map(id => api.delete(`/leads/${id}`)));
+      setLeads(prev => prev.filter(l => !selected.has(l._id)));
+      setMeta(m => ({ ...m, total: Math.max(0, m.total - selected.size) }));
+      addToast(`${selected.size} leads deleted`);
+      setSelected(new Set());
+    } catch { addToast('Bulk delete failed', 'error'); }
+    finally { setBulkWorking(false); }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -272,7 +300,10 @@ export default function Leads() {
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
-                {COLS.map(h=>(
+                <th style={{ padding:'11px 14px', width:36, background:'var(--card)' }}>
+                  <input type="checkbox" checked={leads.length > 0 && selected.size === leads.length} onChange={toggleAll} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
+                </th>
+                {COLS.slice(1).map(h=>(
                   <th key={h} style={{ textAlign:'left', padding:'11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)' }}>{h}</th>
                 ))}
               </tr>
@@ -280,9 +311,12 @@ export default function Leads() {
             <tbody>
               {leads.map(l=>(
                 <tr key={l._id} data-row-id={l._id} className={`tr-hover${exitId===l._id?' row-deleting':''}`}
-                  style={{ borderBottom:'1px solid var(--rule)' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  style={{ borderBottom:'1px solid var(--rule)', background: selected.has(l._id) ? 'var(--accent-bg)' : '' }}
+                  onMouseEnter={e=>{ if (!selected.has(l._id)) e.currentTarget.style.background='var(--hover)'; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background = selected.has(l._id) ? 'var(--accent-bg)' : 'transparent'; }}>
+                  <td style={{ padding:'11px 14px', width:36 }} onClick={e=>e.stopPropagation()}>
+                    <input type="checkbox" checked={selected.has(l._id)} onChange={()=>toggleSelect(l._id)} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
+                  </td>
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:11, color:'var(--faint)', fontVariantNumeric:'tabular-nums' }}>{l.leadId}</td>
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:13, color:'var(--muted)', whiteSpace:'nowrap', fontVariantNumeric:'tabular-nums' }}>{format(new Date(l.date),'dd MMM yy')}</td>
                   <td style={{ padding:'11px 16px' }}>
@@ -354,6 +388,41 @@ export default function Leads() {
         message="This will permanently remove the lead. This action cannot be undone."
         loading={deleting}
       />
+
+      {/* Floating bulk action bar */}
+      {selected.size > 0 && (
+        <div className="fade-in" style={{
+          position:'fixed', bottom:28, left:'50%', transform:'translateX(-50%)',
+          zIndex:500, display:'flex', alignItems:'center', gap:8,
+          background:'var(--fg)', color:'var(--bg)',
+          borderRadius:14, padding:'10px 14px',
+          boxShadow:'0 8px 32px rgba(37,35,32,.3)',
+          fontSize:12, fontWeight:500, whiteSpace:'nowrap',
+        }}>
+          <span style={{ paddingRight:10, borderRight:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.7)' }}>
+            {selected.size} selected
+          </span>
+          {/* Status submenu */}
+          {STATUSES.map(s => {
+            const m = STATUS_META[s];
+            return (
+              <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
+                style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:m.bg, color:m.text, transition:'opacity 0.15s', opacity:bulkWorking?0.6:1 }}>
+                {s}
+              </button>
+            );
+          })}
+          <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 2px' }} />
+          <button onClick={bulkDelete} disabled={bulkWorking}
+            style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(176,70,56,.25)', color:'#ff9086', opacity:bulkWorking?0.6:1 }}>
+            Delete {selected.size}
+          </button>
+          <button onClick={() => setSelected(new Set())}
+            style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14, lineHeight:1 }}>
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

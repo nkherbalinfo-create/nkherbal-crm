@@ -22,7 +22,7 @@ function Av({ name, size = 'md' }) {
 }
 
 const inr = (n) => '₹' + Number(n||0).toLocaleString('en-IN');
-const COLS = ['NAME','MOBILE','CITY','TYPE','ORDERS','REVENUE','LAST ORDER',''];
+const COLS = ['','NAME','MOBILE','CITY','TYPE','ORDERS','REVENUE','LAST ORDER',''];
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -33,9 +33,26 @@ export default function Customers() {
   const [profileModal, setProfileModal] = useState(false);
   const [profile, setProfile] = useState(null);
   const [recalculating, setRecalculating] = useState(false);
-  const [confirmTarget, setConfirmTarget] = useState(null); // { mobile, name }
+  const [confirmTarget, setConfirmTarget] = useState(null);
   const [exitMobile, setExitMobile] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
+
+  const toggleSelect = (mobile) => setSelected(s => { const n = new Set(s); n.has(mobile) ? n.delete(mobile) : n.add(mobile); return n; });
+  const toggleAll = () => setSelected(s => s.size === customers.length ? new Set() : new Set(customers.map(c => c.mobile)));
+
+  const bulkDelete = async () => {
+    setBulkWorking(true);
+    try {
+      await Promise.all([...selected].map(mobile => api.delete(`/customers/${mobile}`)));
+      setCustomers(prev => prev.filter(c => !selected.has(c.mobile)));
+      setMeta(m => ({ ...m, total: Math.max(0, m.total - selected.size) }));
+      addToast(`${selected.size} customers deleted`);
+      setSelected(new Set());
+    } catch { addToast('Bulk delete failed', 'error'); }
+    finally { setBulkWorking(false); }
+  };
   const { addToast } = useToast();
 
   const load = useCallback(async () => {
@@ -120,7 +137,10 @@ export default function Customers() {
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
-                {COLS.map(h=>(
+                <th style={{ padding:'11px 14px', width:36, background:'var(--card)' }}>
+                  <input type="checkbox" checked={customers.length > 0 && selected.size === customers.length} onChange={toggleAll} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
+                </th>
+                {COLS.slice(1).map(h=>(
                   <th key={h} style={{ textAlign:h==='ORDERS'||h==='REVENUE'?'right':'left', padding:'11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)' }}>{h}</th>
                 ))}
               </tr>
@@ -128,9 +148,12 @@ export default function Customers() {
             <tbody>
               {customers.map(c=>(
                 <tr key={c._id} data-row-id={c.mobile} className={`tr-hover${exitMobile===c.mobile?' row-deleting':''}`}
-                  style={{ borderBottom:'1px solid var(--rule)' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  style={{ borderBottom:'1px solid var(--rule)', background: selected.has(c.mobile) ? 'var(--accent-bg)' : '' }}
+                  onMouseEnter={e=>{ if (!selected.has(c.mobile)) e.currentTarget.style.background='var(--hover)'; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background = selected.has(c.mobile) ? 'var(--accent-bg)' : 'transparent'; }}>
+                  <td style={{ padding:'11px 14px', width:36 }} onClick={e=>e.stopPropagation()}>
+                    <input type="checkbox" checked={selected.has(c.mobile)} onChange={()=>toggleSelect(c.mobile)} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
+                  </td>
                   <td style={{ padding:'11px 16px' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                       <Av name={c.name} />
@@ -243,6 +266,29 @@ export default function Customers() {
         loading={deleting}
       />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {selected.size > 0 && (
+        <div className="fade-in" style={{
+          position:'fixed', bottom:28, left:'50%', transform:'translateX(-50%)',
+          zIndex:500, display:'flex', alignItems:'center', gap:10,
+          background:'var(--fg)', color:'var(--bg)',
+          borderRadius:14, padding:'10px 16px',
+          boxShadow:'0 8px 32px rgba(37,35,32,.3)',
+          fontSize:12, fontWeight:500, whiteSpace:'nowrap',
+        }}>
+          <span style={{ paddingRight:10, borderRight:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.7)' }}>
+            {selected.size} customer{selected.size > 1 ? 's' : ''} selected
+          </span>
+          <button onClick={bulkDelete} disabled={bulkWorking}
+            style={{ padding:'5px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(176,70,56,.25)', color:'#ff9086' }}>
+            Delete {selected.size}
+          </button>
+          <button onClick={() => setSelected(new Set())}
+            style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14 }}>
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -29,7 +29,7 @@ const PAY_CHIP    = { Paid:'chip-ok', COD:'chip-warn', Pending:'chip-danger' };
 const CHAN_CHIP   = { Website:'chip-info', WhatsApp:'chip-ok' };
 const TYPE_CHIP   = { New:'chip-info', Repeat:'chip-ok' };
 
-const COLS = ['ORDER ID','DATE','CUSTOMER','MOBILE','PRODUCT','QTY','VALUE','CHANNEL','PAYMENT','STATUS','TYPE',''];
+const COLS = ['','ORDER ID','DATE','CUSTOMER','MOBILE','PRODUCT','QTY','VALUE','CHANNEL','PAYMENT','STATUS','TYPE',''];
 const ITEM_GRID = 'minmax(170px,1fr) 62px 48px 76px 56px 68px 82px 20px';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -110,7 +110,35 @@ export default function Orders() {
   const [leadResults, setLeadResults] = useState([]);
   const [leadSearchOpen, setLeadSearchOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
   const { addToast } = useToast();
+
+  const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = () => setSelected(s => s.size === orders.length ? new Set() : new Set(orders.map(o => o._id)));
+
+  const bulkUpdateStatus = async (status) => {
+    setBulkWorking(true);
+    try {
+      await Promise.all([...selected].map(id => api.put(`/orders/${id}`, { orderStatus: status })));
+      setOrders(prev => prev.map(o => selected.has(o._id) ? { ...o, orderStatus: status } : o));
+      addToast(`${selected.size} orders updated to "${status}"`);
+      setSelected(new Set());
+    } catch { addToast('Bulk update failed', 'error'); }
+    finally { setBulkWorking(false); }
+  };
+
+  const bulkDelete = async () => {
+    setBulkWorking(true);
+    try {
+      await Promise.all([...selected].map(id => api.delete(`/orders/${id}`)));
+      setOrders(prev => prev.filter(o => !selected.has(o._id)));
+      setMeta(m => ({ ...m, total: Math.max(0, m.total - selected.size) }));
+      addToast(`${selected.size} orders deleted`);
+      setSelected(new Set());
+    } catch { addToast('Bulk delete failed', 'error'); }
+    finally { setBulkWorking(false); }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -282,7 +310,10 @@ export default function Orders() {
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
-                {COLS.map(h=>(
+                <th style={{ padding:'11px 14px', width:36, background:'var(--card)' }}>
+                  <input type="checkbox" checked={orders.length > 0 && selected.size === orders.length} onChange={toggleAll} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
+                </th>
+                {COLS.slice(1).map(h=>(
                   <th key={h} style={{ textAlign:'left', padding:'11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)' }}>{h}</th>
                 ))}
               </tr>
@@ -290,9 +321,12 @@ export default function Orders() {
             <tbody>
               {orders.map(o=>(
                 <tr key={o._id} data-row-id={o._id} className={`tr-hover${exitId===o._id?' row-deleting':''}`}
-                  style={{ borderBottom:'1px solid var(--rule)' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  style={{ borderBottom:'1px solid var(--rule)', background: selected.has(o._id) ? 'var(--accent-bg)' : '' }}
+                  onMouseEnter={e=>{ if (!selected.has(o._id)) e.currentTarget.style.background='var(--hover)'; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background = selected.has(o._id) ? 'var(--accent-bg)' : 'transparent'; }}>
+                  <td style={{ padding:'11px 14px', width:36 }} onClick={e=>e.stopPropagation()}>
+                    <input type="checkbox" checked={selected.has(o._id)} onChange={()=>toggleSelect(o._id)} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
+                  </td>
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:12, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{o.orderId}</td>
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:12.5, color:'var(--muted)', whiteSpace:'nowrap', fontVariantNumeric:'tabular-nums' }}>{format(new Date(o.orderDate),'dd MMM yy')}</td>
                   <td style={{ padding:'10px 16px' }}>
@@ -545,6 +579,38 @@ export default function Orders() {
         loading={deleting}
       />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {selected.size > 0 && (
+        <div className="fade-in" style={{
+          position:'fixed', bottom:28, left:'50%', transform:'translateX(-50%)',
+          zIndex:500, display:'flex', alignItems:'center', gap:8,
+          background:'var(--fg)', color:'var(--bg)',
+          borderRadius:14, padding:'10px 14px',
+          boxShadow:'0 8px 32px rgba(37,35,32,.3)',
+          fontSize:12, fontWeight:500, whiteSpace:'nowrap',
+        }}>
+          <span style={{ paddingRight:10, borderRight:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.7)' }}>
+            {selected.size} selected
+          </span>
+          {STATUS.map(s => (
+            <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
+              style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11, fontWeight:500, background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', transition:'background 0.12s' }}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,.2)'}
+              onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,.1)'}>
+              → {s}
+            </button>
+          ))}
+          <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 2px' }} />
+          <button onClick={bulkDelete} disabled={bulkWorking}
+            style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(176,70,56,.25)', color:'#ff9086' }}>
+            Delete {selected.size}
+          </button>
+          <button onClick={() => setSelected(new Set())}
+            style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14 }}>
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }
