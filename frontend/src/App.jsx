@@ -151,7 +151,7 @@ function Layout() {
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
       <style>{`
         @media (min-width: 1024px) {
-          .lg-main { margin-left: 232px; }
+          .lg-main { margin-left: 232px; min-width: 0; overflow-x: hidden; }
           .mobile-header { display: none !important; }
         }
       `}</style>
