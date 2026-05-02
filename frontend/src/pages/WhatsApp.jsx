@@ -43,6 +43,25 @@ function loadTemplates() {
 }
 function saveTemplates(t) { localStorage.setItem('wa_templates', JSON.stringify(t)); }
 
+// Score each template against the latest customer message
+function rankTemplates(lastMsg, templates) {
+  if (!lastMsg) return templates;
+  const t = lastMsg.toLowerCase();
+  const score = {
+    t1: 0, // Pricing
+    t2: 0, // Delivery
+    t3: 0, // COD
+    t4: 0, // Follow up
+    t5: 0, // Order done
+  };
+  if (/price|rate|kitna|cost|paisa|rupee|rs\b|₹|discount|offer|deal|how much|quanto|daam|mehnga|sasta/.test(t)) score.t1 += 3;
+  if (/deliver|ship|time|kitne din|when|kab|tracking|fast|quick|speed|aayega|आएगा|कब|courier/.test(t)) score.t2 += 3;
+  if (/\bcod\b|cash on delivery|payment|pay|upi|gpay|phonepe|paytm|card|online|neft/.test(t)) score.t3 += 3;
+  if (/hi\b|hello|hey|namaste|namaskar|info|details|batao|tell me|interested|want|kya hai|product/.test(t)) score.t4 += 2;
+  if (/order\b|bought|khareed|payment done|paid|done|order kiya|placed|confirm/.test(t)) score.t5 += 3;
+  return [...templates].sort((a, b) => (score[b.id] || 0) - (score[a.id] || 0));
+}
+
 export default function WhatsApp() {
   const [convs, setConvs] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -282,27 +301,40 @@ export default function WhatsApp() {
 
             {/* Input */}
             <div style={{ borderTop:'1px solid var(--rule)', flexShrink:0, background:'var(--card)' }}>
-              {/* Quick reply templates popover */}
-              {showTemplates && botPaused && (
-                <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--rule)', display:'flex', flexDirection:'column', gap:6, maxHeight:220, overflowY:'auto' }}>
-                  <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:2 }}>Quick replies</div>
-                  {templates.map(t => (
-                    <button key={t.id} onClick={() => { setManualMsg(t.text); setShowTemplates(false); }}
-                      style={{ textAlign:'left', padding:'8px 12px', borderRadius:8, border:'1px solid var(--rule)', background:'var(--bg)', cursor:'pointer', transition:'background 0.12s' }}
-                      onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
-                      onMouseLeave={e=>e.currentTarget.style.background='var(--bg)'}>
-                      <div style={{ fontSize:11.5, fontWeight:600, color:'var(--accent)', marginBottom:2 }}>{t.label}</div>
-                      <div style={{ fontSize:11.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.text.slice(0, 80)}…</div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Smart quick reply templates */}
+              {showTemplates && botPaused && (() => {
+                const lastCustomerMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
+                const ranked = rankTemplates(lastCustomerMsg, templates);
+                const topMatch = ranked[0] && rankTemplates(lastCustomerMsg, [ranked[0]])[0];
+                return (
+                  <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--rule)', display:'flex', flexDirection:'column', gap:6, maxHeight:240, overflowY:'auto' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:2 }}>
+                      <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.04em' }}>
+                        ⚡ Quick replies
+                        {lastCustomerMsg && <span style={{ fontWeight:400, textTransform:'none', marginLeft:6, color:'var(--faint)' }}>· sorted by relevance</span>}
+                      </div>
+                    </div>
+                    {ranked.map((tmpl, i) => (
+                      <button key={tmpl.id} onClick={() => { setManualMsg(tmpl.text); setShowTemplates(false); }}
+                        style={{ textAlign:'left', padding:'9px 12px', borderRadius:9, border:`1px solid ${i===0&&lastCustomerMsg?'var(--accent)':'var(--rule)'}`, background: i===0&&lastCustomerMsg?'var(--accent-bg)':'var(--bg)', cursor:'pointer', transition:'background 0.12s' }}
+                        onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+                        onMouseLeave={e=>e.currentTarget.style.background=i===0&&lastCustomerMsg?'var(--accent-bg)':'var(--bg)'}>
+                        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                          <span style={{ fontSize:11, fontWeight:600, color: i===0&&lastCustomerMsg?'var(--accent)':'var(--muted)' }}>{tmpl.label}</span>
+                          {i===0&&lastCustomerMsg&&<span style={{ fontSize:9.5, padding:'1px 6px', borderRadius:999, background:'var(--accent)', color:'#fff', fontWeight:600 }}>Best match</span>}
+                        </div>
+                        <div style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{tmpl.text.slice(0, 90)}…</div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
               <div style={{ padding:'10px 14px', display:'flex', gap:8 }}>
               {botPaused ? (
                 <>
                   <button onClick={() => setShowTemplates(s => !s)} title="Quick replies"
                     style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background: showTemplates?'var(--accent-bg)':'var(--card)', color: showTemplates?'var(--accent)':'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h8M8 14h5"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                   </button>
                   <input className="input" style={{ flex:1, fontSize:13 }} placeholder="Type a reply…" value={manualMsg} onChange={e=>setManualMsg(e.target.value)}
                     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendManual();}}} />
