@@ -3,7 +3,6 @@ import api from '../utils/api';
 import { useToast } from '../components/Toast';
 import Modal from '../components/Modal';
 import { format } from 'date-fns';
-import { useIsMobile } from '../hooks/useIsMobile';
 
 function Av({ name, size = 32 }) {
   const i = (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
@@ -77,7 +76,6 @@ export default function WhatsApp() {
   const [templates, setTemplates] = useState(loadTemplates);
   const [showTemplates, setShowTemplates] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const isMobile = useIsMobile();
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const msgEndRef = useRef(null);
   const selectedPhoneRef = useRef(null);
@@ -196,10 +194,10 @@ export default function WhatsApp() {
         <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Customer conversations via WhatsApp Business API</div>
       </div>
 
-      <div className="card" style={{ padding:0, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '300px minmax(0,1fr) 280px', height: isMobile ? 'calc(100vh - 120px)' : 'calc(100vh - 200px)', minHeight: isMobile ? 'unset' : 560, overflow:'hidden' }}>
+      <div className={`card wa-grid${mobileChatOpen ? ' chat-open' : ''}`} style={{ padding:0, display:'grid', gridTemplateColumns:'300px minmax(0,1fr) 280px', height:'calc(100vh - 200px)', minHeight:560, overflow:'hidden' }}>
 
         {/* Left — conversation list */}
-        <div style={{ borderRight: isMobile ? 'none' : '1px solid var(--rule)', display: isMobile && mobileChatOpen ? 'none' : 'flex', flexDirection:'column', minHeight:0, overflowY:'auto' }}>
+        <div className="wa-list" style={{ borderRight:'1px solid var(--rule)', display:'flex', flexDirection:'column', minHeight:0, overflowY:'auto' }}>
           <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--rule)', fontSize:12, fontWeight:600, color:'var(--fg)' }}>
             Conversations <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums', color:'var(--faint)', fontWeight:400 }}>({convs.length})</span>
           </div>
@@ -259,7 +257,7 @@ export default function WhatsApp() {
         </div>
 
         {/* Middle — message thread */}
-        <div style={{ display: isMobile && !mobileChatOpen ? 'none' : 'flex', flexDirection:'column', minHeight:0, minWidth:0 }}>
+        <div className="wa-chat" style={{ display:'flex', flexDirection:'column', minHeight:0, minWidth:0 }}>
         {!selected ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'var(--faint)', flex:1 }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" style={{ marginBottom:10 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -364,8 +362,8 @@ export default function WhatsApp() {
 
         </div>{/* end wa-chat */}
 
-        {/* Right — customer details (hidden on mobile) */}
-        <div style={{ borderLeft:'1px solid var(--rule)', overflowY:'auto', background:'var(--card)', display: isMobile ? 'none' : 'block' }}>
+        {/* Right — customer details */}
+        <div style={{ borderLeft:'1px solid var(--rule)', overflowY:'auto', background:'var(--card)' }}>
           {!selected ? (
             <div style={{ padding:20, color:'var(--faint)', fontSize:12, textAlign:'center', marginTop:40 }}>Select a conversation to see customer details</div>
           ) : (
