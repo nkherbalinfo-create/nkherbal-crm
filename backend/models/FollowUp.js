@@ -12,6 +12,7 @@ const followUpSchema = new mongoose.Schema({
   dueDate:       { type: Date, required: true },
   status:        { type: String, enum: ['pending', 'sent', 'skipped'], default: 'pending' },
   sentAt:        { type: Date },
+  autoSent:      { type: Boolean, default: false },
   notes:         { type: String }
 }, { timestamps: true });
 

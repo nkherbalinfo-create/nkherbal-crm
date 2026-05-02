@@ -152,7 +152,8 @@ export default function FollowUps() {
                       <span style={{ fontSize:13, fontWeight:500, color:'var(--fg)' }}>{fu.customerName}</span>
                       <span className={`chip ${M_CLS[fu.monthNumber-1]||'chip-muted'}`} style={{ fontSize:10 }}>Month {fu.monthNumber} complete</span>
                       {fu.status==='pending'&&overdue>0&&<span className="chip chip-danger" style={{ fontSize:10 }}>{overdue}d overdue</span>}
-                      {fu.status==='sent'&&<span className="chip chip-ok" style={{ fontSize:10 }}>Sent</span>}
+                      {fu.status==='sent'&&!fu.autoSent&&<span className="chip chip-ok" style={{ fontSize:10 }}>Sent</span>}
+                      {fu.status==='sent'&&fu.autoSent&&<span className="chip chip-info" style={{ fontSize:10 }}>⚡ Auto-sent</span>}
                       {fu.status==='skipped'&&<span className="chip chip-muted" style={{ fontSize:10 }}>Skipped</span>}
                     </div>
                     <div style={{ fontSize:12.5, color:'var(--muted)', marginBottom:4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fu.productName}</div>
