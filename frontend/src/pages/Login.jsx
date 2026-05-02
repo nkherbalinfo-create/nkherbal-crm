@@ -56,7 +56,7 @@ export default function Login() {
     if (attempt === 1) setError('');
     let retrying = false;
     try {
-      await api.post('/auth/forgot-password', { email: forgotEmail });
+      await api.post('/auth/forgot-password', { email: forgotEmail }, { timeout: 60000 });
       setSuccess(`Code sent to ${forgotEmail}`);
       setMode('verify');
     } catch (err) {

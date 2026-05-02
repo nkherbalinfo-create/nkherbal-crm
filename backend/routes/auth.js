@@ -11,7 +11,16 @@ function makeCode() {
 
 async function sendResetEmail(to, code) {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) throw new Error('Email not configured');
-  const t = nodemailer.createTransport({ service:'gmail', auth:{ user:process.env.EMAIL_USER, pass:process.env.EMAIL_PASS } });
+  console.log(`[Auth] Sending reset code to ${to}...`);
+  const t = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+  });
   await t.sendMail({
     from: `"NK Herbal CRM" <${process.env.EMAIL_USER}>`,
     to,
@@ -25,6 +34,7 @@ async function sendResetEmail(to, code) {
       <p style="color:#999;font-size:12px;margin:16px 0 0;text-align:center;">If you didn't request this, ignore this email.</p>
     </div>`
   });
+  console.log(`[Auth] ✅ Reset code sent to ${to}`);
 }
 
 const signToken = (id) =>
