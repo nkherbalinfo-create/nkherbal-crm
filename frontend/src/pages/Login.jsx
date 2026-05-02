@@ -58,7 +58,11 @@ export default function Login() {
       setSuccess(`Code sent to ${forgotEmail}`);
       setMode('verify');
     } catch (err) {
-      triggerShake(err.response?.data?.message || 'Email not found');
+      if (!err.response) {
+        triggerShake('Server is starting up — please try again in 30 seconds');
+      } else {
+        triggerShake(err.response.data?.message || 'Something went wrong');
+      }
     } finally { setLoading(false); }
   };
 
