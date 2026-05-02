@@ -171,14 +171,14 @@ function ProtectedRoute() {
 }
 
 export default function App() {
-  const [splashDone, setSplashDone] = useState(() => sessionStorage.getItem('splashShown') === '1');
+  const [splashDone, setSplashDone] = useState(false);
 
   return (
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
-            {!splashDone && <SplashScreen onDone={() => { sessionStorage.setItem('splashShown','1'); setSplashDone(true); }} />}
+            {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<ProtectedRoute />}>

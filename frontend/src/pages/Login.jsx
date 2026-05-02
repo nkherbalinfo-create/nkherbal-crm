@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -28,17 +28,14 @@ export default function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
-  // Remove shake class after animation ends
-  useEffect(() => {
-    if (!shaking) return;
-    const t = setTimeout(() => setShaking(false), 520);
-    return () => clearTimeout(t);
-  }, [shaking]);
-
+  // Double-RAF: ensures React renders the class REMOVED first, then adds it back
+  // so the browser always sees it as a fresh animation — works 100% reliably
   const triggerShake = useCallback((msg) => {
     setError(msg);
-    setShaking(false); // reset first so re-triggering always replays
-    requestAnimationFrame(() => setShaking(true));
+    setShaking(false);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => setShaking(true))
+    );
   }, []);
 
   const handleAuth = async (e) => {
@@ -93,7 +90,8 @@ export default function Login() {
         </div>
 
         {/* Card */}
-        <div className={`card${shaking ? ' shake-card' : ''}`} style={{ padding:'28px 28px 24px' }}>
+        <div className={`card${shaking ? ' shake-card' : ''}`} style={{ padding:'28px 28px 24px' }}
+          onAnimationEnd={() => setShaking(false)}>
 
           {/* Title */}
           <div style={{ fontSize:16, fontWeight:600, color:'var(--fg)', marginBottom: error ? 12 : 20 }}>
