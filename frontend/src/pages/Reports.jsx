@@ -158,7 +158,7 @@ export default function Reports() {
       </div>
 
       {/* Export cards */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14 }}>
+      <div className="export-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14 }}>
         <div className="card" style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:'22px 18px' }}>
           <div style={{ fontSize:28, marginBottom:10 }}>📊</div>
           <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)', marginBottom:5 }}>Orders Excel</div>
@@ -195,7 +195,7 @@ export default function Reports() {
           <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', marginBottom:14 }}>
             Stats preview {dateLabel && <span style={{ fontSize:12, fontWeight:400, color:'var(--muted)', marginLeft:6 }}>· {dateLabel}</span>}
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
+          <div className="stat-grid-4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:20 }}>
             {[
               { label:'Total Orders',    val:stats.overview?.totalOrders||0,
                 sub: stats.overview?.ordersChange !== null ? `${stats.overview?.ordersChange>0?'+':''}${stats.overview?.ordersChange}% vs prev` : null,

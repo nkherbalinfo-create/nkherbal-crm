@@ -16,7 +16,7 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
     <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
       onClick={onClose}>
       <div style={{ position:'absolute', inset:0, background:'rgba(37,35,32,.45)', backdropFilter:'blur(4px)' }} />
-      <div className="modal-enter" style={{ position:'relative', width:'100%', maxWidth:maxW, maxHeight:'90vh', display:'flex', flexDirection:'column', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:14, boxShadow:'0 8px 40px rgba(37,35,32,.14)', overflow:'hidden' }}
+      <div className="modal-enter modal-content" style={{ position:'relative', width:'100%', maxWidth:maxW, maxHeight:'90vh', display:'flex', flexDirection:'column', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:14, boxShadow:'0 8px 40px rgba(37,35,32,.14)', overflow:'hidden' }}
         onClick={e=>e.stopPropagation()}>
         {/* Header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
