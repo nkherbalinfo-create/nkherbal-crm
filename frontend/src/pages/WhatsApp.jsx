@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../utils/api';
 import { useToast } from '../components/Toast';
 import Modal from '../components/Modal';
@@ -29,6 +29,20 @@ function DetailRow({ label, val }) {
   );
 }
 
+const DEFAULT_TEMPLATES = [
+  { id:'t1', label:'Pricing',   text:'*Muejaza For Men* — ₹4,000 (after ₹499 discount)\n*Testo Vardhak* — ₹3,700\n*Shahi Kalp* — ₹4,000\n*Shilajit 25g* — ₹1,000 | 50g — ₹2,000\n\nFree delivery 🚚 | Discreet packaging 📦\nOrder karne ke liye reply karen ya website visit karen: https://nkherbal.com/shop' },
+  { id:'t2', label:'Delivery',  text:'Delivery 3–5 working days mein ho jati hai 🚚\nHum discreet packing mein bhejte hain — box par koi product name nahi hota.\nTracking link ship hone ke baad share kiya jayega 📦' },
+  { id:'t3', label:'COD',       text:'Abhi hamare paas COD available nahi hai — sirf online/UPI payment hoti hai.\nBut aap *SAVE499* coupon use karke ₹499 discount pa sakte hain website par: https://nkherbal.com/shop\nOr seedha UPI payment karke hamare number pe order de sakte hain: +91 98678 00415' },
+  { id:'t4', label:'Follow up', text:'Namaste Ji! 🙏\nAapne hamare products ke baare mein enquiry ki thi — koi sawaal ho toh batayein, main help karne ke liye hoon! 😊\nKaunse product mein interest tha aapka?' },
+  { id:'t5', label:'Order done',text:'Bahut shukriya aapke order ke liye! 🙏🌿\nAapka order process ho gaya hai. Hum 24 ghante mein ship kar denge.\nTracking details aapko WhatsApp/SMS par milegi. Koi bhi sawaal ho toh batayein! 😊' },
+];
+
+function loadTemplates() {
+  try { return JSON.parse(localStorage.getItem('wa_templates') || 'null') || DEFAULT_TEMPLATES; }
+  catch { return DEFAULT_TEMPLATES; }
+}
+function saveTemplates(t) { localStorage.setItem('wa_templates', JSON.stringify(t)); }
+
 export default function WhatsApp() {
   const [convs, setConvs] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -40,6 +54,8 @@ export default function WhatsApp() {
   const [loading, setLoading] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [templates, setTemplates] = useState(loadTemplates);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const msgEndRef = useRef(null);
   const selectedPhoneRef = useRef(null);
@@ -265,9 +281,29 @@ export default function WhatsApp() {
             </div>
 
             {/* Input */}
-            <div style={{ padding:'10px 14px', borderTop:'1px solid var(--rule)', display:'flex', gap:8, flexShrink:0, background:'var(--card)' }}>
+            <div style={{ borderTop:'1px solid var(--rule)', flexShrink:0, background:'var(--card)' }}>
+              {/* Quick reply templates popover */}
+              {showTemplates && botPaused && (
+                <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--rule)', display:'flex', flexDirection:'column', gap:6, maxHeight:220, overflowY:'auto' }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:2 }}>Quick replies</div>
+                  {templates.map(t => (
+                    <button key={t.id} onClick={() => { setManualMsg(t.text); setShowTemplates(false); }}
+                      style={{ textAlign:'left', padding:'8px 12px', borderRadius:8, border:'1px solid var(--rule)', background:'var(--bg)', cursor:'pointer', transition:'background 0.12s' }}
+                      onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='var(--bg)'}>
+                      <div style={{ fontSize:11.5, fontWeight:600, color:'var(--accent)', marginBottom:2 }}>{t.label}</div>
+                      <div style={{ fontSize:11.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.text.slice(0, 80)}…</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ padding:'10px 14px', display:'flex', gap:8 }}>
               {botPaused ? (
                 <>
+                  <button onClick={() => setShowTemplates(s => !s)} title="Quick replies"
+                    style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background: showTemplates?'var(--accent-bg)':'var(--card)', color: showTemplates?'var(--accent)':'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h8M8 14h5"/></svg>
+                  </button>
                   <input className="input" style={{ flex:1, fontSize:13 }} placeholder="Type a reply…" value={manualMsg} onChange={e=>setManualMsg(e.target.value)}
                     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendManual();}}} />
                   <button className="btn-primary" onClick={sendManual} disabled={sending||!manualMsg.trim()} style={{ fontSize:12 }}>
@@ -279,6 +315,7 @@ export default function WhatsApp() {
                   Bot is handling replies automatically… click "Take over" to reply manually.
                 </div>
               )}
+              </div>
             </div>
           </div>
         )}
