@@ -77,10 +77,16 @@ router.post('/forgot-password', async (req, res) => {
     if (!user) return res.status(404).json({ message: 'No account found with this email' });
     const code = makeCode();
     user.resetCode = code;
-    user.resetCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+    user.resetCodeExpiry = new Date(Date.now() + 15 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
-    await sendResetEmail(email, code);
+
+    // Respond immediately so the frontend never hangs
     res.json({ message: 'Reset code sent to your email' });
+
+    // Send email in background (non-blocking)
+    sendResetEmail(email, code).catch(err =>
+      console.error(`[Auth] ❌ Email send failed for ${email}:`, err.message)
+    );
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
