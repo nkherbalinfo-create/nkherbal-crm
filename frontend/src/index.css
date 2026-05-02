@@ -60,7 +60,7 @@
 
 /* ── Base ─────────────────────────────────────────────── */
 @layer base {
-  html { color-scheme: light; overflow-x: hidden; }
+  html { color-scheme: light; overflow-x: hidden; scrollbar-gutter: stable; }
   html.dark { color-scheme: dark; }
 
   body {
