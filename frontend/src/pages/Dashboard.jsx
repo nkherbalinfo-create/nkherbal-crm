@@ -392,14 +392,32 @@ export default function Dashboard() {
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>By revenue share</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingTop: 20 }}>
             {loading ? (
-              <div className="skeleton" style={{ width: 120, height: 120, borderRadius: '50%', flexShrink: 0 }} />
+              <div className="skeleton" style={{ width: 124, height: 124, borderRadius: '50%', flexShrink: 0 }} />
             ) : (
               <Donut size={124} thickness={20} track="var(--rule-strong)"
                 segments={donutSegs.length ? donutSegs : [{ value: 1, color: 'var(--rule-strong)' }]} />
             )}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {loading ? [0,1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 32, borderRadius: 6 }} />) :
-                channelData.map((ch, i) => {
+              {loading ? [0,1].map(i => <div key={i} className="skeleton" style={{ height: 32, borderRadius: 6 }} />) :
+               channelData.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
+                    No orders in this period.
+                  </div>
+                  {/* Show placeholder channel rows */}
+                  {['Website', 'WhatsApp'].map((name, i) => (
+                    <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4, opacity: 0.35 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: CHAN_COLORS[i], flexShrink: 0 }} />
+                        <span style={{ color: 'var(--fg)', fontSize: 12, fontWeight: 500, flex: 1 }}>{name}</span>
+                        <span className="num" style={{ color: 'var(--muted)', fontSize: 11.5 }}>₹0</span>
+                        <span className="num" style={{ color: 'var(--faint)', fontSize: 11.5, fontWeight: 600, minWidth: 32, textAlign: 'right' }}>—</span>
+                      </div>
+                      <div style={{ height: 3, background: 'var(--rule)', borderRadius: 2 }} />
+                    </div>
+                  ))}
+                </div>
+               ) : channelData.map((ch, i) => {
                   const pct = Math.round((ch.revenue / chanTotal) * 100);
                   const color = CHAN_COLOR_MAP[ch._id] ?? CHAN_COLORS[i % 4];
                   return (
