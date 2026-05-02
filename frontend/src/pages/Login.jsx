@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -23,16 +23,20 @@ export default function Login() {
   const [newPass, setNewPass] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [shake, setShake] = useState(false);
   const [success, setSuccess] = useState('');
+  const cardRef = useRef(null);
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
-  const triggerShake = (msg) => {
+  const triggerShake = useCallback((msg) => {
     setError(msg);
-    setShake(true);
-    setTimeout(() => setShake(false), 500);
-  };
+    const el = cardRef.current;
+    if (!el) return;
+    // Force restart: remove → reflow → re-add
+    el.style.animation = 'none';
+    void el.offsetHeight; // trigger reflow
+    el.style.animation = 'shake 0.55s ease-in-out';
+  }, []);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -71,9 +75,6 @@ export default function Login() {
     } finally { setLoading(false); }
   };
 
-  const cardStyle = {
-    animation: shake ? 'shake 0.5s ease-in-out' : 'none',
-  };
 
   return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)', padding:24 }}>
@@ -89,7 +90,7 @@ export default function Login() {
         </div>
 
         {/* Card */}
-        <div className="card" style={{ padding:'28px 28px 24px', ...cardStyle }}>
+        <div ref={cardRef} className="card" style={{ padding:'28px 28px 24px' }}>
 
           {/* Title */}
           <div style={{ fontSize:16, fontWeight:600, color:'var(--fg)', marginBottom: error ? 12 : 20 }}>
