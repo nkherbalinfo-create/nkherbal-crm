@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -24,18 +24,21 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const cardRef = useRef(null);
+  const [shaking, setShaking] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
+  // Remove shake class after animation ends
+  useEffect(() => {
+    if (!shaking) return;
+    const t = setTimeout(() => setShaking(false), 520);
+    return () => clearTimeout(t);
+  }, [shaking]);
+
   const triggerShake = useCallback((msg) => {
     setError(msg);
-    const el = cardRef.current;
-    if (!el) return;
-    // Force restart: remove → reflow → re-add
-    el.style.animation = 'none';
-    void el.offsetHeight; // trigger reflow
-    el.style.animation = 'shake 0.55s ease-in-out';
+    setShaking(false); // reset first so re-triggering always replays
+    requestAnimationFrame(() => setShaking(true));
   }, []);
 
   const handleAuth = async (e) => {
@@ -90,7 +93,7 @@ export default function Login() {
         </div>
 
         {/* Card */}
-        <div ref={cardRef} className="card" style={{ padding:'28px 28px 24px' }}>
+        <div className={`card${shaking ? ' shake-card' : ''}`} style={{ padding:'28px 28px 24px' }}>
 
           {/* Title */}
           <div style={{ fontSize:16, fontWeight:600, color:'var(--fg)', marginBottom: error ? 12 : 20 }}>
@@ -127,7 +130,9 @@ export default function Login() {
               )}
               <div>
                 <label className="label">Email</label>
-                <input type="email" className="input" placeholder="you@company.com" value={form.email} onChange={e=>{ setForm({...form,email:e.target.value}); setError(''); }} required />
+                <input type="email" className="input" placeholder="you@company.com" value={form.email}
+                  onChange={e=>setForm({...form,email:e.target.value})}
+                  onFocus={()=>setError('')} required />
               </div>
               <div>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
@@ -139,7 +144,9 @@ export default function Login() {
                     </button>
                   )}
                 </div>
-                <input type="password" className="input" placeholder="••••••••" value={form.password} onChange={e=>{ setForm({...form,password:e.target.value}); setError(''); }} required />
+                <input type="password" className="input" placeholder="••••••••" value={form.password}
+                  onChange={e=>setForm({...form,password:e.target.value})}
+                  onFocus={()=>setError('')} required />
               </div>
               <button type="submit" className="btn-primary" disabled={loading}
                 style={{ width:'100%', justifyContent:'center', padding:'9px 16px', marginTop:4, opacity:loading?0.7:1 }}>
@@ -157,7 +164,8 @@ export default function Login() {
               </div>
               <div>
                 <label className="label">Email</label>
-                <input type="email" className="input" placeholder="you@company.com" value={forgotEmail} onChange={e=>{ setForgotEmail(e.target.value); setError(''); }} required autoFocus />
+                <input type="email" className="input" placeholder="you@company.com" value={forgotEmail}
+                  onChange={e=>setForgotEmail(e.target.value)} onFocus={()=>setError('')} required autoFocus />
               </div>
               <button type="submit" className="btn-primary" disabled={loading}
                 style={{ width:'100%', justifyContent:'center', padding:'9px 16px', opacity:loading?0.7:1 }}>
@@ -180,12 +188,15 @@ export default function Login() {
               )}
               <div>
                 <label className="label">6-digit code</label>
-                <input className="input" placeholder="123456" value={code} onChange={e=>{ setCode(e.target.value.replace(/\D/g,'').slice(0,6)); setError(''); }}
+                <input className="input" placeholder="123456" value={code}
+                  onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))}
+                  onFocus={()=>setError('')}
                   style={{ letterSpacing:'0.2em', fontSize:18, fontWeight:600, textAlign:'center' }} maxLength={6} required autoFocus />
               </div>
               <div>
                 <label className="label">New password</label>
-                <input type="password" className="input" placeholder="Min. 6 characters" value={newPass} onChange={e=>{ setNewPass(e.target.value); setError(''); }} required minLength={6} />
+                <input type="password" className="input" placeholder="Min. 6 characters" value={newPass}
+                  onChange={e=>setNewPass(e.target.value)} onFocus={()=>setError('')} required minLength={6} />
               </div>
               <button type="submit" className="btn-primary" disabled={loading || code.length < 6}
                 style={{ width:'100%', justifyContent:'center', padding:'9px 16px', opacity:(loading||code.length<6)?0.7:1 }}>
