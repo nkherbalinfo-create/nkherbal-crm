@@ -922,85 +922,14 @@
   flex-wrap: wrap;
 }
 
-.hide-desktop { display: none; }
-
 @media (max-width: 1180px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Tablet (768px) ───────────────────────────────────── */
-@media (max-width: 768px) {
-  .content-shell { padding: 16px 12px 90px; }
-  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dashboard-grid { grid-template-columns: 1fr; gap: 12px; }
+@media (max-width: 720px) {
+  .content-shell { padding: 18px 14px 24px; }
+  .metric-grid { grid-template-columns: 1fr; }
   .hide-mobile { display: none !important; }
-  .hide-desktop { display: flex !important; }
   .filter-row { grid-template-columns: 1fr; }
-
-  /* Cards stack */
-  .stat-grid-4 { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-  .grid-3 { grid-template-columns: 1fr !important; }
-  .grid-2 { grid-template-columns: 1fr !important; }
-
-  /* Bulk bar */
-  .bulk-bar {
-    left: 50% !important;
-    width: calc(100vw - 24px);
-    max-width: 480px;
-    flex-wrap: wrap;
-    gap: 6px !important;
-    padding: 10px 12px !important;
-  }
-
-  /* Page headers */
-  .page-header-row { flex-direction: column !important; align-items: flex-start !important; }
-  .page-header-row > button { width: 100%; justify-content: center; }
-
-  /* WhatsApp 3-pane → single pane */
-  .wa-grid {
-    grid-template-columns: 1fr !important;
-    height: calc(100vh - 130px) !important;
-    min-height: unset !important;
-  }
-  .wa-list   { display: flex; flex-direction: column; }
-  .wa-chat   { display: none; flex-direction: column; }
-  .wa-detail { display: none !important; }
-  .wa-grid.chat-open .wa-list { display: none; }
-  .wa-grid.chat-open .wa-chat { display: flex; }
-
-  /* Settings: side nav → stacked */
-  .settings-grid { grid-template-columns: 1fr !important; }
-  .settings-nav  { display: flex !important; flex-direction: row !important; overflow-x: auto; border-right: none !important; border-bottom: 1px solid var(--rule); padding: 8px !important; gap: 4px !important; }
-  .settings-nav button { white-space: nowrap; width: auto !important; padding: 6px 14px !important; }
-
-  /* Reports export cards */
-  .export-grid { grid-template-columns: 1fr !important; }
-
-  /* FollowUps stage cards */
-  .followup-stages { grid-template-columns: 1fr !important; }
-
-  /* Dashboard recent orders — hide less important cols */
-  .orders-row { grid-template-columns: 28px 1fr 80px 88px !important; }
-  .orders-row .hide-tablet { display: none !important; }
-
-  /* Dashboard funnel — vertical */
-  .funnel-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
-  .funnel-connector { display: none !important; }
-  .funnel-step { text-align: left !important; display: flex !important; align-items: center !important; justify-content: space-between !important; }
-
-  /* KPI strip — remove vertical dividers */
-  .metric-grid > div { border-left: none !important; padding-left: 0 !important; padding-right: 0 !important; padding-top: 16px !important; border-top: 1px solid var(--rule); }
-  .metric-grid > div:first-child { border-top: none !important; padding-top: 0 !important; }
-
-  /* Modals full-screen on mobile */
-  .modal-content { max-width: calc(100vw - 16px) !important; margin: 8px !important; }
-}
-
-/* ── Small mobile (480px) ─────────────────────────────── */
-@media (max-width: 480px) {
-  .content-shell { padding: 12px 10px 90px; }
-  .metric-grid { grid-template-columns: 1fr 1fr; }
-  .splash-title { font-size: 22px !important; }
-  .stat-grid-4 { grid-template-columns: 1fr 1fr !important; }
 }

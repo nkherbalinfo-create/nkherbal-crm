@@ -94,7 +94,7 @@ export default function FollowUps() {
       </div>
 
       {/* Stage cards */}
-      <div className="followup-stages" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
         {STAGES.map(({month,day,label,desc,cls})=>(
           <div key={month} className="card" style={{ padding:'14px 16px', display:'flex', alignItems:'flex-start', gap:12 }}>
             <span className={`chip ${cls}`} style={{ width:28, height:28, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', padding:0, fontSize:12, fontWeight:700, flexShrink:0 }}>{month}</span>

@@ -259,7 +259,7 @@ export default function Leads() {
       </div>
 
       {/* Stat cards */}
-      <div className="stat-grid-4" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
         {STAT_CARDS.map(({key,label,cls}) => (
           <div key={key} className="card" style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
             <div style={{ width:36, height:36, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} className={cls}>
