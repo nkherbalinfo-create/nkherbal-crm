@@ -133,7 +133,7 @@ export default function Customers() {
       {/* Table */}
       <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
-        <div style={{ overflowX:'auto' }}>
+        <div className="tbl-scroll">
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
