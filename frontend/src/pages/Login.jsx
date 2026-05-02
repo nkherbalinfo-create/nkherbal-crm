@@ -50,20 +50,29 @@ export default function Login() {
     } finally { setLoading(false); }
   };
 
-  const handleForgot = async (e) => {
-    e.preventDefault();
-    setLoading(true); setError('');
+  const handleForgot = async (e, attempt = 1) => {
+    if (e?.preventDefault) e.preventDefault();
+    setLoading(true);
+    if (attempt === 1) setError('');
+    let retrying = false;
     try {
       await api.post('/auth/forgot-password', { email: forgotEmail });
       setSuccess(`Code sent to ${forgotEmail}`);
       setMode('verify');
     } catch (err) {
-      if (!err.response) {
-        triggerShake('Server is starting up — please try again in 30 seconds');
+      if (!err.response && attempt === 1) {
+        // Server was sleeping — first request woke it up, auto-retry
+        setError('Server is starting up… sending code in 10 seconds');
+        retrying = true;
+        setTimeout(() => handleForgot(null, 2), 10000);
+      } else if (!err.response) {
+        triggerShake('Still starting up — click Send again in a moment');
       } else {
         triggerShake(err.response.data?.message || 'Something went wrong');
       }
-    } finally { setLoading(false); }
+    } finally {
+      if (!retrying) setLoading(false);
+    }
   };
 
   const handleVerify = async (e) => {
