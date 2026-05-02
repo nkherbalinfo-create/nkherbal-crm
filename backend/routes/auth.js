@@ -1,6 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const router = express.Router();
@@ -10,21 +10,13 @@ function makeCode() {
 }
 
 async function sendResetEmail(to, code) {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) throw new Error('Email not configured');
+  if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
   console.log(`[Auth] Sending reset code to ${to}...`);
-  const t = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    connectionTimeout: 15000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,
-  });
-  await t.sendMail({
-    from: `"NK Herbal CRM" <${process.env.EMAIL_USER}>`,
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { error } = await resend.emails.send({
+    from: 'NK Herbal CRM <onboarding@resend.dev>',
     to,
-    subject: 'Your password reset code',
+    subject: 'Your NK Herbal CRM password reset code',
     html: `<div style="font-family:Inter,sans-serif;max-width:400px;margin:0 auto;padding:32px;background:#f6f4ee;border-radius:12px;">
       <h2 style="color:#252320;margin:0 0 8px">Password reset</h2>
       <p style="color:#666;margin:0 0 24px">Use this code to reset your NK Herbal CRM password. It expires in 15 minutes.</p>
@@ -34,6 +26,7 @@ async function sendResetEmail(to, code) {
       <p style="color:#999;font-size:12px;margin:16px 0 0;text-align:center;">If you didn't request this, ignore this email.</p>
     </div>`
   });
+  if (error) throw new Error(error.message);
   console.log(`[Auth] ✅ Reset code sent to ${to}`);
 }
 
