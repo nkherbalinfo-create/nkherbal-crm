@@ -50,20 +50,29 @@ export default function Login() {
     } finally { setLoading(false); }
   };
 
-  const handleForgot = async (e) => {
+  const handleForgot = async (e, isRetry = false) => {
     if (e?.preventDefault) e.preventDefault();
-    setLoading(true); setError('');
+    setLoading(true);
+    if (!isRetry) setError('');
+    let keepLoading = false;
     try {
-      await api.post('/auth/forgot-password', { email: forgotEmail });
+      await api.post('/auth/forgot-password', { email: forgotEmail }, { timeout: 30000 });
       setSuccess(`Code sent to ${forgotEmail} — check spam if not in inbox`);
       setMode('verify');
     } catch (err) {
-      if (!err.response) {
-        triggerShake('Could not reach server — please try again');
+      if (!err.response && !isRetry) {
+        // Server was sleeping — it's now waking up, retry in 35s
+        setError('Server is waking up… automatically retrying in 35 seconds');
+        keepLoading = true;
+        setTimeout(() => handleForgot(null, true), 35000);
+      } else if (!err.response) {
+        triggerShake('Server is slow — please click Send again');
       } else {
         triggerShake(err.response.data?.message || 'Something went wrong');
       }
-    } finally { setLoading(false); }
+    } finally {
+      if (!keepLoading) setLoading(false);
+    }
   };
 
   const handleVerify = async (e) => {
