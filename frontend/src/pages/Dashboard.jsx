@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer
@@ -125,6 +126,7 @@ const CHAN_COLOR_MAP = { WhatsApp: '#3d8a5c', Website: '#a8d5be' };
 // ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [data, setData] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -263,7 +265,13 @@ export default function Dashboard() {
             <Skel w="65%" h={11} />
           </div>
         )) : KPIs.map((m, i) => (
-          <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0 }}>
+          <div key={i} style={{
+            borderLeft: (!isMobile && i) ? '1px solid var(--rule)' : 'none',
+            borderTop: (isMobile && i) ? '1px solid var(--rule)' : 'none',
+            paddingLeft: (!isMobile && i) ? 22 : 0,
+            paddingRight: (!isMobile && i < 3) ? 22 : 0,
+            paddingTop: (isMobile && i) ? 16 : 0,
+          }}>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
               <div className="num" style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
@@ -436,7 +444,7 @@ export default function Dashboard() {
             </a>
           </div>
           {loading ? [0,1,2,3,4,5].map(i => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 80px 90px', gap: 12, padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center' }}>
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: isMobile ? '28px 1fr 90px' : '30px 1fr 1fr 80px 90px', gap: isMobile ? 8 : 12, padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center' }}>
               <div className="skeleton" style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0 }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}><Skel w="70%" h={13} /><Skel w="50%" h={11} /></div>
               <Skel w="80%" h={12} />
@@ -444,7 +452,7 @@ export default function Dashboard() {
               <Skel w={70} h={22} />
             </div>
           )) : recentOrders.map((o, i) => (
-            <div key={o._id} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 80px 90px', gap: 12, padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center' }}>
+            <div key={o._id} style={{ display: 'grid', gridTemplateColumns: isMobile ? '28px 1fr 90px' : '30px 1fr 1fr 80px 90px', gap: isMobile ? 8 : 12, padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center' }}>
               <Av name={o.customerName} size={30} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.customerName}</div>
@@ -452,12 +460,12 @@ export default function Dashboard() {
                   {o.city} · {o.orderId}
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {!isMobile && <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {o.productName}
-              </div>
-              <div className="num" style={{ fontSize: 12.5, color: 'var(--fg)', whiteSpace: 'nowrap' }}>
+              </div>}
+              {!isMobile && <div className="num" style={{ fontSize: 12.5, color: 'var(--fg)', whiteSpace: 'nowrap' }}>
                 {inr(o.orderValue)}
-              </div>
+              </div>}
               <div>
                 <Chip tone={STATUS_TONE[o.orderStatus] || 'muted'}>{o.orderStatus}</Chip>
               </div>

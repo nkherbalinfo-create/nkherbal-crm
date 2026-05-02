@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/Toast';
@@ -32,6 +33,7 @@ export default function Settings() {
   const { theme, toggle } = useTheme();
   const { addToast } = useToast();
   const [activeNav, setActiveNav] = useState('Profile');
+  const isMobile = useIsMobile();
   const [wc, setWc] = useState({ url:'', key:'', secret:'' });
   const [showSecret, setShowSecret] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -60,12 +62,12 @@ export default function Settings() {
         <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Manage your account and integrations</div>
       </div>
 
-      <div className="settings-grid" style={{ display:'grid', gridTemplateColumns:'200px 1fr', gap:20, alignItems:'start' }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '200px 1fr', gap: isMobile ? 12 : 20, alignItems:'start' }}>
         {/* Left nav */}
-        <div className="card settings-nav" style={{ padding:8 }}>
+        <div className="card" style={{ padding:8, display: isMobile ? 'flex' : 'block', flexDirection: isMobile ? 'row' : 'column', overflowX: isMobile ? 'auto' : 'visible', gap: isMobile ? 4 : 0 }}>
           {NAV_ITEMS.map(item=>(
             <button key={item} onClick={()=>setActiveNav(item)}
-              style={{ width:'100%', textAlign:'left', padding:'8px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:13, fontWeight:500, transition:'background 0.2s ease, color 0.2s ease',
+              style={{ width: isMobile ? 'auto' : '100%', whiteSpace: isMobile ? 'nowrap' : 'normal', textAlign:'left', padding:'8px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:13, fontWeight:500, flexShrink:0, transition:'background 0.2s ease, color 0.2s ease',
                 background: activeNav===item ? 'var(--card)' : 'transparent',
                 color: activeNav===item ? 'var(--fg)' : 'var(--muted)',
                 boxShadow: activeNav===item ? 'var(--shadow-nav)' : 'none',

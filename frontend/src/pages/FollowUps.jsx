@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 import api from '../utils/api';
 import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
@@ -26,6 +27,7 @@ const M_CLS = ['chip-info','chip-warn','chip-ok'];
 
 export default function FollowUps() {
   const [tab, setTab] = useState('pending');
+  const isMobile = useIsMobile();
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({ total:0, pages:1, page:1 });
   const [page, setPage] = useState(1);
@@ -94,7 +96,7 @@ export default function FollowUps() {
       </div>
 
       {/* Stage cards */}
-      <div className="followup-stages" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap:12 }}>
         {STAGES.map(({month,day,label,desc,cls})=>(
           <div key={month} className="card" style={{ padding:'14px 16px', display:'flex', alignItems:'flex-start', gap:12 }}>
             <span className={`chip ${cls}`} style={{ width:28, height:28, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', padding:0, fontSize:12, fontWeight:700, flexShrink:0 }}>{month}</span>
