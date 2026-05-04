@@ -143,7 +143,7 @@ export default function Leads() {
   const [updatingId, setUpdatingId] = useState(null);
   const [exitId, setExitId] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(767);
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const { addToast } = useToast();
@@ -261,7 +261,7 @@ export default function Leads() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: isMobile ? 8 : 12 }}>
         {STAT_CARDS.map(({key,label,cls}) => (
           <div key={key} className="card" style={{ padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
             <div style={{ width:36, height:36, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }} className={cls}>
@@ -281,6 +281,15 @@ export default function Leads() {
       </div>
 
       {/* Filter bar */}
+      {isMobile ? (
+        <div style={{ display:'flex', gap:8 }}>
+          <input className="input" placeholder="Search name, mobile…" value={filters.search}
+            onChange={e=>{setFilters(f=>({...f,search:e.target.value}));setPage(1);}} style={{ flex:1 }} />
+          {(filters.status||filters.source) && (
+            <button className="btn-secondary" style={{ fontSize:12, flexShrink:0 }} onClick={()=>setFilters({status:'',source:'',search:''})}>Clear</button>
+          )}
+        </div>
+      ) : (
       <FilterBar>
           <input className="input" placeholder="Search name, mobile…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
           <SelectInput value={filters.status} onChange={e=>setFilters(f=>({...f,status:e.target.value}))}>
@@ -294,6 +303,7 @@ export default function Leads() {
           <button className="btn-primary" style={{ fontSize:12 }} onClick={()=>{setPage(1);load();}}>Filter</button>
           <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({status:'',source:'',search:''})}>Clear</button>
       </FilterBar>
+      )}
 
       {/* Mobile card list */}
       {isMobile && (

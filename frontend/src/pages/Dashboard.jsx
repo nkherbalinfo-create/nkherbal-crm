@@ -125,6 +125,7 @@ const CHAN_COLOR_MAP = { WhatsApp: '#3d8a5c', Website: '#a8d5be' };
 // ──────────────────────────────────────────────────────
 export default function Dashboard() {
   const { user } = useAuth();
+  const isMobile = useIsMobile(767);
   const [data, setData] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -202,13 +203,21 @@ export default function Dashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
       {/* ── Page header ──────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'flex-end', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>{dayName}, {dateStr}</div>
-          <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', margin: '4px 0 0', color: 'var(--fg)', lineHeight: 1.2 }}>Hello {firstName}</h1>
+          <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 600, letterSpacing: '-0.02em', margin: '4px 0 0', color: 'var(--fg)', lineHeight: 1.2 }}>Hello {firstName}</h1>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>Here's how NK Herbal is performing today.</div>
         </div>
         <div className="toolbar-row">
+          {/* Mobile: only show + Order button */}
+          {isMobile && (
+            <button onClick={() => window.location.href='/orders'} className="btn-primary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Order
+            </button>
+          )}
+          {!isMobile && <>
 
           {/* ← Month → navigator */}
           <div style={{ display: 'flex', alignItems: 'center', background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 9, overflow: 'hidden' }}>
@@ -248,11 +257,12 @@ export default function Dashboard() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             New order
           </button>
+          </>}
         </div>
       </div>
 
       {/* ── KPI strip ─────────────────────────────────── */}
-      <div className="surface metric-grid" style={{ padding: '20px 22px' }}>
+      <div className="surface metric-grid" style={{ padding: isMobile ? '14px 14px' : '20px 22px', gridTemplateColumns: isMobile ? '1fr 1fr' : undefined }}>
         {loading ? [0,1,2,3].map(i => (
           <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Skel w="50%" h={11} />
@@ -263,7 +273,14 @@ export default function Dashboard() {
             <Skel w="65%" h={11} />
           </div>
         )) : KPIs.map((m, i) => (
-          <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0 }}>
+          <div key={i} style={{
+            borderLeft: (!isMobile && i) ? '1px solid var(--rule)' : 'none',
+            borderTop: isMobile ? '1px solid var(--rule)' : 'none',
+            paddingLeft: (!isMobile && i) ? 22 : 0,
+            paddingRight: (!isMobile && i < 3) ? 22 : 0,
+            paddingTop: isMobile ? 12 : 0,
+            paddingBottom: isMobile ? 4 : 0,
+          }}>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
               <div className="num" style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
