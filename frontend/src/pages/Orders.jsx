@@ -331,9 +331,8 @@ export default function Orders() {
       </FilterBar>
       )}
 
-      {/* Mobile card list */}
-      {isMobile && (
-        <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      {/* Mobile card list — CSS hides on desktop */}
+      <div key={listKey} className="fade-in mobile-only" style={{ flexDirection:'column', gap:10 }}>
           {orders.map(o => (
             <div key={o._id} data-row-id={o._id}
               className={`card${exitId===o._id ? ' row-deleting' : ''}`}
@@ -383,11 +382,9 @@ export default function Orders() {
           ))}
           {!orders.length && <div style={{ textAlign:'center', color:'var(--faint)', fontSize:13, padding:40 }}>No orders found</div>}
         </div>
-      )}
 
-      {/* Table (desktop only) */}
-      {!isMobile && (
-      <div key={listKey} className="fade-in">
+      {/* Table — CSS hides on mobile */}
+      <div key={`t${listKey}`} className="fade-in desktop-only">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -446,7 +443,6 @@ export default function Orders() {
         </div>
       </div>
       </div>
-      )}
 
       <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
 

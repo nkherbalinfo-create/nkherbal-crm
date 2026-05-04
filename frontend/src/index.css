@@ -936,9 +936,16 @@
 
 /* ── Mobile layout ≤ 767px ────────────────────────────── */
 @media (max-width: 767px) {
-  .content-shell { padding: 14px 12px 80px; max-width: 100%; overflow-x: hidden; }
-  .surface, .card { overflow: hidden; max-width: 100%; }
+  .content-shell { padding: 14px 12px 80px; max-width: 100vw; overflow: hidden; }
+  .surface { overflow: hidden; max-width: 100%; }
+  .card { overflow: hidden; max-width: 100%; }
   .dashboard-grid { overflow: hidden; max-width: 100%; }
+
+  /* Force-hide desktop-only elements */
+  .desktop-only { display: none !important; }
+
+  /* Force-show mobile-only elements */
+  .mobile-only { display: flex !important; }
 
   /* 2×2 KPI grid on mobile */
   .metric-grid { grid-template-columns: 1fr 1fr !important; }
