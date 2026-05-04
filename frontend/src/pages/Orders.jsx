@@ -274,7 +274,7 @@ export default function Orders() {
       {isMobile ? (
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div>
-            <div style={{ fontSize:24, fontWeight:700, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
+            <div style={{ fontSize:24, fontWeight:700, letterSpacing:'-0.02em', color:'var(--accent)' }}>Orders</div>
             <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
               {meta.total} total orders
             </div>
