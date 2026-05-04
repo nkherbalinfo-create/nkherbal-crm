@@ -341,33 +341,35 @@ export default function Orders() {
               style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', cursor:'pointer' }}>
 
               {/* Row 1: avatar + name + price */}
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:3 }}>
-                <input type="checkbox" checked={selected.has(o._id)} onChange={e=>{e.stopPropagation();toggleSelect(o._id)}}
-                  style={{ accentColor:'var(--accent)', flexShrink:0, width:15, height:15 }} onClick={e=>e.stopPropagation()} />
+              <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:6 }}>
+                <input type="checkbox" checked={selected.has(o._id)}
+                  onChange={e=>{e.stopPropagation();toggleSelect(o._id)}}
+                  onClick={e=>e.stopPropagation()}
+                  style={{ accentColor:'var(--accent)', flexShrink:0, marginTop:3, width:14, height:14 }} />
                 <Av name={o.customerName} size={36} />
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.customerName}</div>
-                  <div style={{ fontSize:12, color:'var(--muted)', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.productName}</div>
+                  <div style={{ fontSize:12, color:'var(--muted)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.productName}</div>
                 </div>
-                <div className="num" style={{ fontSize:15, fontWeight:700, color:'var(--fg)', flexShrink:0 }}>
+                <div className="num" style={{ fontSize:14, fontWeight:700, color:'var(--fg)', flexShrink:0, paddingTop:1 }}>
                   ₹{o.orderValue?.toLocaleString('en-IN')}
                 </div>
               </div>
 
-              {/* Row 2: ID + date + city (left) | channel + payment (right) */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginLeft:61, marginTop:6, marginBottom:5 }}>
-                <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>
-                  {o.orderId?.slice(-4) ? o.orderId : o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+              {/* Row 2: ID·date·city LEFT  |  channel+payment RIGHT */}
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+                <div style={{ flex:1, fontSize:11, color:'var(--faint)', fontFamily:'Inter', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
                 </div>
                 <div style={{ display:'flex', gap:4, flexShrink:0 }}>
-                  <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10, padding:'2px 7px' }}>{o.salesChannel}</span>
-                  <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10, padding:'2px 7px' }}>{o.paymentStatus}</span>
+                  <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
+                  <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
                 </div>
               </div>
 
-              {/* Row 3: status (left) | edit+delete (right) */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginLeft:61 }}>
-                <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10, padding:'2px 7px' }}>{o.orderStatus}</span>
+              {/* Row 3: status LEFT  |  edit+delete RIGHT */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
                 <div style={{ display:'flex', gap:5 }} onClick={e=>e.stopPropagation()}>
                   <button onClick={e=>{e.stopPropagation();openEdit(o)}} style={{ width:26, height:26, display:'grid', placeItems:'center', borderRadius:6, border:'none', background:'var(--chip)', color:'var(--muted)', cursor:'pointer' }}>
                     <SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={11} />
