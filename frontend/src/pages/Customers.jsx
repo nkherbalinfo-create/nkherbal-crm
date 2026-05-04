@@ -104,7 +104,7 @@ export default function Customers() {
   };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0, overflow:'hidden', maxWidth:'100%' }}>
 
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>

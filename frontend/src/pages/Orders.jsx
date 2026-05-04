@@ -268,7 +268,7 @@ export default function Orders() {
   const onQtyChange = (qty) => { const price=PRODUCT_PRICE_MAP[form.productName]||0; setForm(f=>({...f,quantity:Number(qty),orderValue:price*Number(qty)})); };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14, paddingBottom: selected.size > 0 ? 80 : 0 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:14, paddingBottom: selected.size > 0 ? 80 : 0, overflow:'hidden', maxWidth:'100%' }}>
 
       {/* Header */}
       {isMobile ? (
