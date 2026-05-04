@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/Toast';
 import Sidebar from './components/Sidebar';
+import BottomNav from './components/BottomNav';
+import { useIsMobile } from './hooks/useIsMobile';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
@@ -121,6 +123,8 @@ function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
+  const isMobile = useIsMobile();
+  const [badges] = useState({ orders: 0, leads: 0 });
 
   useEffect(() => {
     const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true); } };
@@ -149,10 +153,15 @@ function Layout() {
         </main>
       </div>
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {isMobile && <BottomNav badges={badges} />}
       <style>{`
         @media (min-width: 1024px) {
           .lg-main { margin-left: 232px; min-width: 0; overflow-x: hidden; }
           .mobile-header { display: none !important; }
+        }
+        @media (max-width: 767px) {
+          .content-shell { padding-bottom: 80px !important; }
+          .bulk-bar { bottom: 80px !important; }
         }
       `}</style>
     </div>

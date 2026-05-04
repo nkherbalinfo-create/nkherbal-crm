@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 import api from '../utils/api';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -92,6 +93,7 @@ const SVG = ({ d, size=13 }) => (
 );
 
 export default function Orders() {
+  const isMobile = useIsMobile();
   const [orders, setOrders] = useState([]);
   const [meta, setMeta] = useState({ total:0, page:1, pages:1 });
   const [listKey, setListKey] = useState(0);
@@ -303,8 +305,42 @@ export default function Orders() {
           <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
       </FilterBar>
 
-      {/* Table */}
-      <div key={listKey} className="fade-in">
+      {/* Mobile card list */}
+      {isMobile && (
+        <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {orders.map(o => (
+            <div key={o._id} data-row-id={o._id}
+              className={exitId===o._id ? 'row-deleting' : ''}
+              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                <input type="checkbox" checked={selected.has(o._id)} onChange={()=>toggleSelect(o._id)} style={{ accentColor:'var(--accent)', marginTop:2, flexShrink:0 }} />
+                <Av name={o.customerName} />
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)' }}>{o.customerName}</div>
+                    <div className="num" style={{ fontSize:14, fontWeight:700, color:'var(--fg)' }}>₹{o.orderValue?.toLocaleString('en-IN')}</div>
+                  </div>
+                  <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:1 }}>{o.productName}</div>
+                  <div style={{ fontSize:11, color:'var(--faint)', marginTop:2, fontFamily:'Inter' }}>{o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''} · {o.city}</div>
+                </div>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:6, paddingLeft:44, flexWrap:'wrap' }}>
+                <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
+                <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
+                <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
+                <div style={{ marginLeft:'auto', display:'flex', gap:4 }}>
+                  <IconBtn onClick={()=>openEdit(o)} title="Edit" bg="var(--chip)" color="var(--muted)"><SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconBtn>
+                  <IconBtn onClick={()=>setConfirmId(o._id)} title="Delete" bg="var(--danger-bg)" color="var(--danger)"><SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></IconBtn>
+                </div>
+              </div>
+            </div>
+          ))}
+          {!orders.length && <div style={{ textAlign:'center', color:'var(--faint)', fontSize:13, padding:40 }}>No orders found</div>}
+        </div>
+      )}
+
+      {/* Table (desktop only) */}
+      {!isMobile && <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -363,6 +399,7 @@ export default function Orders() {
         </div>
       </div>
       </div>
+      }{/* end !isMobile table */}
 
       <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
 

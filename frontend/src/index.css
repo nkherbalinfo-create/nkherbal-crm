@@ -933,3 +933,51 @@
   .hide-mobile { display: none !important; }
   .filter-row { grid-template-columns: 1fr; }
 }
+
+/* ── Mobile layout ≤ 767px ────────────────────────────── */
+@media (max-width: 767px) {
+  .content-shell { padding: 16px 14px 80px; }
+
+  /* 2×2 KPI grid on mobile */
+  .metric-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Dashboard grid stacks */
+  .dashboard-grid { grid-template-columns: 1fr !important; }
+
+  /* Filter bar stacks */
+  .filter-row { grid-template-columns: 1fr !important; }
+
+  /* Hide desktop table, show mobile cards */
+  .mobile-hidden   { display: none !important; }
+  .mobile-only     { display: block !important; }
+  .mobile-flex     { display: flex !important; }
+
+  /* Bulk bar above bottom nav */
+  .bulk-bar { bottom: 80px !important; left: 50% !important; transform: translateX(-50%) !important; }
+
+  /* Settings horizontal tabs */
+  .settings-nav-mobile {
+    display: flex !important;
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 16px;
+    gap: 0;
+  }
+  .settings-nav-mobile::-webkit-scrollbar { display: none; }
+  .settings-nav-mobile button {
+    white-space: nowrap;
+    width: auto !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid transparent;
+    padding: 10px 16px !important;
+    font-size: 13px;
+  }
+  .settings-nav-mobile button.active {
+    border-bottom-color: var(--accent) !important;
+    color: var(--accent) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}

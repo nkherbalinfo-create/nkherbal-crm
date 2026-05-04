@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
+import { useIsMobile } from '../hooks/useIsMobile';
 import api from '../utils/api';
 import Pagination from '../components/Pagination';
 import ConfirmModal from '../components/ConfirmModal';
@@ -36,6 +37,7 @@ export default function Customers() {
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [exitMobile, setExitMobile] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const isMobile = useIsMobile();
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
 
@@ -130,8 +132,34 @@ export default function Customers() {
           <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({type:'',search:''})}>Clear</button>
       </FilterBar>
 
-      {/* Table */}
-      <div key={listKey} className="fade-in">
+      {/* Mobile card list */}
+      {isMobile && (
+        <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {customers.map(c => (
+            <div key={c._id} data-row-id={c.mobile}
+              className={exitMobile===c.mobile ? 'row-deleting' : ''}
+              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}
+              onClick={()=>viewProfile(c.mobile)}>
+              <input type="checkbox" checked={selected.has(c.mobile)} onChange={e=>{e.stopPropagation();toggleSelect(c.mobile)}} style={{ accentColor:'var(--accent)', flexShrink:0 }} />
+              <Av name={c.name} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)' }}>{c.name}</div>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span className="num" style={{ fontSize:13, fontWeight:600, color:'var(--accent)' }}>{inr(c.totalRevenue)}</span>
+                    <span className={`chip ${c.isRepeat?'chip-ok':'chip-info'}`} style={{ fontSize:10 }}>{c.isRepeat?'Repeat':'New'}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:2 }}>{c.city||'—'} · {c.totalOrders} order{c.totalOrders!==1?'s':''}</div>
+              </div>
+            </div>
+          ))}
+          {!customers.length && <div style={{ textAlign:'center', color:'var(--faint)', fontSize:13, padding:40 }}>No customers found</div>}
+        </div>
+      )}
+
+      {/* Table (desktop only) */}
+      {!isMobile && <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -181,8 +209,7 @@ export default function Customers() {
           </table>
         </div>
       </div>
-
-      </div>
+      }{/* end !isMobile table */}
 
       <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
 

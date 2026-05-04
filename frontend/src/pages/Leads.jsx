@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useIsMobile } from '../hooks/useIsMobile';
 import api from '../utils/api';
 import Modal from '../components/Modal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -142,6 +143,7 @@ export default function Leads() {
   const [updatingId, setUpdatingId] = useState(null);
   const [exitId, setExitId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const isMobile = useIsMobile();
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const { addToast } = useToast();
@@ -293,8 +295,31 @@ export default function Leads() {
           <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({status:'',source:'',search:''})}>Clear</button>
       </FilterBar>
 
-      {/* Table */}
-      <div key={listKey} className="fade-in">
+      {/* Mobile card list */}
+      {isMobile && (
+        <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {leads.map(l => (
+            <div key={l._id} data-row-id={l._id}
+              className={exitId===l._id ? 'row-deleting' : ''}
+              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}>
+              <input type="checkbox" checked={selected.has(l._id)} onChange={()=>toggleSelect(l._id)} style={{ accentColor:'var(--accent)', flexShrink:0 }} />
+              <Av name={l.name} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</div>
+                  <StatusDropdown leadId={l._id} current={l.status} onUpdate={updateStatus} disabled={updatingId===l._id} />
+                </div>
+                <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.interestedProduct}</div>
+                <div style={{ fontSize:11, color:'var(--faint)', marginTop:1 }}>{l.source} · {l.leadId}</div>
+              </div>
+            </div>
+          ))}
+          {!leads.length && <div style={{ textAlign:'center', color:'var(--faint)', fontSize:13, padding:40 }}>No leads found</div>}
+        </div>
+      )}
+
+      {/* Table (desktop only) */}
+      {!isMobile && <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -360,8 +385,8 @@ export default function Leads() {
           </table>
         </div>
       </div>
+      }{/* end !isMobile table */}
 
-      </div>
 
       <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
 
