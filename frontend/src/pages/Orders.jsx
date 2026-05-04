@@ -268,31 +268,31 @@ export default function Orders() {
   const onQtyChange = (qty) => { const price=PRODUCT_PRICE_MAP[form.productName]||0; setForm(f=>({...f,quantity:Number(qty),orderValue:price*Number(qty)})); };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:16, paddingBottom: selected.size > 0 ? 80 : 0, maxWidth:'100%', overflow:'hidden' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:14, paddingBottom: selected.size > 0 ? 80 : 0 }}>
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
+      {isMobile ? (
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+          <div>
+            <div style={{ fontSize:24, fontWeight:700, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
+            <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
+              {meta.total} total orders
+            </div>
+          </div>
+          <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5, marginTop:4 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New
+          </button>
+        </div>
+      ) : (
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
         <div>
-          <div style={{ fontSize: isMobile ? 20 : 22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
-          <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
+          <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>
             <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{meta.total}</span> total orders
           </div>
         </div>
-        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-          {/* On mobile: icon-only buttons */}
-          {isMobile ? (
-            <>
-              <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing}
-                style={{ width:36, height:36, display:'grid', placeItems:'center', padding:0 }} title="Sync WooCommerce">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              </button>
-              <button className="btn-primary" onClick={openAdd}
-                style={{ width:36, height:36, display:'grid', placeItems:'center', padding:0 }} title="New order">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              </button>
-            </>
-          ) : (
-          <>
+        <div style={{ display:'flex', gap:8 }}>
           <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ display:'flex', alignItems:'center', gap:6 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             {syncing ? 'Syncing…' : 'Sync WooCommerce'}
@@ -301,10 +301,9 @@ export default function Orders() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             New order
           </button>
-          </>
-          )}
         </div>
       </div>
+      )}
 
       {/* Filter bar */}
       {isMobile ? (
@@ -338,50 +337,42 @@ export default function Orders() {
           {orders.map(o => (
             <div key={o._id} data-row-id={o._id}
               className={exitId===o._id ? 'row-deleting' : ''}
-              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:14, padding:'14px', overflow:'hidden', maxWidth:'100%' }}>
+              onClick={()=>openView(o)}
+              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', cursor:'pointer' }}>
 
-              {/* Top: select + avatar + name */}
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-                <input type="checkbox" checked={selected.has(o._id)} onChange={()=>toggleSelect(o._id)}
-                  style={{ accentColor:'var(--accent)', flexShrink:0, width:15, height:15 }} />
-                <Av name={o.customerName} size={32} />
-                <div style={{ minWidth:0, flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {o.customerName}
-                  </div>
-                  <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', marginTop:1 }}>
-                    {o.orderId}
-                  </div>
+              {/* Row 1: avatar + name + price */}
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:3 }}>
+                <input type="checkbox" checked={selected.has(o._id)} onChange={e=>{e.stopPropagation();toggleSelect(o._id)}}
+                  style={{ accentColor:'var(--accent)', flexShrink:0, width:15, height:15 }} onClick={e=>e.stopPropagation()} />
+                <Av name={o.customerName} size={36} />
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.customerName}</div>
+                  <div style={{ fontSize:12, color:'var(--muted)', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.productName}</div>
                 </div>
-              </div>
-
-              {/* Product + price */}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8, marginBottom:8 }}>
-                <div style={{ fontSize:12.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>
-                  {o.productName}
-                </div>
-                <div className="num" style={{ fontSize:15, fontWeight:700, color:'var(--accent)', flexShrink:0 }}>
+                <div className="num" style={{ fontSize:15, fontWeight:700, color:'var(--fg)', flexShrink:0 }}>
                   ₹{o.orderValue?.toLocaleString('en-IN')}
                 </div>
               </div>
 
-              {/* Date + city */}
-              <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', marginBottom:10 }}>
-                {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+              {/* Row 2: ID + date + city (left) | channel + payment (right) */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginLeft:61, marginTop:6, marginBottom:5 }}>
+                <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 }}>
+                  {o.orderId?.slice(-4) ? o.orderId : o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+                </div>
+                <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                  <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10, padding:'2px 7px' }}>{o.salesChannel}</span>
+                  <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10, padding:'2px 7px' }}>{o.paymentStatus}</span>
+                </div>
               </div>
 
-              {/* Chips + actions */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6, paddingTop:10, borderTop:'1px solid var(--rule)' }}>
-                <div style={{ display:'flex', gap:4, flexWrap:'wrap', minWidth:0 }}>
-                  <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
-                  <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
-                  <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
-                </div>
-                <div style={{ display:'flex', gap:5, flexShrink:0 }}>
-                  <button onClick={()=>openEdit(o)} style={{ width:28, height:28, display:'grid', placeItems:'center', borderRadius:7, border:'none', background:'var(--chip)', color:'var(--muted)', cursor:'pointer' }}>
+              {/* Row 3: status (left) | edit+delete (right) */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginLeft:61 }}>
+                <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10, padding:'2px 7px' }}>{o.orderStatus}</span>
+                <div style={{ display:'flex', gap:5 }} onClick={e=>e.stopPropagation()}>
+                  <button onClick={e=>{e.stopPropagation();openEdit(o)}} style={{ width:26, height:26, display:'grid', placeItems:'center', borderRadius:6, border:'none', background:'var(--chip)', color:'var(--muted)', cursor:'pointer' }}>
                     <SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={11} />
                   </button>
-                  <button onClick={()=>setConfirmId(o._id)} style={{ width:28, height:28, display:'grid', placeItems:'center', borderRadius:7, border:'none', background:'var(--danger-bg)', color:'var(--danger)', cursor:'pointer' }}>
+                  <button onClick={e=>{e.stopPropagation();setConfirmId(o._id)}} style={{ width:26, height:26, display:'grid', placeItems:'center', borderRadius:6, border:'none', background:'var(--danger-bg)', color:'var(--danger)', cursor:'pointer' }}>
                     <SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={11} />
                   </button>
                 </div>
