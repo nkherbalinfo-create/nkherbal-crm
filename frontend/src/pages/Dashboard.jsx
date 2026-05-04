@@ -291,31 +291,15 @@ export default function Dashboard() {
               <Skel w="60%" h={10} />
             </div>
           )) : KPIs.map((m, i) => (
-            <div key={i} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 16 }}>
-              {/* Left: label + value + sub */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400, marginBottom: 5 }}>{m.l}</div>
-                <div className="num" style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
-                  {m.v}
-                </div>
-                <div className="num" style={{ fontSize: 11.5, color: m.up ? 'var(--accent)' : 'var(--danger)', marginTop: 5 }}>
+            <div key={i} className="card" style={{ padding: '16px 18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: m.up ? 'var(--accent)' : 'var(--danger)', background: m.up ? 'var(--accent-bg)' : 'var(--danger-bg)', padding: '2px 8px', borderRadius: 999 }}>
                   {m.up ? '↑' : '↓'} {m.sub}
-                </div>
+                </span>
               </div>
-              {/* Right: mini bar chart always visible */}
-              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-end', gap: 3, height: 36 }}>
-                {(m.spark.length >= 2 ? m.spark : [1,2,3,4,5,6]).map((v, idx, arr) => {
-                  const max = Math.max(...arr) || 1;
-                  const h = Math.max(4, Math.round((v / max) * 32));
-                  return (
-                    <div key={idx} style={{
-                      width: 5, height: h,
-                      borderRadius: 3,
-                      background: idx === arr.length - 1 ? 'var(--accent)' : 'var(--accent-bg)',
-                      opacity: idx === arr.length - 1 ? 1 : 0.5 + (idx / arr.length) * 0.5,
-                    }} />
-                  );
-                })}
+              <div className="num" style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
+                {m.v}
               </div>
             </div>
           ))}
