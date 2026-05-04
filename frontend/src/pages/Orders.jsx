@@ -291,6 +291,16 @@ export default function Orders() {
       </div>
 
       {/* Filter bar */}
+      {isMobile ? (
+        <div style={{ display:'flex', gap:8 }}>
+          <input className="input" placeholder="Search orders…" value={filters.search}
+            onChange={e=>setFilters(f=>({...f,search:e.target.value}))} style={{ flex:1 }} />
+          {Object.values(filters).some(Boolean) && (
+            <button className="btn-secondary" style={{ fontSize:12, flexShrink:0 }}
+              onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
+          )}
+        </div>
+      ) : (
       <FilterBar>
           <input className="input" placeholder="Search name, mobile, order ID…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
           <DateInput value={filters.startDate} onChange={value=>setFilters(f=>({...f,startDate:value}))} />
@@ -304,6 +314,7 @@ export default function Orders() {
           <button className="btn-primary" style={{ fontSize:12 }} onClick={()=>{setPage(1);load();}}>Filter</button>
           <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
       </FilterBar>
+      )}
 
       {/* Mobile card list */}
       {isMobile && (
@@ -311,42 +322,51 @@ export default function Orders() {
           {orders.map(o => (
             <div key={o._id} data-row-id={o._id}
               className={exitId===o._id ? 'row-deleting' : ''}
-              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:14, padding:'14px 14px 12px', overflow:'hidden' }}>
+              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:14, padding:'14px', overflow:'hidden', maxWidth:'100%' }}>
 
-              {/* Row 1: checkbox + avatar + name + price */}
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+              {/* Top: select + avatar + name */}
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
                 <input type="checkbox" checked={selected.has(o._id)} onChange={()=>toggleSelect(o._id)}
-                  style={{ accentColor:'var(--accent)', flexShrink:0, width:16, height:16 }} />
-                <Av name={o.customerName} size={34} />
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.customerName}</div>
-                  <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.productName}</div>
+                  style={{ accentColor:'var(--accent)', flexShrink:0, width:15, height:15 }} />
+                <Av name={o.customerName} size={32} />
+                <div style={{ minWidth:0, flex:1 }}>
+                  <div style={{ fontSize:14, fontWeight:700, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {o.customerName}
+                  </div>
+                  <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', marginTop:1 }}>
+                    {o.orderId}
+                  </div>
                 </div>
-                <div className="num" style={{ fontSize:16, fontWeight:700, color:'var(--accent)', flexShrink:0 }}>
+              </div>
+
+              {/* Product + price */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8, marginBottom:8 }}>
+                <div style={{ fontSize:12.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>
+                  {o.productName}
+                </div>
+                <div className="num" style={{ fontSize:15, fontWeight:700, color:'var(--accent)', flexShrink:0 }}>
                   ₹{o.orderValue?.toLocaleString('en-IN')}
                 </div>
               </div>
 
-              {/* Row 2: meta + actions */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, paddingTop:4, borderTop:'1px solid var(--rule)' }}>
-                <div style={{ minWidth:0 }}>
-                  <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
-                  </div>
-                  <div style={{ display:'flex', gap:4, marginTop:5, flexWrap:'wrap' }}>
-                    <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
-                    <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
-                    <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
-                  </div>
+              {/* Date + city */}
+              <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', marginBottom:10 }}>
+                {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+              </div>
+
+              {/* Chips + actions */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6, paddingTop:10, borderTop:'1px solid var(--rule)' }}>
+                <div style={{ display:'flex', gap:4, flexWrap:'wrap', minWidth:0 }}>
+                  <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
+                  <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
+                  <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
                 </div>
-                <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-                  <button onClick={()=>openEdit(o)}
-                    style={{ width:30, height:30, display:'grid', placeItems:'center', borderRadius:8, border:'none', background:'var(--chip)', color:'var(--muted)', cursor:'pointer' }}>
-                    <SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={12} />
+                <div style={{ display:'flex', gap:5, flexShrink:0 }}>
+                  <button onClick={()=>openEdit(o)} style={{ width:28, height:28, display:'grid', placeItems:'center', borderRadius:7, border:'none', background:'var(--chip)', color:'var(--muted)', cursor:'pointer' }}>
+                    <SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={11} />
                   </button>
-                  <button onClick={()=>setConfirmId(o._id)}
-                    style={{ width:30, height:30, display:'grid', placeItems:'center', borderRadius:8, border:'none', background:'var(--danger-bg)', color:'var(--danger)', cursor:'pointer' }}>
-                    <SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={12} />
+                  <button onClick={()=>setConfirmId(o._id)} style={{ width:28, height:28, display:'grid', placeItems:'center', borderRadius:7, border:'none', background:'var(--danger-bg)', color:'var(--danger)', cursor:'pointer' }}>
+                    <SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={11} />
                   </button>
                 </div>
               </div>
