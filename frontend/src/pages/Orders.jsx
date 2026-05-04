@@ -93,7 +93,6 @@ const SVG = ({ d, size=13 }) => (
 );
 
 export default function Orders() {
-  const isMobile = useIsMobile();
   const [orders, setOrders] = useState([]);
   const [meta, setMeta] = useState({ total:0, page:1, pages:1 });
   const [listKey, setListKey] = useState(0);
@@ -112,6 +111,7 @@ export default function Orders() {
   const [leadResults, setLeadResults] = useState([]);
   const [leadSearchOpen, setLeadSearchOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const isMobile = useIsMobile(767);
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const { addToast } = useToast();
@@ -268,23 +268,9 @@ export default function Orders() {
   const onQtyChange = (qty) => { const price=PRODUCT_PRICE_MAP[form.productName]||0; setForm(f=>({...f,quantity:Number(qty),orderValue:price*Number(qty)})); };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14, paddingBottom: selected.size > 0 ? 80 : 0, overflow:'hidden', maxWidth:'100%' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0, overflow:'hidden', maxWidth:'100%' }}>
 
       {/* Header */}
-      {isMobile ? (
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-          <div>
-            <div style={{ fontSize:24, fontWeight:700, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
-            <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
-              {meta.total} total orders
-            </div>
-          </div>
-          <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5, marginTop:4 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New
-          </button>
-        </div>
-      ) : (
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
         <div>
           <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
@@ -303,19 +289,8 @@ export default function Orders() {
           </button>
         </div>
       </div>
-      )}
 
       {/* Filter bar */}
-      {isMobile ? (
-        <div style={{ display:'flex', gap:8 }}>
-          <input className="input" placeholder="Search orders…" value={filters.search}
-            onChange={e=>setFilters(f=>({...f,search:e.target.value}))} style={{ flex:1 }} />
-          {Object.values(filters).some(Boolean) && (
-            <button className="btn-secondary" style={{ fontSize:12, flexShrink:0 }}
-              onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
-          )}
-        </div>
-      ) : (
       <FilterBar>
           <input className="input" placeholder="Search name, mobile, order ID…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
           <DateInput value={filters.startDate} onChange={value=>setFilters(f=>({...f,startDate:value}))} />
@@ -329,53 +304,43 @@ export default function Orders() {
           <button className="btn-primary" style={{ fontSize:12 }} onClick={()=>{setPage(1);load();}}>Filter</button>
           <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
       </FilterBar>
-      )}
 
-      {/* Mobile card list */}
+      {/* Mobile cards */}
       {isMobile && (
-        <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', overflow:'hidden' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', overflow:'hidden', boxSizing:'border-box' }}>
           {orders.map(o => (
             <div key={o._id} data-row-id={o._id}
               className={exitId===o._id ? 'row-deleting' : ''}
               onClick={()=>openView(o)}
-              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', cursor:'pointer', overflow:'hidden', width:'100%', boxSizing:'border-box' }}>
+              style={{ width:'100%', boxSizing:'border-box', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', cursor:'pointer', overflow:'hidden' }}>
 
-              {/* Row 1: avatar + name + price */}
-              <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:6 }}>
-                <input type="checkbox" checked={selected.has(o._id)}
-                  onChange={e=>{e.stopPropagation();toggleSelect(o._id)}}
-                  onClick={e=>e.stopPropagation()}
-                  style={{ accentColor:'var(--accent)', flexShrink:0, marginTop:3, width:14, height:14 }} />
-                <Av name={o.customerName} size={36} />
+              {/* Name + price */}
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+                <input type="checkbox" checked={selected.has(o._id)} onChange={e=>{e.stopPropagation();toggleSelect(o._id)}} onClick={e=>e.stopPropagation()} style={{ accentColor:'var(--accent)', flexShrink:0 }} />
+                <Av name={o.customerName} />
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.customerName}</div>
-                  <div style={{ fontSize:12, color:'var(--muted)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.productName}</div>
+                  <div style={{ fontSize:12, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.productName}</div>
                 </div>
-                <div className="num" style={{ fontSize:14, fontWeight:700, color:'var(--fg)', flexShrink:0, paddingTop:1 }}>
-                  ₹{o.orderValue?.toLocaleString('en-IN')}
-                </div>
+                <div className="num" style={{ fontSize:14, fontWeight:700, color:'var(--fg)', flexShrink:0 }}>₹{o.orderValue?.toLocaleString('en-IN')}</div>
               </div>
 
-              {/* Row 2: ID·date·city LEFT  |  channel+payment RIGHT */}
-              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-                <div style={{ flex:1, fontSize:11, color:'var(--faint)', fontFamily:'Inter', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                  {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
-                </div>
-                <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+              {/* Meta + chips */}
+              <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', marginBottom:8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+              </div>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ display:'flex', gap:4 }}>
                   <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
                   <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
+                  <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
                 </div>
-              </div>
-
-              {/* Row 3: status LEFT  |  edit+delete RIGHT */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
-                <div style={{ display:'flex', gap:5 }} onClick={e=>e.stopPropagation()}>
+                <div style={{ display:'flex', gap:5, flexShrink:0 }} onClick={e=>e.stopPropagation()}>
                   <button onClick={e=>{e.stopPropagation();openEdit(o)}} style={{ width:26, height:26, display:'grid', placeItems:'center', borderRadius:6, border:'none', background:'var(--chip)', color:'var(--muted)', cursor:'pointer' }}>
-                    <SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={11} />
+                    <SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={11}/>
                   </button>
                   <button onClick={e=>{e.stopPropagation();setConfirmId(o._id)}} style={{ width:26, height:26, display:'grid', placeItems:'center', borderRadius:6, border:'none', background:'var(--danger-bg)', color:'var(--danger)', cursor:'pointer' }}>
-                    <SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={11} />
+                    <SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={11}/>
                   </button>
                 </div>
               </div>
@@ -385,9 +350,8 @@ export default function Orders() {
         </div>
       )}
 
-      {/* Table (desktop only) */}
-      {!isMobile && (
-      <div key={listKey} className="fade-in">
+      {/* Table (desktop) */}
+      {!isMobile && <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -445,8 +409,7 @@ export default function Orders() {
           </table>
         </div>
       </div>
-      </div>
-      )}
+      </div>}
 
       <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
 
