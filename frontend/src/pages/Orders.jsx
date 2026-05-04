@@ -340,7 +340,8 @@ export default function Orders() {
       )}
 
       {/* Table (desktop only) */}
-      {!isMobile && <div key={listKey} className="fade-in">
+      {!isMobile && (
+      <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -399,7 +400,7 @@ export default function Orders() {
         </div>
       </div>
       </div>
-      }{/* end !isMobile table */}
+      )}
 
       <Pagination page={page} pages={meta.pages} total={meta.total} limit={8} onPage={p=>{setPage(p);window.scrollTo({top:0,behavior:'smooth'});}} />
 
