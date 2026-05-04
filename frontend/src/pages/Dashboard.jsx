@@ -201,7 +201,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, overflow: 'hidden', maxWidth: '100%' }}>
 
       {/* ── Page header ──────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'flex-end', flexWrap: 'wrap', gap: 12 }}>
@@ -337,7 +337,7 @@ export default function Dashboard() {
 
       {/* ── Conversion Funnel ────────────────────────── */}
       {!loading && funnel.total > 0 && (
-        <div className="surface" style={{ padding: '18px 22px' }}>
+        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Sales funnel</div>
@@ -402,7 +402,7 @@ export default function Dashboard() {
       <div className="dashboard-grid">
 
         {/* Revenue trend */}
-        <div className="surface" style={{ padding: '18px 20px' }}>
+        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Revenue trend</div>
@@ -463,7 +463,7 @@ export default function Dashboard() {
         </div>
 
         {/* Channels donut */}
-        <div className="surface" style={{ padding: '18px 20px' }}>
+        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Channels</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>By revenue share</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingTop: 20 }}>
@@ -519,7 +519,7 @@ export default function Dashboard() {
       <div className="dashboard-grid">
 
         {/* Recent orders */}
-        <div className="surface" style={{ padding: '18px 20px' }}>
+        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Recent orders</div>
@@ -560,7 +560,7 @@ export default function Dashboard() {
         </div>
 
         {/* Top products */}
-        <div className="surface" style={{ padding: '18px 20px' }}>
+        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 2 }}>Top products</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>By revenue this period</div>
           {loading ? [0,1,2,3,4].map(i => (
