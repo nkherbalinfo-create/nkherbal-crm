@@ -265,7 +265,7 @@ export default function Dashboard() {
       {/* ── KPI strip ─────────────────────────────────── */}
       {isMobile ? (
         /* Mobile: 4 individual cards in 2×2 grid */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {loading ? [0,1,2,3].map(i => (
             <div key={i} className="card" style={{ padding: '14px' }}>
               <Skel w="55%" h={10} />
@@ -273,18 +273,20 @@ export default function Dashboard() {
               <Skel w="60%" h={10} />
             </div>
           )) : KPIs.map((m, i) => (
-            <div key={i} className="card" style={{ padding: '12px 10px 10px', overflow: 'hidden', minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
-                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.l}</div>
-                <div style={{ color: 'var(--accent)', flexShrink: 0 }}>
-                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={44} h={24} id={m.l + 'mob'} />
+            <div key={i} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* Left: label + value + sub */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400, marginBottom: 4 }}>{m.l}</div>
+                <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
+                  {m.v}
+                </div>
+                <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)', marginTop: 4 }}>
+                  {m.up ? '↑' : '↓'} {m.sub}
                 </div>
               </div>
-              <div className="num" style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1, margin: '5px 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {m.v}
-              </div>
-              <div className="num" style={{ fontSize: 10.5, color: m.up ? 'var(--accent)' : 'var(--danger)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {m.up ? '↑' : '↓'} {m.sub}
+              {/* Right: sparkline */}
+              <div style={{ color: 'var(--accent)', flexShrink: 0 }}>
+                <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={72} h={36} id={m.l + 'mob'} />
               </div>
             </div>
           ))}

@@ -17,6 +17,41 @@ import FollowUps from './pages/FollowUps';
 import WhatsApp from './pages/WhatsApp';
 import api from './utils/api';
 
+function MobileHeader({ className }) {
+  const { user } = useAuth();
+  const initials = (user?.name || user?.email || 'U').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  return (
+    <header className={className} style={{
+      position: 'sticky', top: 0, zIndex: 20,
+      background: 'var(--card)', borderBottom: '1px solid var(--rule)',
+      padding: '14px 20px',
+      display: 'flex', alignItems: 'center', gap: 12,
+    }}>
+      {/* Brand */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--accent)', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(61,138,92,.3)' }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 21c0-9 7-16 18-16-1 11-7 18-18 16z"/>
+            <path d="M3 21c4-4 8-7 14-10"/>
+          </svg>
+        </div>
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</span>
+      </div>
+      {/* Bell */}
+      <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 6, display: 'flex', borderRadius: 8 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+          <path d="M6 8a6 6 0 1112 0c0 6 2 7 2 7H4s2-1 2-7z"/>
+          <path d="M10 19a2 2 0 004 0"/>
+        </svg>
+      </button>
+      {/* Avatar */}
+      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+        {initials}
+      </div>
+    </header>
+  );
+}
+
 function SplashScreen({ onDone }) {
   return (
     <div className="splash-screen" onAnimationEnd={(e) => { if (e.animationName === 'splash-exit') onDone(); }}>
@@ -136,23 +171,8 @@ function Layout() {
     <div className="app-shell" style={{ display: 'flex' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }} className="lg-main">
-        {/* Mobile header */}
-        <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--card)', borderBottom: '1px solid var(--rule)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }} className="mobile-header">
-          <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 2, display: 'flex', flexShrink: 0 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-          {/* Brand */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M3 21c0-9 7-16 18-16-1 11-7 18-18 16z"/><path d="M3 21c4-4 8-7 14-10"/></svg>
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg)' }}>NK Herbal</span>
-          </div>
-          {/* Bell */}
-          <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 4, display: 'flex' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M6 8a6 6 0 1112 0c0 6 2 7 2 7H4s2-1 2-7z"/><path d="M10 19a2 2 0 004 0"/></svg>
-          </button>
-        </header>
+        {/* Mobile header — no hamburger, bottom nav handles navigation */}
+        <MobileHeader className="mobile-header" />
         <main className="content-shell" style={{ flex: 1 }}>
           <div key={location.key} className="page-enter">
             <Outlet />
