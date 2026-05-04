@@ -273,17 +273,17 @@ export default function Dashboard() {
               <Skel w="60%" h={10} />
             </div>
           )) : KPIs.map((m, i) => (
-            <div key={i} className="card" style={{ padding: '14px 12px 12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
-                <div style={{ color: 'var(--accent)', flexShrink: 0, marginTop: -2 }}>
-                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={52} h={28} id={m.l + 'mob'} />
+            <div key={i} className="card" style={{ padding: '12px 10px 10px', overflow: 'hidden', minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.l}</div>
+                <div style={{ color: 'var(--accent)', flexShrink: 0 }}>
+                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={44} h={24} id={m.l + 'mob'} />
                 </div>
               </div>
-              <div className="num" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1, margin: '6px 0 5px' }}>
+              <div className="num" style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1, margin: '5px 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {m.v}
               </div>
-              <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)' }}>
+              <div className="num" style={{ fontSize: 10.5, color: m.up ? 'var(--accent)' : 'var(--danger)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {m.up ? '↑' : '↓'} {m.sub}
               </div>
             </div>
@@ -335,7 +335,27 @@ export default function Dashboard() {
               </a>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto' }}>
+          {isMobile ? (
+            /* Mobile funnel: 2×2 grid */
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {[
+                { label: 'Total leads',   value: funnel.total,        color: 'var(--fg)',     bg: 'var(--chip)' },
+                { label: 'Interested',    value: funnel.interested,   color: 'var(--info)',   bg: 'var(--info-bg)' },
+                { label: 'Follow Up',     value: funnel.followUp,     color: 'var(--warn)',   bg: 'var(--warn-bg)' },
+                { label: 'Converted',     value: funnel.converted,    color: 'var(--accent)', bg: 'var(--accent-bg)' },
+              ].map((step, i) => {
+                const pct = funnel.total > 0 ? Math.round((step.value / funnel.total) * 100) : 0;
+                return (
+                  <div key={step.label} style={{ padding: '12px', borderRadius: 10, background: step.bg, textAlign: 'center' }}>
+                    <div className="num" style={{ fontSize: 20, fontWeight: 700, color: step.color, lineHeight: 1 }}>{step.value}</div>
+                    <div style={{ fontSize: 11, color: step.color, opacity: 0.8, marginTop: 3 }}>{step.label}</div>
+                    {i > 0 && <div className="num" style={{ fontSize: 10, color: step.color, opacity: 0.65, marginTop: 2 }}>{pct}%</div>}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             {[
               { label: 'Total leads',   value: funnel.total,        color: 'var(--fg)',     bg: 'var(--chip)' },
               { label: 'Interested',    value: funnel.interested,   color: 'var(--info)',   bg: 'var(--info-bg)' },
@@ -359,6 +379,7 @@ export default function Dashboard() {
               );
             })}
           </div>
+          )}
         </div>
       )}
 
