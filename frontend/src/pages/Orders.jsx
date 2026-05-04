@@ -327,17 +327,17 @@ export default function Orders() {
                 </div>
               </div>
 
-              {/* Row 2: meta info */}
-              <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', marginLeft:60, marginBottom:10, fontVariantNumeric:'tabular-nums' }}>
-                {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
-              </div>
-
-              {/* Row 3: chips + actions — same line */}
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginLeft:60 }}>
-                <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
-                  <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
-                  <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
-                  <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
+              {/* Row 2: meta + actions */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, paddingTop:4, borderTop:'1px solid var(--rule)' }}>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+                  </div>
+                  <div style={{ display:'flex', gap:4, marginTop:5, flexWrap:'wrap' }}>
+                    <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
+                    <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
+                    <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
+                  </div>
                 </div>
                 <div style={{ display:'flex', gap:6, flexShrink:0 }}>
                   <button onClick={()=>openEdit(o)}
