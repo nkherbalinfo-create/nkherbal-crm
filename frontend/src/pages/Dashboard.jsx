@@ -263,40 +263,62 @@ export default function Dashboard() {
       </div>
 
       {/* ── KPI strip ─────────────────────────────────── */}
-      <div className="surface metric-grid" style={{ padding: isMobile ? '14px 14px' : '20px 22px', gridTemplateColumns: isMobile ? '1fr 1fr' : undefined }}>
-        {loading ? [0,1,2,3].map(i => (
-          <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Skel w="50%" h={11} />
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <Skel w="60%" h={28} />
-              <Skel w={88} h={44} />
+      {isMobile ? (
+        /* Mobile: 4 individual cards in 2×2 grid */
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {loading ? [0,1,2,3].map(i => (
+            <div key={i} className="card" style={{ padding: '14px' }}>
+              <Skel w="55%" h={10} />
+              <Skel w="70%" h={22} style={{ margin: '8px 0 6px' }} />
+              <Skel w="60%" h={10} />
             </div>
-            <Skel w="65%" h={11} />
-          </div>
-        )) : KPIs.map((m, i) => (
-          <div key={i} style={{
-            borderLeft: (!isMobile && i) ? '1px solid var(--rule)' : 'none',
-            borderTop: isMobile ? '1px solid var(--rule)' : 'none',
-            paddingLeft: (!isMobile && i) ? 22 : 0,
-            paddingRight: (!isMobile && i < 3) ? 22 : 0,
-            paddingTop: isMobile ? 12 : 0,
-            paddingBottom: isMobile ? 4 : 0,
-          }}>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
-              <div className="num" style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
+          )) : KPIs.map((m, i) => (
+            <div key={i} className="card" style={{ padding: '14px 12px 12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
+                <div style={{ color: 'var(--accent)', flexShrink: 0, marginTop: -2 }}>
+                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={52} h={28} id={m.l + 'mob'} />
+                </div>
+              </div>
+              <div className="num" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1, margin: '6px 0 5px' }}>
                 {m.v}
               </div>
-              <div style={{ color: 'var(--accent)', flexShrink: 0, marginBottom: 2 }}>
-                <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={88} h={44} id={m.l} />
+              <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)' }}>
+                {m.up ? '↑' : '↓'} {m.sub}
               </div>
             </div>
-            <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)', marginTop: 6 }}>
-              {m.up ? '↑' : '↓'} {m.sub}
+          ))}
+        </div>
+      ) : (
+        /* Desktop: one wide surface with 4 columns */
+        <div className="surface metric-grid" style={{ padding: '20px 22px' }}>
+          {loading ? [0,1,2,3].map(i => (
+            <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Skel w="50%" h={11} />
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                <Skel w="60%" h={28} />
+                <Skel w={88} h={44} />
+              </div>
+              <Skel w="65%" h={11} />
             </div>
-          </div>
-        ))}
-      </div>
+          )) : KPIs.map((m, i) => (
+            <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0 }}>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
+                <div className="num" style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
+                  {m.v}
+                </div>
+                <div style={{ color: 'var(--accent)', flexShrink: 0, marginBottom: 2 }}>
+                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={88} h={44} id={m.l} />
+                </div>
+              </div>
+              <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)', marginTop: 6 }}>
+                {m.up ? '↑' : '↓'} {m.sub}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Conversion Funnel ────────────────────────── */}
       {!loading && funnel.total > 0 && (
