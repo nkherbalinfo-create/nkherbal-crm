@@ -268,17 +268,31 @@ export default function Orders() {
   const onQtyChange = (qty) => { const price=PRODUCT_PRICE_MAP[form.productName]||0; setForm(f=>({...f,quantity:Number(qty),orderValue:price*Number(qty)})); };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:16, paddingBottom: selected.size > 0 ? 80 : 0, maxWidth:'100%', overflow:'hidden' }}>
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
-          <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>
+          <div style={{ fontSize: isMobile ? 20 : 22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
             <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{meta.total}</span> total orders
           </div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
+        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+          {/* On mobile: icon-only buttons */}
+          {isMobile ? (
+            <>
+              <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing}
+                style={{ width:36, height:36, display:'grid', placeItems:'center', padding:0 }} title="Sync WooCommerce">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              </button>
+              <button className="btn-primary" onClick={openAdd}
+                style={{ width:36, height:36, display:'grid', placeItems:'center', padding:0 }} title="New order">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </>
+          ) : (
+          <>
           <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ display:'flex', alignItems:'center', gap:6 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             {syncing ? 'Syncing…' : 'Sync WooCommerce'}
@@ -287,6 +301,8 @@ export default function Orders() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             New order
           </button>
+          </>
+          )}
         </div>
       </div>
 
