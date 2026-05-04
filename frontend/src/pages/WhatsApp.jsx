@@ -3,6 +3,7 @@ import api from '../utils/api';
 import { useToast } from '../components/Toast';
 import Modal from '../components/Modal';
 import { format } from 'date-fns';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 function Av({ name, size = 32 }) {
   const i = (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
@@ -76,6 +77,8 @@ export default function WhatsApp() {
   const [templates, setTemplates] = useState(loadTemplates);
   const [showTemplates, setShowTemplates] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const isMobile = useIsMobile(767);
   const msgEndRef = useRef(null);
   const selectedPhoneRef = useRef(null);
   const { addToast } = useToast();
@@ -105,6 +108,7 @@ export default function WhatsApp() {
   const selectConv = async (conv) => {
     selectedPhoneRef.current = conv.phone;
     setSelected(conv);
+    if (isMobile) setMobileChatOpen(true);
     await loadConversation(conv, { showLoading: true, scroll: true });
   };
 
@@ -192,10 +196,10 @@ export default function WhatsApp() {
         <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Customer conversations via WhatsApp Business API</div>
       </div>
 
-      <div className="card" style={{ padding:0, display:'grid', gridTemplateColumns:'300px minmax(0,1fr) 280px', height:'calc(100vh - 200px)', minHeight:560, overflow:'hidden' }}>
+      <div className="card" style={{ padding:0, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '300px minmax(0,1fr) 280px', height: isMobile ? 'calc(100vh - 140px)' : 'calc(100vh - 200px)', minHeight: isMobile ? 'unset' : 560, overflow:'hidden' }}>
 
         {/* Left — conversation list */}
-        <div style={{ borderRight:'1px solid var(--rule)', display:'flex', flexDirection:'column', minHeight:0, overflowY:'auto' }}>
+        <div style={{ borderRight: isMobile ? 'none' : '1px solid var(--rule)', display: isMobile && mobileChatOpen ? 'none' : 'flex', flexDirection:'column', minHeight:0, overflowY:'auto' }}>
           <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--rule)', fontSize:12, fontWeight:600, color:'var(--fg)' }}>
             Conversations <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums', color:'var(--faint)', fontWeight:400 }}>({convs.length})</span>
           </div>
@@ -254,16 +258,23 @@ export default function WhatsApp() {
           ))}
         </div>
 
-        {/* Middle — message thread */}
-        {!selected ? (
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'var(--faint)' }}>
+        {/* Middle — message thread (hidden on mobile when list shown) */}
+        {!(isMobile && !mobileChatOpen) && (
+        !selected ? (
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'var(--faint)', flex:1 }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" style={{ marginBottom:10 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <div style={{ fontSize:13, fontWeight:500, color:'var(--muted)' }}>Select a conversation</div>
           </div>
         ) : (
-          <div style={{ display:'flex', flexDirection:'column', minHeight:0, minWidth:0 }}>
-            {/* Chat header */}
+          <div style={{ display:'flex', flexDirection:'column', minHeight:0, minWidth:0, flex:1 }}>
+            {/* Chat header with mobile back button */}
             <div style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 16px', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
+              {isMobile && (
+                <button onClick={() => { setMobileChatOpen(false); setSelected(null); selectedPhoneRef.current = null; setMessages([]); setLead(null); }}
+                  style={{ background:'none', border:'none', color:'var(--muted)', cursor:'pointer', padding:'2px 6px 2px 0', display:'flex', alignItems:'center', flexShrink:0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+              )}
               <Av name={selected.name} size={32} />
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:13, fontWeight:500, color:'var(--fg)' }}>{selected.name}</div>
@@ -350,10 +361,10 @@ export default function WhatsApp() {
               </div>
             </div>
           </div>
-        )}
+        ))}
 
-        {/* Right — customer details */}
-        <div style={{ borderLeft:'1px solid var(--rule)', overflowY:'auto', background:'var(--card)' }}>
+        {/* Right — customer details (hidden on mobile) */}
+        {!isMobile && <div style={{ borderLeft:'1px solid var(--rule)', overflowY:'auto', background:'var(--card)' }}>
           {!selected ? (
             <div style={{ padding:20, color:'var(--faint)', fontSize:12, textAlign:'center', marginTop:40 }}>Select a conversation to see customer details</div>
           ) : (
@@ -427,7 +438,7 @@ export default function WhatsApp() {
               )}
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       <Modal open={!!pendingDelete} onClose={()=>!deleting && setPendingDelete(null)} title="Delete conversation" size="sm">
