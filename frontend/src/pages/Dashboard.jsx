@@ -211,7 +211,7 @@ export default function Dashboard() {
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>Here's how NK Herbal is performing today.</div>
         </div>
         <div className="toolbar-row">
-          {/* Mobile: only show + Order button */}
+          {/* Mobile: + Order button */}
           {isMobile && (
             <button onClick={() => window.location.href='/orders'} className="btn-primary">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -261,6 +261,24 @@ export default function Dashboard() {
           </>}
         </div>
       </div>
+
+      {/* ── Mobile month navigator ───────────────────── */}
+      {isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: '10px 14px' }}>
+          <button onClick={() => setMonthOffset(o => o - 1)}
+            style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', fontSize: 18 }}>
+            ‹
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+            {monthStr}
+          </div>
+          <button onClick={() => setMonthOffset(o => o + 1)} disabled={monthOffset >= 0}
+            style={{ background: 'none', border: 'none', color: monthOffset >= 0 ? 'var(--faint)' : 'var(--muted)', cursor: monthOffset >= 0 ? 'default' : 'pointer', padding: '4px 8px', borderRadius: 8, fontSize: 18 }}>
+            ›
+          </button>
+        </div>
+      )}
 
       {/* ── KPI strip ─────────────────────────────────── */}
       {isMobile ? (
@@ -351,7 +369,7 @@ export default function Dashboard() {
                   <div key={step.label} style={{ padding: '12px', borderRadius: 10, background: step.bg, textAlign: 'center' }}>
                     <div className="num" style={{ fontSize: 20, fontWeight: 700, color: step.color, lineHeight: 1 }}>{step.value}</div>
                     <div style={{ fontSize: 11, color: step.color, opacity: 0.8, marginTop: 3 }}>{step.label}</div>
-                    {i > 0 && <div className="num" style={{ fontSize: 10, color: step.color, opacity: 0.65, marginTop: 2 }}>{pct}%</div>}
+                    <div className="num" style={{ fontSize: 10, color: step.color, opacity: 0.65, marginTop: 2 }}>{i === 0 ? '100%' : `${pct}%`}</div>
                   </div>
                 );
               })}
