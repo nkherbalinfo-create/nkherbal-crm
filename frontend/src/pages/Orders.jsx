@@ -333,12 +333,12 @@ export default function Orders() {
 
       {/* Mobile card list */}
       {isMobile && (
-        <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', overflow:'hidden' }}>
           {orders.map(o => (
             <div key={o._id} data-row-id={o._id}
-              className={`card${exitId===o._id ? ' row-deleting' : ''}`}
+              className={exitId===o._id ? 'row-deleting' : ''}
               onClick={()=>openView(o)}
-              style={{ padding:'12px 14px', cursor:'pointer', overflow:'hidden', maxWidth:'100%' }}>
+              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', cursor:'pointer', overflow:'hidden', width:'100%', boxSizing:'border-box' }}>
 
               {/* Row 1: avatar + name + price */}
               <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:6 }}>
