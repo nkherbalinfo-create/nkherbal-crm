@@ -274,7 +274,7 @@ export default function Orders() {
       {isMobile ? (
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div>
-            <div style={{ fontSize:24, fontWeight:700, letterSpacing:'-0.02em', color:'var(--accent)' }}>Orders</div>
+            <div style={{ fontSize:24, fontWeight:700, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
             <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
               {meta.total} total orders
             </div>
@@ -336,9 +336,9 @@ export default function Orders() {
         <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {orders.map(o => (
             <div key={o._id} data-row-id={o._id}
-              className={exitId===o._id ? 'row-deleting' : ''}
+              className={`card${exitId===o._id ? ' row-deleting' : ''}`}
               onClick={()=>openView(o)}
-              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', cursor:'pointer' }}>
+              style={{ padding:'12px 14px', cursor:'pointer', overflow:'hidden', maxWidth:'100%' }}>
 
               {/* Row 1: avatar + name + price */}
               <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:6 }}>
