@@ -64,12 +64,12 @@ export default function Settings() {
 
       {/* Mobile: pill-style tab row */}
       {isMobile && (
-        <div style={{ display:'flex', gap:6, overflowX:'auto', scrollbarWidth:'none', paddingBottom:2, width:'100%', boxSizing:'border-box' }}>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8, width:'100%', boxSizing:'border-box' }}>
           {NAV_ITEMS.map(item => (
             <button key={item} onClick={() => setActiveNav(item)}
               style={{
-                padding:'8px 16px', borderRadius:999, border:'none', cursor:'pointer',
-                fontSize:13, fontWeight:500, whiteSpace:'nowrap', flexShrink:0,
+                padding:'9px 18px', borderRadius:999, cursor:'pointer',
+                fontSize:13, fontWeight:500, whiteSpace:'nowrap',
                 background: activeNav===item ? 'var(--accent)' : 'var(--card)',
                 color: activeNav===item ? 'var(--accent-ink)' : 'var(--muted)',
                 border: `1px solid ${activeNav===item ? 'var(--accent)' : 'var(--rule)'}`,
