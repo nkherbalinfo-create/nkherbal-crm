@@ -271,66 +271,114 @@ export default function Orders() {
     <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0 }}>
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
-          <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>
-            <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{meta.total}</span> total orders
-          </div>
+          <div style={{ fontSize: isMobile ? 20 : 22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{meta.total} total orders</div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            {syncing ? 'Syncing…' : 'Sync WooCommerce'}
-          </button>
-          <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New order
-          </button>
+        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+          {isMobile ? (
+            <>
+              <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ width:36, height:36, padding:0, display:'grid', placeItems:'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              </button>
+              <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                {syncing ? 'Syncing…' : 'Sync WooCommerce'}
+              </button>
+              <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New order
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Filter bar */}
-      <FilterBar>
-          <input className="input" placeholder="Search name, mobile, order ID…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
-          <DateInput value={filters.startDate} onChange={value=>setFilters(f=>({...f,startDate:value}))} />
-          <DateInput value={filters.endDate} onChange={value=>setFilters(f=>({...f,endDate:value}))} />
-          {[{k:'channel',opts:CHANNELS,label:'All channels'},{k:'status',opts:STATUS,label:'All status'},{k:'paymentStatus',opts:PAYMENT,label:'All payments'}].map(({k,opts,label})=>(
-            <SelectInput key={k} value={filters[k]} onChange={e=>setFilters(f=>({...f,[k]:e.target.value}))}>
-              <option value="">{label}</option>
-              {opts.map(o=><option key={o}>{o}</option>)}
-            </SelectInput>
-          ))}
-          <button className="btn-primary" style={{ fontSize:12 }} onClick={()=>{setPage(1);load();}}>Filter</button>
-          <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
-      </FilterBar>
+      {/* Filter bar — compact on mobile */}
+      {isMobile ? (
+        <input className="input" placeholder="Search orders…" value={filters.search}
+          onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
+      ) : (
+        <FilterBar>
+            <input className="input" placeholder="Search name, mobile, order ID…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
+            <DateInput value={filters.startDate} onChange={value=>setFilters(f=>({...f,startDate:value}))} />
+            <DateInput value={filters.endDate} onChange={value=>setFilters(f=>({...f,endDate:value}))} />
+            {[{k:'channel',opts:CHANNELS,label:'All channels'},{k:'status',opts:STATUS,label:'All status'},{k:'paymentStatus',opts:PAYMENT,label:'All payments'}].map(({k,opts,label})=>(
+              <SelectInput key={k} value={filters[k]} onChange={e=>setFilters(f=>({...f,[k]:e.target.value}))}>
+                <option value="">{label}</option>
+                {opts.map(o=><option key={o}>{o}</option>)}
+              </SelectInput>
+            ))}
+            <button className="btn-primary" style={{ fontSize:12 }} onClick={()=>{setPage(1);load();}}>Filter</button>
+            <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
+        </FilterBar>
+      )}
 
-      {/* Mobile card list */}
+      {/* Mobile card list — column layout */}
       {isMobile && (
         <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {orders.map(o => (
             <div key={o._id} data-row-id={o._id}
               className={exitId===o._id ? 'row-deleting' : ''}
-              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', display:'flex', flexDirection:'column', gap:8 }}>
-              <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
-                <input type="checkbox" checked={selected.has(o._id)} onChange={()=>toggleSelect(o._id)} style={{ accentColor:'var(--accent)', marginTop:2, flexShrink:0 }} />
-                <Av name={o.customerName} />
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                    <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)' }}>{o.customerName}</div>
-                    <div className="num" style={{ fontSize:14, fontWeight:700, color:'var(--fg)' }}>₹{o.orderValue?.toLocaleString('en-IN')}</div>
-                  </div>
-                  <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:1 }}>{o.productName}</div>
-                  <div style={{ fontSize:11, color:'var(--faint)', marginTop:2, fontFamily:'Inter' }}>{o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''} · {o.city}</div>
+              onClick={()=>openView(o)}
+              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'14px', cursor:'pointer', width:'100%', boxSizing:'border-box', overflow:'hidden' }}>
+
+              {/* Top: checkbox + avatar pinned left, content column on right */}
+              <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0, paddingTop:2 }}>
+                  <input type="checkbox" checked={selected.has(o._id)}
+                    onChange={e=>{e.stopPropagation();toggleSelect(o._id)}}
+                    onClick={e=>e.stopPropagation()}
+                    style={{ accentColor:'var(--accent)', width:14, height:14 }} />
+                  <Av name={o.customerName} />
                 </div>
-              </div>
-              <div style={{ display:'flex', alignItems:'center', gap:6, paddingLeft:44, flexWrap:'wrap' }}>
-                <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
-                <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
-                <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
-                <div style={{ marginLeft:'auto', display:'flex', gap:4 }}>
-                  <IconBtn onClick={()=>openEdit(o)} title="Edit" bg="var(--chip)" color="var(--muted)"><SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconBtn>
-                  <IconBtn onClick={()=>setConfirmId(o._id)} title="Delete" bg="var(--danger-bg)" color="var(--danger)"><SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></IconBtn>
+
+                {/* Content in a true column */}
+                <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:3 }}>
+                  {/* Row: name + price */}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
+                    <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {o.customerName}
+                    </div>
+                    <div className="num" style={{ fontSize:14, fontWeight:700, color:'var(--accent)', flexShrink:0 }}>
+                      ₹{o.orderValue?.toLocaleString('en-IN')}
+                    </div>
+                  </div>
+
+                  {/* Product name — full width, 2 lines max */}
+                  <div style={{ fontSize:12.5, color:'var(--muted)', lineHeight:1.4, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
+                    {o.productName}
+                  </div>
+
+                  {/* Meta info */}
+                  <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+                  </div>
+
+                  {/* Chips + actions */}
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:6, paddingTop:8, borderTop:'1px solid var(--rule)' }}>
+                    <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+                      <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
+                      <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
+                      <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
+                    </div>
+                    <div style={{ display:'flex', gap:5, flexShrink:0 }} onClick={e=>e.stopPropagation()}>
+                      <button onClick={e=>{e.stopPropagation();openEdit(o)}} style={{ width:26, height:26, display:'grid', placeItems:'center', borderRadius:6, border:'none', background:'var(--chip)', color:'var(--muted)', cursor:'pointer' }}>
+                        <SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={11}/>
+                      </button>
+                      <button onClick={e=>{e.stopPropagation();setConfirmId(o._id)}} style={{ width:26, height:26, display:'grid', placeItems:'center', borderRadius:6, border:'none', background:'var(--danger-bg)', color:'var(--danger)', cursor:'pointer' }}>
+                        <SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={11}/>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
