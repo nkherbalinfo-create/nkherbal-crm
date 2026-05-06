@@ -330,16 +330,20 @@ export default function Orders() {
               ✕
             </button>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:6, padding:'4px 14px 10px', overflowX:'auto', scrollbarWidth:'none' }}>
-            {STATUS.map(s => (
-              <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
-                style={{ padding:'7px 14px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:500, background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', whiteSpace:'nowrap', flexShrink:0 }}>
-                {s}
-              </button>
-            ))}
-            <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', flexShrink:0 }} />
+          {/* Status buttons scroll + Delete always visible */}
+          <div style={{ display:'flex', alignItems:'center', padding:'4px 14px 10px', gap:8, minWidth:0 }}>
+            {/* Scrollable status buttons */}
+            <div style={{ display:'flex', alignItems:'center', gap:6, overflowX:'auto', scrollbarWidth:'none', flex:1, minWidth:0 }}>
+              {STATUS.map(s => (
+                <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
+                  style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', whiteSpace:'nowrap', flexShrink:0 }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            {/* Delete always visible on the right */}
             <button onClick={bulkDelete} disabled={bulkWorking}
-              style={{ padding:'7px 14px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:500, background:'rgba(176,70,56,.3)', color:'#ff9086', whiteSpace:'nowrap', flexShrink:0 }}>
+              style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:600, background:'rgba(176,70,56,.3)', color:'#ff9086', whiteSpace:'nowrap', flexShrink:0 }}>
               Delete
             </button>
           </div>
