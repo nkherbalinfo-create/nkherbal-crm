@@ -888,6 +888,8 @@
 .app-shell {
   min-height: 100vh;
   background: var(--bg);
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 .content-shell {

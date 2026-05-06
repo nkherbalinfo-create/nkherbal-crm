@@ -24,7 +24,7 @@ function MobileHeader({ className }) {
     <header className={className} style={{
       position: 'sticky', top: 0, zIndex: 20,
       background: 'var(--card)', borderBottom: '1px solid var(--rule)',
-      padding: '14px 20px',
+      padding: '12px 14px',
       display: 'flex', alignItems: 'center', gap: 12,
     }}>
       {/* Brand */}
@@ -170,7 +170,7 @@ function Layout() {
   return (
     <div className="app-shell" style={{ display: 'flex' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }} className="lg-main">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden', minWidth: 0 }} className="lg-main">
         {/* Mobile header — no hamburger, bottom nav handles navigation */}
         <MobileHeader className="mobile-header" />
         <main className="content-shell" style={{ flex: 1 }}>
