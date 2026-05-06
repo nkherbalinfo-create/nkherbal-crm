@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import api from '../utils/api';
 import Modal from '../components/Modal';
@@ -114,9 +114,20 @@ export default function Orders() {
   const [syncing, setSyncing] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const pressTimer = useRef(null);
   const { addToast } = useToast();
 
   const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  // Long-press handlers for mobile selection
+  const handlePressStart = (id) => {
+    pressTimer.current = setTimeout(() => {
+      if (navigator.vibrate) navigator.vibrate(40);
+      setSelected(s => { const n = new Set(s); n.add(id); return n; });
+    }, 450);
+  };
+  const handlePressEnd = () => { clearTimeout(pressTimer.current); };
+  const handlePressMove = () => { clearTimeout(pressTimer.current); };
   const toggleAll = () => setSelected(s => s.size === orders.length ? new Set() : new Set(orders.map(o => o._id)));
 
   const bulkUpdateStatus = async (status) => {
@@ -328,17 +339,30 @@ export default function Orders() {
           {orders.map(o => (
             <div key={o._id} data-row-id={o._id}
               className={exitId===o._id ? 'row-deleting' : ''}
-              onClick={()=>openView(o)}
-              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'14px', cursor:'pointer', width:'100%', boxSizing:'border-box', overflow:'hidden' }}>
+              onClick={() => selected.size > 0 ? toggleSelect(o._id) : openView(o)}
+              onPointerDown={() => handlePressStart(o._id)}
+              onPointerUp={handlePressEnd}
+              onPointerMove={handlePressMove}
+              onPointerLeave={handlePressEnd}
+              onContextMenu={e => e.preventDefault()}
+              style={{
+                background: selected.has(o._id) ? 'var(--accent-bg)' : 'var(--card)',
+                border: `1px solid ${selected.has(o._id) ? 'var(--accent)' : 'var(--rule)'}`,
+                borderRadius:12, padding:'14px', cursor:'pointer',
+                width:'100%', boxSizing:'border-box', overflow:'hidden',
+                transition:'background 0.18s, border-color 0.18s',
+                userSelect:'none', WebkitUserSelect:'none',
+              }}>
 
-              {/* Top: checkbox + avatar pinned left, content column on right */}
+              {/* Top: avatar (with checkmark when selected) + content column */}
               <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0, paddingTop:2 }}>
-                  <input type="checkbox" checked={selected.has(o._id)}
-                    onChange={e=>{e.stopPropagation();toggleSelect(o._id)}}
-                    onClick={e=>e.stopPropagation()}
-                    style={{ accentColor:'var(--accent)', width:14, height:14 }} />
+                <div style={{ position:'relative', flexShrink:0 }}>
                   <Av name={o.customerName} />
+                  {selected.has(o._id) && (
+                    <div style={{ position:'absolute', inset:0, borderRadius:'50%', background:'var(--accent)', display:'grid', placeItems:'center' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                  )}
                 </div>
 
                 {/* Content in a true column */}
