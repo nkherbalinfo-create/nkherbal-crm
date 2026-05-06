@@ -146,6 +146,16 @@ export default function Leads() {
   const isMobile = useIsMobile(767);
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const pressTimer = useRef(null);
+
+  const handlePressStart = (id) => {
+    pressTimer.current = setTimeout(() => {
+      if (navigator.vibrate) navigator.vibrate(40);
+      setSelected(s => { const n = new Set(s); n.add(id); return n; });
+    }, 450);
+  };
+  const handlePressEnd = () => { clearTimeout(pressTimer.current); };
+  const handlePressMove = () => { clearTimeout(pressTimer.current); };
   const { addToast } = useToast();
 
   const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -280,9 +290,36 @@ export default function Leads() {
         ))}
       </div>
 
+      {/* Mobile inline bulk bar — replaces search when items selected */}
+      {isMobile && selected.size > 0 && (
+        <div className="fade-in" style={{ background:'rgba(20,18,15,0.96)', backdropFilter:'blur(16px)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:14, boxShadow:'0 4px 20px rgba(0,0,0,.35)', width:'100%', boxSizing:'border-box', overflow:'hidden' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px 6px', gap:8 }}>
+            <span style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,.9)' }}>{selected.size} lead{selected.size > 1 ? 's' : ''} selected</span>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <button onClick={toggleAll} style={{ padding:'4px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.2)', cursor:'pointer', background:'transparent', color:'rgba(255,255,255,.7)', fontSize:11.5, fontWeight:500, whiteSpace:'nowrap' }}>
+                {selected.size === leads.length ? 'Deselect all' : 'Select all'}
+              </button>
+              <button onClick={() => setSelected(new Set())} style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14 }}>✕</button>
+            </div>
+          </div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:6, padding:'4px 14px 10px' }}>
+            {STATUSES.map(s => (
+              <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
+                style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:500, background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', whiteSpace:'nowrap' }}>
+                {s}
+              </button>
+            ))}
+            <button onClick={bulkDelete} disabled={bulkWorking}
+              style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:600, background:'rgba(176,70,56,.3)', color:'#ff9086', whiteSpace:'nowrap' }}>
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filter bar */}
       {isMobile ? (
-        <div style={{ display:'flex', gap:8 }}>
+        !selected.size && <div style={{ display:'flex', gap:8 }}>
           <input className="input" placeholder="Search name, mobile…" value={filters.search}
             onChange={e=>{setFilters(f=>({...f,search:e.target.value}));setPage(1);}} style={{ flex:1 }} />
           {(filters.status||filters.source) && (
@@ -311,16 +348,39 @@ export default function Leads() {
           {leads.map(l => (
             <div key={l._id} data-row-id={l._id}
               className={exitId===l._id ? 'row-deleting' : ''}
-              style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}>
-              <input type="checkbox" checked={selected.has(l._id)} onChange={()=>toggleSelect(l._id)} style={{ accentColor:'var(--accent)', flexShrink:0 }} />
-              <Av name={l.name} />
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</div>
-                  <StatusDropdown leadId={l._id} current={l.status} onUpdate={updateStatus} disabled={updatingId===l._id} />
+              onClick={() => selected.size > 0 ? toggleSelect(l._id) : null}
+              onPointerDown={() => handlePressStart(l._id)}
+              onPointerUp={handlePressEnd}
+              onPointerMove={handlePressMove}
+              onPointerLeave={handlePressEnd}
+              onContextMenu={e => e.preventDefault()}
+              style={{
+                background: selected.has(l._id) ? 'var(--accent-bg)' : 'var(--card)',
+                border: `1px solid ${selected.has(l._id) ? 'var(--accent)' : 'var(--rule)'}`,
+                borderRadius:12, padding:'14px', width:'100%', boxSizing:'border-box', overflow:'hidden',
+                transition:'background 0.18s, border-color 0.18s', userSelect:'none', WebkitUserSelect:'none', cursor:'pointer',
+              }}>
+              <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+                {/* Avatar with checkmark when selected */}
+                <div style={{ position:'relative', flexShrink:0 }}>
+                  <Av name={l.name} />
+                  {selected.has(l._id) && (
+                    <div style={{ position:'absolute', inset:0, borderRadius:'50%', background:'var(--accent)', display:'grid', placeItems:'center' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                  )}
                 </div>
-                <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.interestedProduct}</div>
-                <div style={{ fontSize:11, color:'var(--faint)', marginTop:1 }}>{l.source} · {l.leadId}</div>
+                {/* Content column */}
+                <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:3 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
+                    <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.name}</div>
+                    <div onClick={e=>e.stopPropagation()}>
+                      <StatusDropdown leadId={l._id} current={l.status} onUpdate={updateStatus} disabled={updatingId===l._id} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize:12.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.interestedProduct}</div>
+                  <div style={{ fontSize:11, color:'var(--faint)', marginTop:1 }}>{l.source} · {l.leadId}</div>
+                </div>
               </div>
             </div>
           ))}
