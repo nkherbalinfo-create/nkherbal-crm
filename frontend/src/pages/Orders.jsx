@@ -343,24 +343,24 @@ export default function Orders() {
 
                 {/* Content in a true column */}
                 <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:3 }}>
-                  {/* Row: name + price */}
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {o.customerName}
-                    </div>
-                    <div className="num" style={{ fontSize:14, fontWeight:700, color:'var(--accent)', flexShrink:0 }}>
-                      ₹{o.orderValue?.toLocaleString('en-IN')}
-                    </div>
+                  {/* Name — full width, no price competition */}
+                  <div style={{ fontSize:14, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {o.customerName}
                   </div>
 
-                  {/* Product name — full width, 2 lines max */}
+                  {/* Product name — full width, 2 lines max, no overlap */}
                   <div style={{ fontSize:12.5, color:'var(--muted)', lineHeight:1.4, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
                     {o.productName}
                   </div>
 
-                  {/* Meta info */}
-                  <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+                  {/* Meta + price on same row — price sits at far right, ID truncates */}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8, marginTop:2 }}>
+                    <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>
+                      {o.orderId} · {o.orderDate ? format(new Date(o.orderDate),'dd MMM yy') : ''}{o.city ? ` · ${o.city}` : ''}
+                    </div>
+                    <div className="num" style={{ fontSize:14, fontWeight:700, color:'var(--accent)', flexShrink:0 }}>
+                      ₹{o.orderValue?.toLocaleString('en-IN')}
+                    </div>
                   </div>
 
                   {/* Chips + actions */}
