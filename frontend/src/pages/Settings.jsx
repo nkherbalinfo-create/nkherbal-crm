@@ -56,27 +56,47 @@ export default function Settings() {
   };
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap: isMobile ? 14 : 20, overflow:'hidden', maxWidth:'100%' }}>
       <div>
-        <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Settings</div>
+        <div style={{ fontSize: isMobile ? 20 : 22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Settings</div>
         <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Manage your account and integrations</div>
       </div>
 
-      <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns:'200px 1fr', gap:20, alignItems:'start' }}>
-        {/* Left nav (desktop) / Horizontal tabs (mobile) */}
-        <div className={isMobile ? 'settings-nav-mobile' : 'card'} style={isMobile ? {} : { padding:8 }}>
-          {NAV_ITEMS.map(item=>(
-            <button key={item} onClick={()=>setActiveNav(item)}
-              className={isMobile && activeNav===item ? 'active' : ''}
-              style={{ width: isMobile ? 'auto' : '100%', textAlign:'left', padding:'8px 12px', borderRadius: isMobile ? 0 : 8, border:'none', cursor:'pointer', fontSize:13, fontWeight:500, transition:'background 0.2s ease, color 0.2s ease', whiteSpace: isMobile ? 'nowrap' : 'normal', flexShrink:0,
-                background: (!isMobile && activeNav===item) ? 'var(--hover)' : 'transparent',
-                color: activeNav===item ? (isMobile ? 'var(--accent)' : 'var(--fg)') : 'var(--muted)',
-                boxShadow: (!isMobile && activeNav===item) ? 'var(--shadow-nav)' : 'none',
+      {/* Mobile: pill-style tab row */}
+      {isMobile && (
+        <div style={{ display:'flex', gap:6, overflowX:'auto', scrollbarWidth:'none', paddingBottom:2, width:'100%', boxSizing:'border-box' }}>
+          {NAV_ITEMS.map(item => (
+            <button key={item} onClick={() => setActiveNav(item)}
+              style={{
+                padding:'8px 16px', borderRadius:999, border:'none', cursor:'pointer',
+                fontSize:13, fontWeight:500, whiteSpace:'nowrap', flexShrink:0,
+                background: activeNav===item ? 'var(--accent)' : 'var(--card)',
+                color: activeNav===item ? 'var(--accent-ink)' : 'var(--muted)',
+                border: `1px solid ${activeNav===item ? 'var(--accent)' : 'var(--rule)'}`,
+                transition:'all 0.15s',
               }}>
               {item}
             </button>
           ))}
         </div>
+      )}
+
+      <div style={{ display: isMobile ? 'block' : 'grid', gridTemplateColumns:'200px 1fr', gap:20, alignItems:'start' }}>
+        {/* Desktop side nav */}
+        {!isMobile && (
+        <div className="card" style={{ padding:8 }}>
+          {NAV_ITEMS.map(item=>(
+            <button key={item} onClick={()=>setActiveNav(item)}
+              style={{ width:'100%', textAlign:'left', padding:'8px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:13, fontWeight:500, transition:'background 0.2s ease, color 0.2s ease',
+                background: activeNav===item ? 'var(--hover)' : 'transparent',
+                color: activeNav===item ? 'var(--fg)' : 'var(--muted)',
+                boxShadow: activeNav===item ? 'var(--shadow-nav)' : 'none',
+              }}>
+              {item}
+            </button>
+          ))}
+        </div>
+        )}
 
         {/* Right content */}
         <div>
@@ -92,7 +112,7 @@ export default function Settings() {
                   <span className="chip chip-info" style={{ fontSize:10, marginTop:5, display:'inline-flex' }}>Admin</span>
                 </div>
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:12 }}>
                 <Field label="Full Name" value={user?.name} />
                 <Field label="Email Address" value={user?.email} />
                 <Field label="Role" value="Administrator" />
