@@ -318,7 +318,8 @@ export default function Orders() {
         <div className="fade-in" style={{
           background:'rgba(20,18,15,0.96)', backdropFilter:'blur(16px)',
           border:'1px solid rgba(255,255,255,0.09)', borderRadius:14,
-          boxShadow:'0 4px 20px rgba(0,0,0,.35)', overflow:'hidden',
+          boxShadow:'0 4px 20px rgba(0,0,0,.35)',
+          width:'100%', boxSizing:'border-box', overflow:'hidden',
         }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px 6px' }}>
             <span style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,.9)' }}>
