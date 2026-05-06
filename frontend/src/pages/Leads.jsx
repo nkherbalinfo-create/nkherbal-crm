@@ -486,36 +486,25 @@ export default function Leads() {
       />
 
       {/* Floating bulk action bar */}
-      {selected.size > 0 && (
-        <div className="bulk-bar fade-in" style={{
-          zIndex:500, display:'flex', alignItems:'center', gap:8,
-          
-          borderRadius:14, padding:'10px 14px',
-          boxShadow:'0 8px 32px rgba(37,35,32,.3)',
-          fontSize:12, fontWeight:500, whiteSpace:'nowrap',
-        }}>
-          <span style={{ paddingRight:10, borderRight:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.7)' }}>
-            {selected.size} selected
-          </span>
-          {/* Status submenu */}
+      {/* Desktop bulk bar */}
+      {!isMobile && selected.size > 0 && (
+        <div className="bulk-bar fade-in" style={{ zIndex:500, display:'flex', alignItems:'center', gap:8, borderRadius:14, padding:'10px 14px', boxShadow:'0 8px 32px rgba(37,35,32,.3)', fontSize:12, fontWeight:500, whiteSpace:'nowrap' }}>
+          <span style={{ paddingRight:10, borderRight:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.7)' }}>{selected.size} selected</span>
           {STATUSES.map(s => {
             const m = STATUS_META[s];
             return (
               <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
-                style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:m.bg, color:m.text, transition:'opacity 0.15s', opacity:bulkWorking?0.6:1 }}>
+                style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:m.bg, color:m.text }}>
                 {s}
               </button>
             );
           })}
-          <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 2px' }} />
           <button onClick={bulkDelete} disabled={bulkWorking}
-            style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(176,70,56,.25)', color:'#ff9086', opacity:bulkWorking?0.6:1 }}>
+            style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(176,70,56,.25)', color:'#ff9086' }}>
             Delete {selected.size}
           </button>
           <button onClick={() => setSelected(new Set())}
-            style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14, lineHeight:1 }}>
-            ✕
-          </button>
+            style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14 }}>✕</button>
         </div>
       )}
     </div>
