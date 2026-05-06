@@ -691,33 +691,44 @@ export default function Orders() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {selected.size > 0 && (
-        <div className="bulk-bar fade-in" style={{
-          zIndex:500, display:'flex', alignItems:'center', gap:8,
-          
-          borderRadius:14, padding:'10px 14px',
-          boxShadow:'0 8px 32px rgba(37,35,32,.3)',
-          fontSize:12, fontWeight:500, whiteSpace:'nowrap',
+        <div className="fade-in" style={{
+          position:'fixed',
+          bottom: isMobile ? 72 : 24,
+          left: isMobile ? 12 : '50%',
+          right: isMobile ? 12 : 'auto',
+          transform: isMobile ? 'none' : 'translateX(calc(-50% + 116px))',
+          zIndex:500,
+          background:'rgba(20,18,15,0.96)',
+          backdropFilter:'blur(16px)',
+          border:'1px solid rgba(255,255,255,0.09)',
+          borderRadius:14,
+          boxShadow:'0 8px 32px rgba(0,0,0,.4)',
+          overflow:'hidden',
         }}>
-          <span style={{ paddingRight:10, borderRight:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.7)' }}>
-            {selected.size} selected
-          </span>
-          {STATUS.map(s => (
-            <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
-              style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11, fontWeight:500, background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', transition:'background 0.12s' }}
-              onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,.2)'}
-              onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,.1)'}>
-              → {s}
+          {/* Top row: count + close */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px 6px' }}>
+            <span style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,.9)' }}>
+              {selected.size} order{selected.size > 1 ? 's' : ''} selected
+            </span>
+            <button onClick={() => setSelected(new Set())}
+              style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14 }}>
+              ✕
             </button>
-          ))}
-          <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', margin:'0 2px' }} />
-          <button onClick={bulkDelete} disabled={bulkWorking}
-            style={{ padding:'5px 10px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(176,70,56,.25)', color:'#ff9086' }}>
-            Delete {selected.size}
-          </button>
-          <button onClick={() => setSelected(new Set())}
-            style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14 }}>
-            ✕
-          </button>
+          </div>
+          {/* Bottom row: scrollable status buttons + delete */}
+          <div style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 14px 10px', overflowX:'auto', scrollbarWidth:'none' }}>
+            {STATUS.map(s => (
+              <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
+                style={{ padding:'6px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', whiteSpace:'nowrap', flexShrink:0 }}>
+                {s}
+              </button>
+            ))}
+            <div style={{ width:1, height:20, background:'rgba(255,255,255,.15)', flexShrink:0 }} />
+            <button onClick={bulkDelete} disabled={bulkWorking}
+              style={{ padding:'6px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(176,70,56,.25)', color:'#ff9086', whiteSpace:'nowrap', flexShrink:0 }}>
+              Delete
+            </button>
+          </div>
         </div>
       )}
     </div>
