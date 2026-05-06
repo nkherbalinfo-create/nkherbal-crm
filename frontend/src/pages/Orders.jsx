@@ -330,20 +330,16 @@ export default function Orders() {
               ✕
             </button>
           </div>
-          {/* Status buttons scroll + Delete always visible */}
-          <div style={{ display:'flex', alignItems:'center', padding:'4px 14px 10px', gap:8, minWidth:0 }}>
-            {/* Scrollable status buttons */}
-            <div style={{ display:'flex', alignItems:'center', gap:6, overflowX:'auto', scrollbarWidth:'none', flex:1, minWidth:0 }}>
-              {STATUS.map(s => (
-                <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
-                  style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:500, background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', whiteSpace:'nowrap', flexShrink:0 }}>
-                  {s}
-                </button>
-              ))}
-            </div>
-            {/* Delete always visible on the right */}
+          {/* Buttons wrap to next line — works at any screen width */}
+          <div style={{ display:'flex', flexWrap:'wrap', gap:6, padding:'4px 14px 10px' }}>
+            {STATUS.map(s => (
+              <button key={s} onClick={() => bulkUpdateStatus(s)} disabled={bulkWorking}
+                style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:500, background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.85)', whiteSpace:'nowrap' }}>
+                {s}
+              </button>
+            ))}
             <button onClick={bulkDelete} disabled={bulkWorking}
-              style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:11.5, fontWeight:600, background:'rgba(176,70,56,.3)', color:'#ff9086', whiteSpace:'nowrap', flexShrink:0 }}>
+              style={{ padding:'7px 12px', borderRadius:8, border:'none', cursor:'pointer', fontSize:12, fontWeight:600, background:'rgba(176,70,56,.3)', color:'#ff9086', whiteSpace:'nowrap' }}>
               Delete
             </button>
           </div>
