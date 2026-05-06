@@ -271,26 +271,41 @@ export default function Orders() {
     <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0, overflow:'hidden', maxWidth:'100%' }}>
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
-          <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>
-            <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{meta.total}</span> total orders
-          </div>
+          <div style={{ fontSize: isMobile?20:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{meta.total} total orders</div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            {syncing ? 'Syncing…' : 'Sync WooCommerce'}
-          </button>
-          <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New order
-          </button>
+        <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+          {isMobile ? (
+            <>
+              <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ width:36, height:36, display:'grid', placeItems:'center', padding:0, flexShrink:0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              </button>
+              <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn-secondary" onClick={syncWooCommerce} disabled={syncing} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                {syncing ? 'Syncing…' : 'Sync WooCommerce'}
+              </button>
+              <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New order
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Filter bar */}
+      {isMobile ? (
+        <input className="input" placeholder="Search orders…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} style={{ width:'100%', boxSizing:'border-box' }} />
+      ) : (
       <FilterBar>
           <input className="input" placeholder="Search name, mobile, order ID…" value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))} />
           <DateInput value={filters.startDate} onChange={value=>setFilters(f=>({...f,startDate:value}))} />
@@ -304,6 +319,7 @@ export default function Orders() {
           <button className="btn-primary" style={{ fontSize:12 }} onClick={()=>{setPage(1);load();}}>Filter</button>
           <button className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setFilters({channel:'',status:'',paymentStatus:'',search:'',startDate:'',endDate:''})}>Clear</button>
       </FilterBar>
+      )}
 
       {/* Mobile cards */}
       {isMobile && (
