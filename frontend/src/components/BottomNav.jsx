@@ -48,7 +48,7 @@ export default function BottomNav({ badges = {} }) {
                 </span>
               )}
               {icon}
-              <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400, letterSpacing: 0 }}>{label}</span>
+              <span style={{ fontSize: 9.5, fontWeight: isActive ? 600 : 400, letterSpacing: 0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:52 }}>{label}</span>
             </div>
           )}
         </NavLink>

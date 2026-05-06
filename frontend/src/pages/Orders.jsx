@@ -426,9 +426,9 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  {/* Chips + actions */}
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:6, paddingTop:8, borderTop:'1px solid var(--rule)' }}>
-                    <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+                  {/* Chips + actions — flex:1 on chips prevents overflow */}
+                  <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginTop:6, paddingTop:8, borderTop:'1px solid var(--rule)', minWidth:0 }}>
+                    <div style={{ display:'flex', gap:4, flexWrap:'wrap', flex:1, minWidth:0 }}>
                       <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
                       <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
                       <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
