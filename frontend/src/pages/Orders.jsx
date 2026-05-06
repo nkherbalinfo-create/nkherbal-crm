@@ -321,14 +321,20 @@ export default function Orders() {
           boxShadow:'0 4px 20px rgba(0,0,0,.35)',
           width:'100%', boxSizing:'border-box', overflow:'hidden',
         }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px 6px' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px 6px', gap:8 }}>
             <span style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,.9)' }}>
               {selected.size} order{selected.size > 1 ? 's' : ''} selected
             </span>
-            <button onClick={() => setSelected(new Set())}
-              style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14 }}>
-              ✕
-            </button>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <button onClick={toggleAll}
+                style={{ padding:'4px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.2)', cursor:'pointer', background:'transparent', color:'rgba(255,255,255,.7)', fontSize:11.5, fontWeight:500, whiteSpace:'nowrap' }}>
+                {selected.size === orders.length ? 'Deselect all' : 'Select all'}
+              </button>
+              <button onClick={() => setSelected(new Set())}
+                style={{ width:24, height:24, borderRadius:6, border:'none', cursor:'pointer', background:'rgba(255,255,255,.1)', color:'rgba(255,255,255,.6)', display:'grid', placeItems:'center', fontSize:14 }}>
+                ✕
+              </button>
+            </div>
           </div>
           {/* Buttons wrap to next line — works at any screen width */}
           <div style={{ display:'flex', flexWrap:'wrap', gap:6, padding:'4px 14px 10px' }}>
