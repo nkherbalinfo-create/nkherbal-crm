@@ -21,6 +21,34 @@ const PRODUCTS = [
 const STATUS_CHIP = { Interested:'chip-info', 'Not Interested':'chip-danger', Converted:'chip-ok', 'Follow Up':'chip-warn' };
 const SOURCE_CHIP = { Ads:'chip-info', WhatsApp:'chip-ok', Website:'chip-info', Referral:'chip-muted', Direct:'chip-muted' };
 
+function calcScore(lead) {
+  if (lead.status === 'Not Interested') return 0;
+  let score = 0;
+  const src = { WhatsApp: 30, Ads: 20, Website: 20, Referral: 15, Direct: 10 };
+  score += src[lead.source] || 10;
+  const st = { Interested: 40, 'Follow Up': 25, Converted: 50, 'Not Interested': 0 };
+  score += st[lead.status] || 0;
+  const days = Math.floor((Date.now() - new Date(lead.date)) / 86400000);
+  if (days <= 7) score += 30;
+  else if (days <= 30) score += 20;
+  else if (days <= 60) score += 10;
+  return Math.min(100, score);
+}
+
+function ScoreBadge({ lead }) {
+  if (lead.status === 'Not Interested') return null;
+  const score = calcScore(lead);
+  let label, color, bg;
+  if (score >= 65) { label = '🔴 Hot'; color = '#e05c2d'; bg = 'rgba(224,92,45,.12)'; }
+  else if (score >= 35) { label = '🟡 Warm'; color = '#c9960b'; bg = 'rgba(201,150,11,.12)'; }
+  else { label = '🔵 Cold'; color = 'var(--muted)'; bg = 'var(--chip)'; }
+  return (
+    <span style={{ padding:'2px 8px', borderRadius:999, fontSize:10.5, fontWeight:600, color, background:bg, border:`1px solid ${color}33`, letterSpacing:'0.01em', whiteSpace:'nowrap' }}>
+      {label}
+    </span>
+  );
+}
+
 const STAT_CARDS = [
   { key:'Interested',      label:'Interested',      cls:'chip-info'   },
   { key:'Not Interested',  label:'Not Interested',  cls:'chip-danger' },
@@ -39,7 +67,7 @@ function Av({ name }) {
   return <span className="avatar avatar-md">{i}</span>;
 }
 
-const COLS = ['','LEAD ID','DATE','NAME','MOBILE','SOURCE','PRODUCT','STATUS','NOTES',''];
+const COLS = ['','LEAD ID','DATE','NAME','MOBILE','SOURCE','PRODUCT','SCORE','STATUS','NOTES',''];
 
 const STATUS_META = {
   'Interested':     { dot:'var(--info)',   text:'var(--info)',   bg:'var(--info-bg)'   },
@@ -188,7 +216,8 @@ export default function Leads() {
     try {
       const params = { page, limit:8, ...Object.fromEntries(Object.entries(filters).filter(([,v])=>v)) };
       const { data } = await api.get('/leads', { params });
-      setLeads(data.leads);
+      const sorted = [...(data.leads||[])].sort((a,b) => calcScore(b) - calcScore(a));
+      setLeads(sorted);
       setMeta({ total:data.total, page:data.page, pages:data.pages });
       if (data.statusCounts) setStatusCounts(data.statusCounts);
       setListKey(k => k + 1);
@@ -379,7 +408,10 @@ export default function Leads() {
                     </div>
                   </div>
                   <div style={{ fontSize:12.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{l.interestedProduct}</div>
-                  <div style={{ fontSize:11, color:'var(--faint)', marginTop:1 }}>{l.source} · {l.leadId}</div>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2, flexWrap:'wrap' }}>
+                    <span style={{ fontSize:11, color:'var(--faint)' }}>{l.source} · {l.leadId}</span>
+                    <ScoreBadge lead={l} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -424,6 +456,7 @@ export default function Leads() {
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:11.5, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{l.mobile}</td>
                   <td style={{ padding:'11px 16px' }}><span className={`chip ${SOURCE_CHIP[l.source]||'chip-muted'}`}>{l.source}</span></td>
                   <td style={{ padding:'11px 16px', maxWidth:130, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:12, color:'var(--muted)' }}>{l.interestedProduct}</td>
+                  <td style={{ padding:'10px 16px' }}><ScoreBadge lead={l} /></td>
                   <td style={{ padding:'10px 16px' }}>
                     <StatusDropdown
                       leadId={l._id}

@@ -106,4 +106,34 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// Update profile (name + email)
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    if (!name || !email) return res.status(400).json({ message: 'Name and email are required' });
+    const existing = await User.findOne({ email: email.toLowerCase(), _id: { $ne: req.user.id } });
+    if (existing) return res.status(400).json({ message: 'Email already in use by another account' });
+    const user = await User.findByIdAndUpdate(req.user.id, { name: name.trim(), email: email.toLowerCase().trim() }, { new: true }).select('-password');
+    res.json({ user: { id: user._id, name: user.name, email: user.email } });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Change password
+router.put('/password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Both passwords are required' });
+    if (newPassword.length < 6) return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    const user = await User.findById(req.user.id);
+    if (!(await user.matchPassword(currentPassword))) return res.status(401).json({ message: 'Current password is incorrect' });
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

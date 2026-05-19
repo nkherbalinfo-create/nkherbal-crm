@@ -73,7 +73,7 @@ function SplashScreen({ onDone }) {
 
 function GlobalSearch({ open, onClose }) {
   const [q, setQ] = useState('');
-  const [results, setResults] = useState({ orders: [], customers: [] });
+  const [results, setResults] = useState({ orders: [], customers: [], leads: [] });
   const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
   const navigate = useNavigate();
@@ -84,16 +84,17 @@ function GlobalSearch({ open, onClose }) {
   }, [open]);
 
   useEffect(() => {
-    if (!q.trim()) { setResults({ orders: [], customers: [] }); return; }
+    if (!q.trim()) { setResults({ orders: [], customers: [], leads: [] }); return; }
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const [o, c] = await Promise.all([
+        const [o, c, l] = await Promise.all([
           api.get('/orders', { params: { search: q, limit: 5 } }),
           api.get('/customers', { params: { search: q, limit: 5 } }),
+          api.get('/leads', { params: { search: q, limit: 5 } }),
         ]);
-        setResults({ orders: o.data.orders || [], customers: c.data.customers || [] });
+        setResults({ orders: o.data.orders || [], customers: c.data.customers || [], leads: l.data.leads || [] });
       } catch {} finally { setLoading(false); }
     }, 300);
   }, [q]);
@@ -114,7 +115,7 @@ function GlobalSearch({ open, onClose }) {
         <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 32px rgba(37,35,32,.12)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--rule)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--faint)', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders, customers…"
+            <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders, customers, leads…"
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: 'var(--fg)', fontFamily: 'inherit' }} />
             {loading && <div style={{ width: 14, height: 14, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />}
             <button onClick={onClose} style={{ color: 'var(--faint)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
@@ -142,8 +143,21 @@ function GlobalSearch({ open, onClose }) {
                 </button>
               ))}
             </>}
-            {!q && <div style={{ padding: '16px 10px', color: 'var(--faint)', fontSize: 12, textAlign: 'center' }}>Type to search orders and customers</div>}
-            {q && !loading && !results.orders.length && !results.customers.length && (
+            {results.leads.length > 0 && <>
+              <div style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--faint)', padding: '6px 10px', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 4 }}>Leads</div>
+              {results.leads.map(l => (
+                <button key={l._id} onClick={() => go('/leads')} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontSize: 12 }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--hover)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'var(--info-bg)', color: 'var(--info)', fontWeight: 500 }}>{l.source}</span>
+                    <span style={{ fontWeight: 500 }}>{l.name}</span>
+                  </div>
+                  <span style={{ color: 'var(--faint)', fontFamily: 'Inter', fontSize: 11 }}>{l.status}</span>
+                </button>
+              ))}
+            </>}
+            {!q && <div style={{ padding: '16px 10px', color: 'var(--faint)', fontSize: 12, textAlign: 'center' }}>Type to search orders, customers and leads</div>}
+            {q && !loading && !results.orders.length && !results.customers.length && !results.leads.length && (
               <div style={{ padding: '16px 10px', color: 'var(--faint)', fontSize: 12, textAlign: 'center' }}>No results for "{q}"</div>
             )}
           </div>

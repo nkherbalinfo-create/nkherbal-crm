@@ -29,7 +29,7 @@ function Field({ label, value }) {
 }
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { theme, toggle } = useTheme();
   const { addToast } = useToast();
   const [activeNav, setActiveNav] = useState('Profile');
@@ -39,7 +39,37 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
+  // Profile edit state
+  const [profileForm, setProfileForm] = useState({ name: user?.name||'', email: user?.email||'' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  // Password change state
+  const [pwForm, setPwForm] = useState({ currentPassword:'', newPassword:'', confirmPassword:'' });
+  const [savingPw, setSavingPw] = useState(false);
+  const [showPw, setShowPw] = useState({ cur:false, new:false, confirm:false });
+
   const initials = (user?.name||user?.email||'U').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+
+  const saveProfile = async (e) => {
+    e.preventDefault(); setSavingProfile(true);
+    try {
+      const { data } = await api.put('/auth/profile', profileForm);
+      updateUser(data.user);
+      addToast('Profile updated');
+    } catch (err) { addToast(err.response?.data?.message||'Save failed','error'); }
+    finally { setSavingProfile(false); }
+  };
+
+  const changePassword = async (e) => {
+    e.preventDefault();
+    if (pwForm.newPassword !== pwForm.confirmPassword) { addToast('New passwords do not match','error'); return; }
+    setSavingPw(true);
+    try {
+      await api.put('/auth/password', { currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword });
+      addToast('Password changed successfully');
+      setPwForm({ currentPassword:'', newPassword:'', confirmPassword:'' });
+    } catch (err) { addToast(err.response?.data?.message||'Change failed','error'); }
+    finally { setSavingPw(false); }
+  };
 
   const saveWC = async (e) => {
     e.preventDefault(); setSaving(true);
@@ -101,7 +131,8 @@ export default function Settings() {
         {/* Right content */}
         <div>
           {activeNav==='Profile' && (
-            <Card title="Profile" subtitle="Your account information">
+            <>
+            <Card title="Profile" subtitle="Update your account name and email">
               <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:20, paddingBottom:16, borderBottom:'1px solid var(--rule)' }}>
                 <div style={{ width:52, height:52, borderRadius:12, background:'var(--accent)', color:'var(--accent-ink)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:700, flexShrink:0 }}>
                   {initials}
@@ -112,13 +143,51 @@ export default function Settings() {
                   <span className="chip chip-info" style={{ fontSize:10, marginTop:5, display:'inline-flex' }}>Admin</span>
                 </div>
               </div>
-              <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:12 }}>
-                <Field label="Full Name" value={user?.name} />
-                <Field label="Email Address" value={user?.email} />
-                <Field label="Role" value="Administrator" />
-                <Field label="Account type" value="NK Herbal CRM" />
-              </div>
+              <form onSubmit={saveProfile} style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:12 }}>
+                <div>
+                  <label className="label">Full Name</label>
+                  <input className="input" value={profileForm.name} onChange={e=>setProfileForm(p=>({...p,name:e.target.value}))} required />
+                </div>
+                <div>
+                  <label className="label">Email Address</label>
+                  <input type="email" className="input" value={profileForm.email} onChange={e=>setProfileForm(p=>({...p,email:e.target.value}))} required />
+                </div>
+                <div style={{ gridColumn:'1/-1', display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid var(--rule)', paddingTop:12, marginTop:4 }}>
+                  <button type="button" className="btn-secondary" style={{ fontSize:12 }} onClick={()=>setProfileForm({name:user?.name||'',email:user?.email||''})}>Reset</button>
+                  <button type="submit" className="btn-primary" style={{ fontSize:12 }} disabled={savingProfile}>{savingProfile?'Saving…':'Save changes'}</button>
+                </div>
+              </form>
             </Card>
+
+            <Card title="Change password" subtitle="You'll need your current password to set a new one">
+              <form onSubmit={changePassword} style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                {[
+                  { key:'currentPassword', label:'Current password', pk:'cur' },
+                  { key:'newPassword', label:'New password', pk:'new' },
+                  { key:'confirmPassword', label:'Confirm new password', pk:'confirm' },
+                ].map(({ key, label, pk }) => (
+                  <div key={key}>
+                    <label className="label">{label}</label>
+                    <div style={{ position:'relative' }}>
+                      <input type={showPw[pk]?'text':'password'} className="input" style={{ paddingRight:36 }}
+                        value={pwForm[key]} onChange={e=>setPwForm(p=>({...p,[key]:e.target.value}))} required minLength={key!=='currentPassword'?6:1} />
+                      <button type="button" onClick={()=>setShowPw(p=>({...p,[pk]:!p[pk]}))}
+                        style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--faint)', display:'flex' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                          {showPw[pk]
+                            ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                            : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div style={{ display:'flex', justifyContent:'flex-end', borderTop:'1px solid var(--rule)', paddingTop:12, marginTop:4 }}>
+                  <button type="submit" className="btn-primary" style={{ fontSize:12 }} disabled={savingPw}>{savingPw?'Changing…':'Change password'}</button>
+                </div>
+              </form>
+            </Card>
+            </>
           )}
 
           {activeNav==='WooCommerce' && (
