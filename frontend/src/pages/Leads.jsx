@@ -179,6 +179,13 @@ export default function Leads() {
   const [bulkWorking, setBulkWorking] = useState(false);
   const pressTimer = useRef(null);
 
+  const SAVED_VIEWS_KEY = 'savedViews_leads';
+  const [savedViews, setSavedViews] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('savedViews_leads')) || []; } catch { return []; }
+  });
+  const [savingView, setSavingView] = useState(false);
+  const [newViewName, setNewViewName] = useState('');
+
   const handlePressStart = (id) => {
     pressTimer.current = setTimeout(() => {
       if (navigator.vibrate) navigator.vibrate(40);
@@ -313,6 +320,23 @@ export default function Leads() {
     finally { setExporting(false); }
   };
 
+  const persistViews = (views) => {
+    setSavedViews(views);
+    localStorage.setItem('savedViews_leads', JSON.stringify(views));
+  };
+  const saveCurrentView = () => {
+    if (!newViewName.trim()) return;
+    if (savedViews.length >= 5) { addToast('Maximum 5 saved views', 'error'); return; }
+    persistViews([...savedViews, { name: newViewName.trim(), filters: { ...filters } }]);
+    setNewViewName(''); setSavingView(false);
+    addToast('View saved');
+  };
+  const applyView = (view) => {
+    setFilters({ status:'', source:'', search:'', ...view.filters });
+    setPage(1);
+  };
+  const deleteSavedView = (idx) => persistViews(savedViews.filter((_, i) => i !== idx));
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0, overflow:'hidden', maxWidth:'100%' }}>
 
@@ -360,6 +384,45 @@ export default function Leads() {
           </div>
         ))}
       </div>
+
+      {/* Saved views — desktop only */}
+      {!isMobile && (savedViews.length > 0 || true) && (
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', minHeight: 32 }}>
+          {savedViews.map((v, i) => (
+            <div key={i} style={{ display:'inline-flex', alignItems:'center', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:999, overflow:'hidden', boxShadow:'var(--shadow-card)' }}>
+              <button onClick={() => applyView(v)}
+                style={{ padding:'5px 12px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, fontWeight:500, color:'var(--fg)', whiteSpace:'nowrap' }}
+                onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
+                onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                {v.name}
+              </button>
+              <button onClick={() => deleteSavedView(i)}
+                style={{ padding:'4px 8px 4px 2px', border:'none', background:'transparent', cursor:'pointer', color:'var(--faint)', fontSize:13, lineHeight:1, display:'flex', alignItems:'center' }}
+                onMouseEnter={e => e.currentTarget.style.color='var(--danger)'}
+                onMouseLeave={e => e.currentTarget.style.color='var(--faint)'}>
+                ✕
+              </button>
+            </div>
+          ))}
+          {savingView ? (
+            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+              <input autoFocus className="input" style={{ width:150, padding:'5px 10px', fontSize:12 }}
+                placeholder="View name…" value={newViewName}
+                onChange={e => setNewViewName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') saveCurrentView(); if (e.key === 'Escape') setSavingView(false); }} />
+              <button className="btn-primary" style={{ padding:'5px 10px', fontSize:12 }} onClick={saveCurrentView}>Save</button>
+              <button className="btn-secondary" style={{ padding:'5px 10px', fontSize:12 }} onClick={() => setSavingView(false)}>Cancel</button>
+            </div>
+          ) : savedViews.length < 5 && (
+            <button className="btn-secondary"
+              style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 11px', fontSize:12 }}
+              onClick={() => { setSavingView(true); setNewViewName(''); }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+              Save view
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Mobile inline bulk bar — replaces search when items selected */}
       {isMobile && selected.size > 0 && (
