@@ -118,10 +118,23 @@ export default function WhatsApp() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  // seenCounts: { [phone]: lastSeenCustomerMsgCount } — persisted in localStorage
+  const [seenCounts, setSeenCounts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('wa_seen') || '{}'); } catch { return {}; }
+  });
   const isMobile = useIsMobile(767);
   const msgEndRef = useRef(null);
   const selectedPhoneRef = useRef(null);
+  const msgCountRef = useRef(0);
   const { addToast } = useToast();
+
+  const markSeen = (phone, count) => {
+    setSeenCounts(prev => {
+      const next = { ...prev, [phone]: count };
+      localStorage.setItem('wa_seen', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const loadConvs = async () => {
     try { const { data } = await api.get('/wa'); setConvs(data); } catch {}
@@ -135,19 +148,31 @@ export default function WhatsApp() {
     try {
       const { data } = await api.get(`/wa/${conv.phone}`);
       if (selectedPhoneRef.current && selectedPhoneRef.current !== conv.phone) return;
-      setMessages(data.messages || []);
+      const incoming = (data.messages || []);
+      const prevCount = msgCountRef.current;
+      const newCount = incoming.length;
+      setMessages(incoming);
       setLead(data.leadId || null);
       setBotPaused(data.botPaused || false);
-    } catch { addToast('Failed to load conversation','error'); }
-    finally {
-      if (showLoading) setLoading(false);
-      if (scroll) setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior:'auto' }), 0);
-    }
+      // Auto-scroll if new messages arrived OR initial load
+      if (scroll || newCount > prevCount) {
+        setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: scroll ? 'auto' : 'smooth' }), 30);
+      }
+      msgCountRef.current = newCount;
+      // Update unread badge in conv list and mark as seen
+      const customerCount = incoming.filter(m => m.role === 'user').length;
+      setConvs(prev => prev.map(c => c.phone === conv.phone ? { ...c, messageCount: customerCount } : c));
+      markSeen(conv.phone, customerCount);
+    } catch { if (showLoading) addToast('Failed to load conversation','error'); }
+    finally { if (showLoading) setLoading(false); }
   };
 
   const selectConv = async (conv) => {
     selectedPhoneRef.current = conv.phone;
+    msgCountRef.current = 0;
     setSelected(conv);
+    // Clear badge immediately on click
+    markSeen(conv.phone, conv.messageCount);
     if (isMobile) setMobileChatOpen(true);
     await loadConversation(conv, { showLoading: true, scroll: true });
   };
@@ -262,26 +287,20 @@ export default function WhatsApp() {
                 </div>
                 <div style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.lastMessage||'—'}</div>
               </div>
-              <div
-                title={`${c.messageCount || 0} messages`}
-                style={{
-                  minWidth:18,
-                  height:18,
-                  padding:'0 6px',
-                  borderRadius:999,
-                  background:'var(--accent-bg)',
-                  color:'var(--accent)',
-                  display:'inline-flex',
-                  alignItems:'center',
-                  justifyContent:'center',
-                  fontSize:10,
-                  fontWeight:600,
-                  fontVariantNumeric:'tabular-nums',
-                  flexShrink:0
-                }}
-              >
-                {c.messageCount || 0}
-              </div>
+              {(() => {
+                const unread = Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0));
+                if (!unread) return null;
+                return (
+                  <div title={`${unread} new message${unread > 1 ? 's' : ''}`} style={{
+                    minWidth:18, height:18, padding:'0 5px', borderRadius:999,
+                    background:'var(--accent)', color:'#fff',
+                    display:'inline-flex', alignItems:'center', justifyContent:'center',
+                    fontSize:10, fontWeight:700, fontVariantNumeric:'tabular-nums', flexShrink:0,
+                  }}>
+                    {unread > 99 ? '99+' : unread}
+                  </div>
+                );
+              })()}
               <button
                 type="button"
                 title="Delete conversation"
@@ -310,7 +329,7 @@ export default function WhatsApp() {
             {/* Chat header with mobile back button */}
             <div style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 16px', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
               {isMobile && (
-                <button onClick={() => { setMobileChatOpen(false); setSelected(null); selectedPhoneRef.current = null; setMessages([]); setLead(null); }}
+                <button onClick={() => { setMobileChatOpen(false); setSelected(null); selectedPhoneRef.current = null; msgCountRef.current = 0; setMessages([]); setLead(null); }}
                   style={{ background:'none', border:'none', color:'var(--muted)', cursor:'pointer', padding:'2px 6px 2px 0', display:'flex', alignItems:'center', flexShrink:0 }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>

@@ -17,7 +17,7 @@ router.get('/', protect, async (req, res) => {
       name:  c.name || `+${c.phone}`,
       lastMessage: c.messages[c.messages.length - 1]?.content?.slice(0, 80) || '',
       lastMessageAt: c.lastMessageAt,
-      messageCount: c.messages.length,
+      messageCount: c.messages.filter(m => m.role === 'user').length,
       botPaused: c.botPaused || false,
       leadId: c.leadId,
     }));
