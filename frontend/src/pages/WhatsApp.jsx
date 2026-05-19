@@ -5,6 +5,46 @@ import Modal from '../components/Modal';
 import { format } from 'date-fns';
 import { useIsMobile } from '../hooks/useIsMobile';
 
+// Renders WhatsApp formatting: *bold*, _italic_, ~strike~, `mono`, newlines
+function WaText({ text, color }) {
+  if (!text) return null;
+  const lines = text.split('\n');
+  return (
+    <span>
+      {lines.map((line, li) => {
+        // Parse inline formatting
+        const parts = [];
+        let remaining = line;
+        let key = 0;
+        // Regex to match *bold*, _italic_, ~strike~, `mono`
+        const re = /(\*[^*]+\*|_[^_]+_|~[^~]+~|`[^`]+`)/g;
+        let last = 0;
+        let match;
+        re.lastIndex = 0;
+        while ((match = re.exec(remaining)) !== null) {
+          if (match.index > last) {
+            parts.push(<span key={key++}>{remaining.slice(last, match.index)}</span>);
+          }
+          const raw = match[0];
+          const inner = raw.slice(1, -1);
+          if (raw.startsWith('*')) parts.push(<strong key={key++} style={{ fontWeight:700 }}>{inner}</strong>);
+          else if (raw.startsWith('_')) parts.push(<em key={key++}>{inner}</em>);
+          else if (raw.startsWith('~')) parts.push(<s key={key++}>{inner}</s>);
+          else if (raw.startsWith('`')) parts.push(<code key={key++} style={{ fontFamily:'monospace', fontSize:'0.9em', background:'rgba(0,0,0,.15)', padding:'0 3px', borderRadius:3 }}>{inner}</code>);
+          last = match.index + raw.length;
+        }
+        if (last < remaining.length) parts.push(<span key={key++}>{remaining.slice(last)}</span>);
+        return (
+          <span key={li}>
+            {parts.length ? parts : line}
+            {li < lines.length - 1 && <br />}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 function Av({ name, size = 32 }) {
   const i = (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
   const hue = [...(name||'U')].reduce((a,c)=>a+c.charCodeAt(0),0)%360;
@@ -297,10 +337,11 @@ export default function WhatsApp() {
                     maxWidth:'75%', padding:'9px 12px', borderRadius:m.role==='user'?'4px 12px 12px 12px':'12px 4px 12px 12px',
                     background:m.role==='user'?'var(--card)':'var(--accent)',
                     color:m.role==='user'?'var(--fg)':'var(--accent-ink)',
-                    fontSize:13, lineHeight:1.5,
+                    fontSize:13, lineHeight:1.6,
                     border: m.role==='user'?'1px solid var(--rule)':'none',
+                    whiteSpace:'pre-wrap', wordBreak:'break-word',
                   }}>
-                    {m.content}
+                    <WaText text={m.content} />
                   </div>
                   <div style={{ fontSize:10.5, color:'var(--faint)', marginTop:3, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
                     {m.role==='user'?'Customer':'Bot'} · {timeStr(m.timestamp)}
