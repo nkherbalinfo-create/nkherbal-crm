@@ -137,7 +137,15 @@ export default function WhatsApp() {
   };
 
   const loadConvs = async () => {
-    try { const { data } = await api.get('/wa'); setConvs(data); } catch {}
+    try {
+      const { data } = await api.get('/wa');
+      setConvs(data);
+      // If a conversation is currently open, mark it as seen immediately so badge stays 0
+      if (selectedPhoneRef.current) {
+        const active = data.find(c => c.phone === selectedPhoneRef.current);
+        if (active) markSeen(active.phone, active.messageCount);
+      }
+    } catch {}
   };
 
   useEffect(() => { loadConvs(); const t = setInterval(loadConvs, 15000); return ()=>clearInterval(t); }, []);
@@ -159,10 +167,6 @@ export default function WhatsApp() {
         setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: scroll ? 'auto' : 'smooth' }), 30);
       }
       msgCountRef.current = newCount;
-      // Update unread badge in conv list and mark as seen
-      const customerCount = incoming.filter(m => m.role === 'user').length;
-      setConvs(prev => prev.map(c => c.phone === conv.phone ? { ...c, messageCount: customerCount } : c));
-      markSeen(conv.phone, customerCount);
     } catch { if (showLoading) addToast('Failed to load conversation','error'); }
     finally { if (showLoading) setLoading(false); }
   };
@@ -292,10 +296,12 @@ export default function WhatsApp() {
                 if (!unread) return null;
                 return (
                   <div title={`${unread} new message${unread > 1 ? 's' : ''}`} style={{
-                    minWidth:18, height:18, padding:'0 5px', borderRadius:999,
-                    background:'var(--accent)', color:'#fff',
+                    minWidth:20, height:20, padding:'0 6px', borderRadius:999,
+                    background:'#25d366', color:'#fff',
                     display:'inline-flex', alignItems:'center', justifyContent:'center',
-                    fontSize:10, fontWeight:700, fontVariantNumeric:'tabular-nums', flexShrink:0,
+                    fontSize:11, fontWeight:800, fontVariantNumeric:'tabular-nums', flexShrink:0,
+                    boxShadow:'0 1px 6px rgba(37,211,102,.55)',
+                    letterSpacing:'-0.02em',
                   }}>
                     {unread > 99 ? '99+' : unread}
                   </div>
