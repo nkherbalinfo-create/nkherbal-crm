@@ -8,6 +8,8 @@ import { useToast } from '../components/Toast';
 import { DateInput, FilterBar, SelectInput } from '../components/FormControls';
 import Pagination from '../components/Pagination';
 import { format } from 'date-fns';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 const SOURCES  = ['Ads', 'WhatsApp', 'Website', 'Referral', 'Direct'];
 const STATUSES = ['Interested', 'Not Interested', 'Converted', 'Follow Up'];
@@ -171,6 +173,7 @@ export default function Leads() {
   const [updatingId, setUpdatingId] = useState(null);
   const [exitId, setExitId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const isMobile = useIsMobile(767);
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
@@ -278,6 +281,38 @@ export default function Leads() {
     catch { addToast('Delete failed','error'); load(); }
   };
 
+  const exportLeads = async () => {
+    setExporting(true);
+    try {
+      const activeFilters = Object.fromEntries(Object.entries(filters).filter(([,v])=>v));
+      const { data } = await api.get('/leads', { params: { limit:10000, ...activeFilters } });
+      const rows = data.leads || [];
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'NK Herbal CRM';
+      const ws = wb.addWorksheet('Leads');
+      ws.columns = [
+        { header:'Name',    key:'name',               width:22 },
+        { header:'Mobile',  key:'mobile',             width:16 },
+        { header:'Status',  key:'status',             width:14 },
+        { header:'Source',  key:'source',             width:12 },
+        { header:'Product', key:'interestedProduct',  width:28 },
+        { header:'Date',    key:'date',               width:14 },
+        { header:'Lead ID', key:'leadId',             width:22 },
+        { header:'Notes',   key:'notes',              width:30 },
+      ];
+      ws.getRow(1).eachCell(c => {
+        c.font = { bold:true, color:{ argb:'FFFFFFFF' } };
+        c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF3d8a5c' } };
+        c.alignment = { vertical:'middle' };
+      });
+      rows.forEach(l => ws.addRow({ ...l, date: l.date ? format(new Date(l.date),'dd/MM/yyyy') : '' }));
+      const buf = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buf]), `nkherbal_leads_${format(new Date(),'yyyy-MM-dd')}.xlsx`);
+      addToast(`${rows.length} leads exported`);
+    } catch { addToast('Export failed','error'); }
+    finally { setExporting(false); }
+  };
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0, overflow:'hidden', maxWidth:'100%' }}>
 
@@ -293,10 +328,17 @@ export default function Leads() {
           </div>
           <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>auto-captured from WhatsApp · status syncs every 8s</div>
         </div>
-        <button className="btn-primary" onClick={()=>{setEditing(null);setForm(emptyForm);setModal(true);}} style={{ display:'flex', alignItems:'center', gap:5 }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add lead
-        </button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button className="btn-secondary" onClick={exportLeads} disabled={exporting} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12 }}>
+            {exporting
+              ? <><span style={{ width:11, height:11, border:'2px solid var(--muted)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> Exporting…</>
+              : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export Excel</>}
+          </button>
+          <button className="btn-primary" onClick={()=>{setEditing(null);setForm(emptyForm);setModal(true);}} style={{ display:'flex', alignItems:'center', gap:5 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add lead
+          </button>
+        </div>
       </div>
 
       {/* Stat cards */}
