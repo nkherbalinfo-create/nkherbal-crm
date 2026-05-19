@@ -27,7 +27,9 @@
   --info-bg:    rgba(58,107,168,.08);
   --success:    #3d8a5c;
   --success-bg: rgba(61,138,92,.10);
-  --shadow-card: none;
+  --sidebar-bg: #edeae2;
+  --shadow-card: 0 1px 3px rgba(37,35,32,.05), 0 4px 16px rgba(37,35,32,.06);
+  --shadow-elevated: 0 2px 8px rgba(37,35,32,.08), 0 8px 32px rgba(37,35,32,.08);
   --shadow-soft: none;
   --shadow-nav:  0 1px 0 var(--rule), 0 0 0 1px var(--rule);
 }
@@ -56,6 +58,9 @@
   --info-bg:    rgba(127,169,224,.10);
   --success:    #7fbf95;
   --success-bg: rgba(127,191,149,.12);
+  --sidebar-bg: #161410;
+  --shadow-card: 0 1px 4px rgba(0,0,0,.18), 0 4px 20px rgba(0,0,0,.22);
+  --shadow-elevated: 0 2px 8px rgba(0,0,0,.28), 0 8px 32px rgba(0,0,0,.28);
 }
 
 /* ── Base ─────────────────────────────────────────────── */
@@ -111,8 +116,9 @@
   .card {
     background: var(--card);
     border: 1px solid var(--rule);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 18px 20px;
+    box-shadow: var(--shadow-card);
   }
 
   /* Buttons */
@@ -256,7 +262,7 @@
     border: 1px solid var(--rule);
     border-radius: 10px;
     padding: 6px;
-    box-shadow: 0 8px 22px rgba(37,35,32,.08);
+    box-shadow: 0 8px 32px rgba(37,35,32,.12), 0 2px 8px rgba(37,35,32,.08);
   }
 
   .select-option {
@@ -550,7 +556,7 @@
     margin-bottom: 2px;
   }
   .page-title {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--fg);
@@ -571,6 +577,24 @@
     color: var(--fg);
     font-family: 'JetBrains Mono', monospace;
   }
+
+  /* Sidebar nav — filled active pill */
+  .nav-link-active {
+    background: var(--accent) !important;
+    color: var(--accent-ink) !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px rgba(61,138,92,.25) !important;
+    transform: none !important;
+  }
+  .dark .nav-link-active {
+    box-shadow: 0 2px 12px rgba(127,191,149,.2) !important;
+  }
+  .nav-link-active::before { opacity: 0 !important; }
+  .nav-link:hover { transform: translateX(3px); }
+}
+
+@media (min-width: 1024px) {
+  .lg-sidebar { width: 248px !important; }
 }
 
 /* ── Core keyframes ───────────────────────────────────── */
@@ -750,7 +774,7 @@
 }
 .card:hover {
   border-color: rgba(61,138,92,.18);
-  box-shadow: 0 4px 20px rgba(37,35,32,.06), 0 0 0 1px rgba(61,138,92,.07);
+  box-shadow: 0 6px 24px rgba(37,35,32,.09), 0 0 0 1px rgba(61,138,92,.1);
 }
 .dark .card:hover {
   border-color: rgba(127,191,149,.18);
@@ -818,6 +842,8 @@
 .nav-link.active::before { opacity: 0; }
 
 /* ── Table row hover — left accent line ───────────────── */
+.tr-hover:hover { background: rgba(61,138,92,.04); }
+.dark .tr-hover:hover { background: rgba(127,191,149,.05); }
 .tr-hover {
   position: relative;
   transition: background 0.12s;
@@ -898,13 +924,14 @@
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 24px 20px 32px;
+  padding: 32px 28px 40px;
 }
 
 .surface {
   background: var(--card);
   border: 1px solid var(--rule);
-  border-radius: 14px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
 }
 
 .metric-grid {
