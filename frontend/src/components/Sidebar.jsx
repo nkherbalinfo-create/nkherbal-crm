@@ -48,7 +48,7 @@ const NAV_SECTIONS = [
   { label: 'TOOLS',  items: NAV.slice(6, 8) },
 ];
 
-export default function Sidebar({ open, onClose, onSearchOpen }) {
+export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
@@ -101,6 +101,13 @@ export default function Sidebar({ open, onClose, onSearchOpen }) {
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
           <div style={{ fontSize: 10.5, color: 'var(--faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
         </div>
+        <button onClick={onQuickAdd}
+          title="Quick add (N)"
+          style={{ marginLeft:'auto', width:26, height:26, borderRadius:8, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.9, transition:'opacity 0.15s, transform 0.12s' }}
+          onMouseEnter={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1.08)'; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity='0.9'; e.currentTarget.style.transform='scale(1)'; }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
       </div>
 
       {/* Search */}

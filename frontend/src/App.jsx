@@ -1,8 +1,10 @@
 ﻿import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider, useToast } from './components/Toast';
+import Modal from './components/Modal';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import { useIsMobile } from './hooks/useIsMobile';
@@ -171,19 +173,70 @@ function GlobalSearch({ open, onClose }) {
 function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [quickAdd, setQuickAdd] = useState(null); // null | 'menu' | 'lead' | 'order'
+  const [quickForm, setQuickForm] = useState({});
+  const [quickSaving, setQuickSaving] = useState(false);
+  const { addToast } = useToast();
   const location = useLocation();
   const isMobile = useIsMobile();
   const [badges] = useState({ orders: 0, leads: 0 });
 
+  const PRODUCTS = ['Muejaza For Men (300g)', 'Muejaza Plus For Men (300g)', 'Testo – Vardhak For Men (300g)', 'Shahi Kalp For Men & Women (300g)', 'Kashmiri Shilajit 25g', 'Kashmiri Shilajit 50g', 'Muejaza & Shahi Kalp Combo (300g)'];
+
+  const QUICK_LEAD_EMPTY = {
+    date: new Date().toISOString().split('T')[0],
+    name: '', mobile: '', source: 'WhatsApp',
+    interestedProduct: 'Muejaza For Men (300g)',
+    status: 'Interested', notes: ''
+  };
+  const QUICK_ORDER_EMPTY = {
+    orderDate: new Date().toISOString().split('T')[0],
+    customerName: '', mobile: '', city: '',
+    productName: 'Muejaza For Men (300g)',
+    quantity: 1, orderValue: 4499,
+    salesChannel: 'WhatsApp', leadSource: 'Organic',
+    paymentStatus: 'Paid', orderStatus: 'Processing',
+    customerType: 'New'
+  };
+
+  const saveQuickLead = async (e) => {
+    e.preventDefault(); setQuickSaving(true);
+    try {
+      await api.post('/leads', quickForm);
+      addToast('Lead added successfully');
+      setQuickAdd(null);
+    } catch (err) { addToast(err.response?.data?.message || 'Failed to save lead', 'error'); }
+    finally { setQuickSaving(false); }
+  };
+
+  const saveQuickOrder = async (e) => {
+    e.preventDefault(); setQuickSaving(true);
+    try {
+      await api.post('/orders', quickForm);
+      addToast('Order added successfully');
+      setQuickAdd(null);
+    } catch (err) { addToast(err.response?.data?.message || 'Failed to save order', 'error'); }
+    finally { setQuickSaving(false); }
+  };
+
   useEffect(() => {
-    const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true); } };
+    const h = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setSearchOpen(true); }
+      if (e.key === 'n' || e.key === 'N') {
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (document.activeElement?.contentEditable === 'true') return;
+        e.preventDefault();
+        setQuickAdd('menu');
+      }
+    };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, []);
 
   return (
     <div className="app-shell" style={{ display: 'flex' }}>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} onQuickAdd={() => setQuickAdd('menu')} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden', minWidth: 0 }} className="lg-main">
         {/* Mobile header — no hamburger, bottom nav handles navigation */}
         <MobileHeader className="mobile-header" />
@@ -194,6 +247,114 @@ function Layout() {
         </main>
       </div>
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {quickAdd === 'menu' && createPortal(
+        <div style={{ position:'fixed', inset:0, zIndex:9998, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={() => setQuickAdd(null)}>
+          <div style={{ position:'absolute', inset:0, background:'rgba(37,35,32,.5)', backdropFilter:'blur(4px)' }} />
+          <div className="modal-enter" style={{ position:'relative', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:16, padding:24, width:300, boxShadow:'0 8px 40px rgba(37,35,32,.18)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize:15, fontWeight:600, color:'var(--fg)', marginBottom:4 }}>Quick add</div>
+            <div style={{ fontSize:12, color:'var(--muted)', marginBottom:18 }}>Press N to open · Esc to close</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {[
+                { type:'lead', title:'Add Lead', desc:'Capture a new enquiry', icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' },
+                { type:'order', title:'Add Order', desc:'Record a new sale', icon:'M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10' },
+              ].map(({ type, title, desc, icon }) => (
+                <button key={type}
+                  onClick={() => { setQuickForm(type === 'lead' ? {...QUICK_LEAD_EMPTY} : {...QUICK_ORDER_EMPTY}); setQuickAdd(type); }}
+                  style={{ padding:'14px 16px', borderRadius:12, border:'1px solid var(--rule)', background:'var(--bg)', cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:12, transition:'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor='var(--accent)'; e.currentTarget.style.background='var(--accent-bg)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor='var(--rule)'; e.currentTarget.style.background='var(--bg)'; }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:'var(--accent-bg)', display:'grid', placeItems:'center', flexShrink:0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={icon}/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)' }}>{title}</div>
+                    <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:2 }}>{desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {quickAdd === 'lead' && (
+        <Modal open={true} onClose={() => setQuickAdd(null)} title="Quick add lead">
+          <form onSubmit={saveQuickLead} style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+            <div>
+              <label className="label">Full Name *</label>
+              <input className="input" required value={quickForm.name||''} onChange={e=>setQuickForm(f=>({...f,name:e.target.value}))} placeholder="Customer name" />
+            </div>
+            <div>
+              <label className="label">Mobile *</label>
+              <input className="input" required value={quickForm.mobile||''} onChange={e=>setQuickForm(f=>({...f,mobile:e.target.value}))} placeholder="10-digit number" />
+            </div>
+            <div>
+              <label className="label">Source</label>
+              <select className="input" value={quickForm.source||'WhatsApp'} onChange={e=>setQuickForm(f=>({...f,source:e.target.value}))}>
+                {['Ads','WhatsApp','Website','Referral','Direct'].map(s=><option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Status</label>
+              <select className="input" value={quickForm.status||'Interested'} onChange={e=>setQuickForm(f=>({...f,status:e.target.value}))}>
+                {['Interested','Follow Up','Converted','Not Interested'].map(s=><option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label className="label">Interested Product</label>
+              <select className="input" value={quickForm.interestedProduct||PRODUCTS[0]} onChange={e=>setQuickForm(f=>({...f,interestedProduct:e.target.value}))}>
+                {PRODUCTS.map(p=><option key={p}>{p}</option>)}
+              </select>
+            </div>
+            <div style={{ gridColumn:'1/-1', display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid var(--rule)', paddingTop:14 }}>
+              <button type="button" className="btn-secondary" onClick={() => setQuickAdd(null)}>Cancel</button>
+              <button type="submit" className="btn-primary" disabled={quickSaving}>{quickSaving?'Saving…':'Add Lead'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {quickAdd === 'order' && (
+        <Modal open={true} onClose={() => setQuickAdd(null)} title="Quick add order">
+          <form onSubmit={saveQuickOrder} style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+            <div>
+              <label className="label">Customer Name *</label>
+              <input className="input" required value={quickForm.customerName||''} onChange={e=>setQuickForm(f=>({...f,customerName:e.target.value}))} placeholder="Full name" />
+            </div>
+            <div>
+              <label className="label">Mobile *</label>
+              <input className="input" required value={quickForm.mobile||''} onChange={e=>setQuickForm(f=>({...f,mobile:e.target.value}))} placeholder="10-digit number" />
+            </div>
+            <div>
+              <label className="label">Product *</label>
+              <select className="input" value={quickForm.productName||PRODUCTS[0]} onChange={e=>setQuickForm(f=>({...f,productName:e.target.value}))}>
+                {PRODUCTS.map(p=><option key={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Order Value (₹) *</label>
+              <input type="number" className="input" required min="0" value={quickForm.orderValue||''} onChange={e=>setQuickForm(f=>({...f,orderValue:Number(e.target.value)}))} />
+            </div>
+            <div>
+              <label className="label">Channel</label>
+              <select className="input" value={quickForm.salesChannel||'WhatsApp'} onChange={e=>setQuickForm(f=>({...f,salesChannel:e.target.value}))}>
+                {['WhatsApp','Website'].map(s=><option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Payment</label>
+              <select className="input" value={quickForm.paymentStatus||'Paid'} onChange={e=>setQuickForm(f=>({...f,paymentStatus:e.target.value}))}>
+                {['Paid','COD','Pending'].map(s=><option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div style={{ gridColumn:'1/-1', display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid var(--rule)', paddingTop:14 }}>
+              <button type="button" className="btn-secondary" onClick={() => setQuickAdd(null)}>Cancel</button>
+              <button type="submit" className="btn-primary" disabled={quickSaving}>{quickSaving?'Saving…':'Add Order'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
       {isMobile && <BottomNav badges={badges} />}
       <style>{`
         @media (min-width: 1024px) {
