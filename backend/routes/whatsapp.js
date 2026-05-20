@@ -455,18 +455,26 @@ router.post('/webhook', async (req, res) => {
           conv.messages.push({ role: 'assistant', content: aiReply });
           await conv.save();
 
-          // ── Build reply — append product URL for WhatsApp link preview ──
-          const detectedProduct = detectProduct(text) || detectProduct(aiReply);
-          let finalReply = aiReply;
-
-          if (detectedProduct && PRODUCT_IMAGES[detectedProduct] && !isGreeting(text)) {
-            const urlMatch = PRODUCT_IMAGES[detectedProduct].caption.match(/https:\/\/\S+/);
-            if (urlMatch) finalReply += `\n\n🛒 ${urlMatch[0]}`;
-            console.log(`[WhatsApp] 🖼️ Adding link preview for: ${detectedProduct}`);
-          }
-
-          await sendWhatsAppMessage(phone, finalReply, true);
+          // ── Send AI text reply ────────────────────────────
+          await sendWhatsAppMessage(phone, aiReply, false);
           console.log(`[WhatsApp] ✅ Reply sent to ${phone}`);
+
+          // ── Send product image if customer enquired about a specific product ──
+          const detectedProduct = detectProduct(text) || detectProduct(aiReply);
+          if (detectedProduct && PRODUCT_IMAGES[detectedProduct] && !isGreeting(text)) {
+            // Don't send image if this conversation already got this product's image recently
+            const recentMessages = conv.messages.slice(-10);
+            const alreadySentImage = recentMessages.some(
+              m => m.role === 'assistant' && m.content.includes(`[img:${detectedProduct}]`)
+            );
+            if (!alreadySentImage) {
+              console.log(`[WhatsApp] 🖼️ Sending product image: ${detectedProduct}`);
+              await sendProductImage(phone, detectedProduct, PRODUCT_IMAGES[detectedProduct]);
+              // Tag the last assistant message so we don't repeat the image next turn
+              conv.messages[conv.messages.length - 1].content += ` [img:${detectedProduct}]`;
+              await conv.save();
+            }
+          }
         }
       }
     }
