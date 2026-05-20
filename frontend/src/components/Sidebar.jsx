@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
+import NotificationCenter from './NotificationCenter';
 
 // Exact icon implementations from the design file primitives.jsx
 const Icon = ({ name, size = 16, stroke = 1.6, color = 'currentColor' }) => {
@@ -119,6 +120,8 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         <span style={{ fontSize: 12, flex: 1, color: 'var(--faint)' }}>Search…</span>
         <kbd style={{ fontFamily: 'Inter', fontSize: 9.5, color: 'var(--faint)', background: 'var(--chip)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--rule)' }}>⌘K</kbd>
       </div>
+
+      <NotificationCenter />
 
       {/* Navigation — sectioned */}
       {NAV_SECTIONS.map(({ label, items }, si) => (
