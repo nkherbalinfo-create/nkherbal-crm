@@ -382,24 +382,32 @@ router.post('/webhook', async (req, res) => {
           }
 
           if (leadMissing) {
-            const byMobile = await Lead.findOne({ mobile: mobile10 });
-            if (!byMobile) {
-              const lead = await Lead.create({
-                date:              new Date(),
-                name:              waName || `WA-${mobile10}`,
-                mobile:            mobile10,
-                source:            'WhatsApp',
-                interestedProduct: detectProduct(text) || 'Muejaza For Men (300g)',
-                status:            'Interested',
-                notes:             `First message: "${text.slice(0, 200)}"`
-              });
-              conv.leadId = lead._id;
-              console.log(`[WhatsApp] ✅ New lead created: ${waName} (${mobile10})`);
-            } else {
-              conv.leadId = byMobile._id;
-              console.log(`[WhatsApp] 🔗 Linked to existing lead: ${mobile10}`);
+            try {
+              const byMobile = await Lead.findOne({ mobile: mobile10 });
+              if (!byMobile) {
+                const lead = await Lead.create({
+                  date:              new Date(),
+                  name:              waName || `WA-${mobile10}`,
+                  mobile:            mobile10,
+                  source:            'WhatsApp',
+                  interestedProduct: detectProduct(text) || 'Muejaza For Men (300g)',
+                  status:            'Interested',
+                  notes:             `First message: "${text.slice(0, 200)}"`
+                });
+                conv.leadId = lead._id;
+                console.log(`[WhatsApp] ✅ New lead created: ${waName} (${mobile10})`);
+              } else {
+                conv.leadId = byMobile._id;
+                console.log(`[WhatsApp] 🔗 Linked to existing lead: ${mobile10}`);
+              }
+              await conv.save();
+            } catch (leadErr) {
+              // If lead creation fails (e.g. duplicate key race), try to link to existing lead
+              console.error(`[WhatsApp] ⚠️ Lead create failed, trying to find existing:`, leadErr.message);
+              const fallback = await Lead.findOne({ mobile: mobile10 });
+              if (fallback) { conv.leadId = fallback._id; await conv.save(); }
+              // Continue — message must be saved regardless of lead creation outcome
             }
-            await conv.save();
           }
 
           // ── Send welcome message on first contact ───────

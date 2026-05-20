@@ -22,9 +22,11 @@ const leadSchema = new mongoose.Schema({
 
 leadSchema.pre('save', async function (next) {
   if (!this.leadId) {
-    const count = await mongoose.model('Lead').countDocuments();
     const date = new Date();
-    this.leadId = `LEAD-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}-${String(count + 1).padStart(4, '0')}`;
+    const ym = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
+    // Use timestamp + random to avoid race-condition duplicate key errors
+    const suffix = String(Date.now()).slice(-5) + String(Math.floor(Math.random() * 100)).padStart(2, '0');
+    this.leadId = `LEAD-${ym}-${suffix}`;
   }
   next();
 });
