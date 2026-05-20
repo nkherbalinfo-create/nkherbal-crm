@@ -121,8 +121,6 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         <kbd style={{ fontFamily: 'Inter', fontSize: 9.5, color: 'var(--faint)', background: 'var(--chip)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--rule)' }}>⌘K</kbd>
       </div>
 
-      <NotificationCenter />
-
       {/* Navigation — sectioned */}
       {NAV_SECTIONS.map(({ label, items }, si) => (
         <div key={si}>
@@ -178,15 +176,18 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         </div>
       )}
 
-      {/* Bottom: theme + user */}
+      {/* Bottom: theme + notifications + user */}
       <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: 10, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <button onClick={toggle}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', width: '100%', fontFamily: 'inherit', transition: 'background 0.15s, color 0.15s' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--fg)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}>
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} stroke={1.6} />
-          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 4px' }}>
+          <button onClick={toggle}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', flex: 1, fontFamily: 'inherit', transition: 'background 0.15s, color 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--fg)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}>
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} stroke={1.6} />
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
+          <NotificationCenter />
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 4px', borderRadius: 9, marginTop: 2 }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(61,138,92,.3)' }}>

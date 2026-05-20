@@ -126,27 +126,27 @@ export default function NotificationCenter() {
 
   return (
     <div ref={panelRef} style={{ position: 'relative' }}>
-      {/* Bell button — styled like a nav item */}
+      {/* Compact bell icon button */}
       <button
         onClick={handleOpen}
+        title="Notifications"
         style={{
-          position: 'relative', display: 'flex', alignItems: 'center', gap: 10,
-          width: '100%', padding: '9px 11px', borderRadius: 10, border: 'none',
+          position: 'relative', width: 32, height: 32, borderRadius: 8, border: 'none',
           background: open ? 'var(--hover)' : 'transparent',
-          color: 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 400,
-          transition: 'background 0.15s',
+          color: 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center',
+          flexShrink: 0, transition: 'background 0.15s',
         }}
-        onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'var(--hover)'; }}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'transparent'; }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" strokeWidth="1.6" strokeLinecap="round" style={{ flexShrink: 0 }}>
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--fg)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = open ? 'var(--hover)' : 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
           <path d="M6 8a6 6 0 1112 0c0 6 2 7 2 7H4s2-1 2-7z"/>
           <path d="M10 19a2 2 0 004 0"/>
         </svg>
-        <span style={{ flex: 1 }}>Notifications</span>
         {hasNew && (
           <span style={{
+            position: 'absolute', top: 5, right: 5,
             width: 7, height: 7, borderRadius: '50%',
-            background: 'var(--danger)', flexShrink: 0,
+            background: 'var(--danger)',
             boxShadow: '0 0 0 2px var(--sidebar-bg)',
           }} />
         )}
@@ -155,7 +155,7 @@ export default function NotificationCenter() {
       {/* Dropdown panel */}
       {open && (
         <div className="modal-enter" style={{
-          position: 'fixed', left: 262, top: 58,
+          position: 'fixed', left: 262, bottom: 60,
           width: 304, maxHeight: 420,
           background: 'var(--card)', border: '1px solid var(--rule)',
           borderRadius: 14, boxShadow: '0 8px 32px rgba(37,35,32,.14)',
