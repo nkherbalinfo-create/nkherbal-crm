@@ -12,14 +12,14 @@ router.get('/stats', protect, async (req, res) => {
     const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
     const end = endDate ? new Date(endDate + 'T23:59:59') : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-    const matchFilter = { orderDate: { $gte: start, $lte: end } };
+    const matchFilter = { orderDate: { $gte: start, $lte: end }, manuallyDeleted: { $ne: true } };
     if (channel) matchFilter.salesChannel = channel;
 
     // Trend always covers the last N months from today, independent of the KPI date filter
     const trendN = Math.min(24, Math.max(1, parseInt(trendMonthsParam) || 6));
     const trendStart = new Date(now.getFullYear(), now.getMonth() - (trendN - 1), 1);
     const trendEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    const trendFilter = { orderDate: { $gte: trendStart, $lte: trendEnd } };
+    const trendFilter = { orderDate: { $gte: trendStart, $lte: trendEnd }, manuallyDeleted: { $ne: true } };
     if (channel) trendFilter.salesChannel = channel;
 
     // Lead filter uses same date range applied to lead creation date
@@ -29,7 +29,7 @@ router.get('/stats', protect, async (req, res) => {
     const periodMs = end - start;
     const prevEnd = new Date(start.getTime() - 1);
     const prevStart = new Date(start.getTime() - periodMs - 1);
-    const prevFilter = { orderDate: { $gte: prevStart, $lte: prevEnd } };
+    const prevFilter = { orderDate: { $gte: prevStart, $lte: prevEnd }, manuallyDeleted: { $ne: true } };
     if (channel) prevFilter.salesChannel = channel;
 
     // Dormant customers (no order in 90+ days)
