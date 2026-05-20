@@ -125,7 +125,10 @@ export default function WhatsApp() {
   const [broadcastDone, setBroadcastDone] = useState(false);
   // seenCounts: { [phone]: lastSeenCustomerMsgCount } — persisted in localStorage
   const [seenCounts, setSeenCounts] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('wa_seen') || '{}'); } catch { return {}; }
+    try {
+      // v2 key — wipes old inflated counts from before the user-only message fix
+      return JSON.parse(localStorage.getItem('wa_seen_v2') || '{}');
+    } catch { return {}; }
   });
   const isMobile = useIsMobile(767);
   const msgEndRef = useRef(null);
@@ -136,7 +139,7 @@ export default function WhatsApp() {
   const markSeen = (phone, count) => {
     setSeenCounts(prev => {
       const next = { ...prev, [phone]: count };
-      localStorage.setItem('wa_seen', JSON.stringify(next));
+      localStorage.setItem('wa_seen_v2', JSON.stringify(next));
       return next;
     });
   };
@@ -153,7 +156,7 @@ export default function WhatsApp() {
     } catch {}
   };
 
-  useEffect(() => { loadConvs(); const t = setInterval(loadConvs, 15000); return ()=>clearInterval(t); }, []);
+  useEffect(() => { loadConvs(); const t = setInterval(loadConvs, 6000); return ()=>clearInterval(t); }, []);
 
   const loadConversation = async (conv, { showLoading = false, scroll = false } = {}) => {
     if (!conv?.phone) return;
@@ -219,7 +222,7 @@ export default function WhatsApp() {
   // Refresh messages every 10s when conversation open
   useEffect(() => {
     if (!selected) return;
-    const t = setInterval(() => loadConversation(selected, { showLoading: false, scroll: false }), 10000);
+    const t = setInterval(() => loadConversation(selected, { showLoading: false, scroll: false }), 5000);
     return () => clearInterval(t);
   }, [selected?.phone]);
 

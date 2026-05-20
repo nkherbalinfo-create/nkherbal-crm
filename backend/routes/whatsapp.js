@@ -379,15 +379,30 @@ router.post('/webhook', async (req, res) => {
             await sendWhatsAppMessage(phone, welcome);
           }
 
-          // ── Add user message ────────────────────────────
+          // ── Save user message immediately so it's never lost ──
           conv.messages.push({ role: 'user', content: text });
           conv.lastMessageAt = new Date();
+          await conv.save(); // ← CRITICAL: save before AI call so message persists even if AI fails
 
-          // ── Run AI reply + intent classification in parallel (no added delay) ──
-          const [aiReply, detectedIntent] = await Promise.all([
-            getAIReply(conv.messages.slice(-6).map(m => ({ role: m.role, content: m.content }))),
-            classifyIntent(text)
-          ]);
+          console.log(`[WhatsApp] 💬 User message saved: "${text.slice(0, 60)}" from ${phone}`);
+
+          // ── Skip AI if bot is paused ──────────────────────
+          if (conv.botPaused) {
+            console.log(`[WhatsApp] ⏸️ Bot paused for ${phone}, skipping AI reply`);
+            continue;
+          }
+
+          // ── Run AI reply + intent classification in parallel ──
+          let aiReply, detectedIntent;
+          try {
+            [aiReply, detectedIntent] = await Promise.all([
+              getAIReply(conv.messages.slice(-6).map(m => ({ role: m.role, content: m.content }))),
+              classifyIntent(text)
+            ]);
+          } catch (aiErr) {
+            console.error(`[WhatsApp] ❌ AI call failed for ${phone}:`, aiErr.message);
+            continue; // user message already saved — just skip the bot reply
+          }
 
           // ── Auto-update lead status from AI-detected intent ─
           if (detectedIntent && conv.leadId) {
@@ -395,10 +410,11 @@ router.post('/webhook', async (req, res) => {
             console.log(`[WhatsApp] 📊 Lead status → ${detectedIntent} for "${text}" (${mobile10})`);
           }
 
+          // ── Save AI reply ─────────────────────────────────
           conv.messages.push({ role: 'assistant', content: aiReply });
           await conv.save();
 
-          // ── Build reply — append product URL for WhatsApp link preview (shows image) ──
+          // ── Build reply — append product URL for WhatsApp link preview ──
           const detectedProduct = detectProduct(text) || detectProduct(aiReply);
           let finalReply = aiReply;
 
@@ -408,9 +424,7 @@ router.post('/webhook', async (req, res) => {
             console.log(`[WhatsApp] 🖼️ Adding link preview for: ${detectedProduct}`);
           }
 
-          // preview_url: true makes WhatsApp render product image from the URL's OG tags
           await sendWhatsAppMessage(phone, finalReply, true);
-
           console.log(`[WhatsApp] ✅ Reply sent to ${phone}`);
         }
       }
