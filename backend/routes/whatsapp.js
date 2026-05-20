@@ -99,46 +99,36 @@ async function getMediaId(productKey, imageUrl) {
 // Naming convention: muejaza.jpg, muejaza-plus.jpg, testo-vardhak.jpg,
 //   shahi-kalp.jpg, shilajit-25g.jpg, shilajit-50g.jpg, combo.jpg
 const BACKEND_URL = process.env.BACKEND_URL || 'https://crm-backend-azu8.onrender.com';
-const IMG_DIR = require('path').join(__dirname, '../public/images/products');
-
-function localImageUrl(filename) {
-  // Check common extensions: jpg, jpeg, png, webp
-  for (const ext of ['jpg', 'jpeg', 'png', 'webp']) {
-    const full = `${filename}.${ext}`;
-    if (require('fs').existsSync(require('path').join(IMG_DIR, full))) {
-      return `${BACKEND_URL}/images/products/${full}`;
-    }
-  }
-  return null; // no local image — use WooCommerce URL below
-}
 
 const PRODUCT_IMAGES = {
   'Muejaza For Men (300g)': {
-    get url() { return localImageUrl('muejaza') || 'https://nkherbal.com/wp-content/uploads/2023/07/Muejaza_New_Main_Image.webp'; },
+    url:     `${BACKEND_URL}/images/products/muejaza.png`,
     caption: '🌿 *Muejaza For Men (300g)* — ₹4,499\n🔗 https://nkherbal.com/product/muejaza-ayurvedic-food-preparation/'
   },
+  // Muejaza Plus — fetch from website (no local image)
   'Muejaza Plus For Men (300g)': {
-    get url() { return localImageUrl('muejaza-plus') || 'https://nkherbal.com/wp-content/uploads/2026/01/NK-Herbal-24-1.webp'; },
+    url:     'https://nkherbal.com/wp-content/uploads/2026/01/NK-Herbal-24-1.webp',
     caption: '⭐ *Muejaza Plus For Men (300g)* — ₹15,000\n🔗 https://nkherbal.com/product/muejaza-plus-ayurvedic-herbal-preparation/'
   },
   'Testo – Vardhak For Men (300g)': {
-    get url() { return localImageUrl('testo-vardhak') || 'https://nkherbal.com/wp-content/uploads/2023/07/Testo-Vardhak_Main_Image-1.png'; },
+    url:     `${BACKEND_URL}/images/products/testovardhak.png`,
     caption: '💪 *Testo Vardhak For Men (300g)* — ₹4,199\n🔗 https://nkherbal.com/product/testo-vardhak-ayurvedic-preparation/'
   },
   'Shahi Kalp For Men & Women (300g)': {
-    get url() { return localImageUrl('shahi-kalp') || 'https://nkherbal.com/wp-content/uploads/2023/07/Shahi-Kalp_Main_Image_2-1.png'; },
+    url:     `${BACKEND_URL}/images/products/shahikalp.png`,
     caption: '👑 *Shahi Kalp For Men & Women (300g)* — ₹4,499\n🔗 https://nkherbal.com/product/shahi-kalp-ayurvedic-food-preparation/'
   },
+  // Both Shilajit sizes use the same image
   'Kashmiri Shilajit 25g': {
-    get url() { return localImageUrl('shilajit-25g') || 'https://nkherbal.com/wp-content/uploads/2026/01/71S9lqznMmL._SL1500_.jpg'; },
+    url:     `${BACKEND_URL}/images/products/shilajit.png`,
     caption: '🏔️ *Kashmiri Shilajit 25g* — ₹1,499\n🔗 https://nkherbal.com/product/pure-kashmiri-shilajit/'
   },
   'Kashmiri Shilajit 50g': {
-    get url() { return localImageUrl('shilajit-50g') || 'https://nkherbal.com/wp-content/uploads/2026/01/71S9lqznMmL._SL1500_.jpg'; },
+    url:     `${BACKEND_URL}/images/products/shilajit.png`,
     caption: '🏔️ *Kashmiri Shilajit 50g* — ₹2,499\n🔗 https://nkherbal.com/product/pure-kashmiri-shilajit/'
   },
   'Muejaza & Shahi Kalp Combo (300g)': {
-    get url() { return localImageUrl('combo') || 'https://nkherbal.com/wp-content/uploads/2023/07/Muejaza_New_Main_Image.webp'; },
+    url:     `${BACKEND_URL}/images/products/muejaza-shahikalp-combo.png`,
     caption: '🎁 *Muejaza + Shahi Kalp Combo* — ₹8,999\n🔗 https://nkherbal.com/product/nk-herbal-muejaza-shahi-kalp-combo/'
   },
 };
