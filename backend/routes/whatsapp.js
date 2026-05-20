@@ -145,6 +145,22 @@ function detectProduct(text) {
   return null;
 }
 
+// Detect if customer is asking for an image/photo
+function isImageRequest(text) {
+  const t = text.toLowerCase().trim();
+  return /image|photo|pic\b|picture|dikhao|dikha|bhejo|dekh|tasveer|tasweer|photo bhejo|image bhejo|image send|send image|show me/.test(t);
+}
+
+// Find the last product mentioned in recent conversation history
+function lastMentionedProduct(messages) {
+  const recent = [...messages].reverse().slice(0, 10);
+  for (const m of recent) {
+    const p = detectProduct(m.content || '');
+    if (p) return p;
+  }
+  return null;
+}
+
 // ── Legacy keyword detector (kept as fallback, AI is primary) ─
 function detectLeadIntent(text) {
   const t = text.toLowerCase().trim();
@@ -466,18 +482,22 @@ router.post('/webhook', async (req, res) => {
           await sendWhatsAppMessage(phone, aiReply, false);
           console.log(`[WhatsApp] ✅ Reply sent to ${phone}`);
 
-          // ── Send product image if customer enquired about a specific product ──
-          const detectedProduct = detectProduct(text) || detectProduct(aiReply);
+          // ── Send product image ────────────────────────────
+          // Detect product from: current message, AI reply, or recent conversation history
+          const imgRequest = isImageRequest(text);
+          let detectedProduct = detectProduct(text) || detectProduct(aiReply);
+          // If customer asked for an image but no product in current message, look back
+          if (!detectedProduct && imgRequest) {
+            detectedProduct = lastMentionedProduct(conv.messages);
+          }
           if (detectedProduct && PRODUCT_IMAGES[detectedProduct] && !isGreeting(text)) {
-            // Don't send image if this conversation already got this product's image recently
             const recentMessages = conv.messages.slice(-10);
-            const alreadySentImage = recentMessages.some(
+            const alreadySentImage = !imgRequest && recentMessages.some(
               m => m.role === 'assistant' && m.content.includes(`[img:${detectedProduct}]`)
             );
             if (!alreadySentImage) {
-              console.log(`[WhatsApp] 🖼️ Sending product image: ${detectedProduct}`);
+              console.log(`[WhatsApp] 🖼️ Sending product image: ${detectedProduct}${imgRequest ? ' (image request)' : ''}`);
               await sendProductImage(phone, detectedProduct, PRODUCT_IMAGES[detectedProduct]);
-              // Tag the last assistant message so we don't repeat the image next turn
               conv.messages[conv.messages.length - 1].content += ` [img:${detectedProduct}]`;
               await conv.save();
             }
