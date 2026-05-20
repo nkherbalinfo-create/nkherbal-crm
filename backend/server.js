@@ -8,7 +8,8 @@ const { syncOrders } = require('./services/woocommerceSync');
 const { generateFollowUps } = require('./services/followUpScheduler');
 
 const fs = require('fs');
-const LAST_SYNC_FILE = require('path').join(__dirname, '.last-sync');
+const path = require('path');
+const LAST_SYNC_FILE = path.join(__dirname, '.last-sync');
 
 function getLastSyncTime() {
   try {
@@ -76,6 +77,9 @@ app.use((req, res, next) => {
     next();
   });
 });
+
+// Serve product images statically — accessible at /images/products/filename.jpg
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/orders', require('./routes/orders'));
