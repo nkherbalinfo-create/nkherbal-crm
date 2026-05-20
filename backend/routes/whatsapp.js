@@ -483,12 +483,19 @@ router.post('/webhook', async (req, res) => {
           console.log(`[WhatsApp] ✅ Reply sent to ${phone}`);
 
           // ── Send product image ────────────────────────────
-          // Detect product from: current message, AI reply, or recent conversation history
+          // Priority: 1) product in customer message  2) image request → look back in history
+          // We do NOT use detectProduct(aiReply) to avoid sending wrong image when bot mentions multiple products
           const imgRequest = isImageRequest(text);
-          let detectedProduct = detectProduct(text) || detectProduct(aiReply);
-          // If customer asked for an image but no product in current message, look back
+          let detectedProduct = detectProduct(text);
           if (!detectedProduct && imgRequest) {
             detectedProduct = lastMentionedProduct(conv.messages);
+          }
+          // Only use AI reply as fallback when bot clearly recommended exactly one product
+          if (!detectedProduct) {
+            const p = detectProduct(aiReply);
+            // Only use it if the AI reply doesn't mention multiple products
+            const mentionCount = ['muejaza','testo','shahi kalp','shilajit','vardhak'].filter(k => aiReply.toLowerCase().includes(k)).length;
+            if (p && mentionCount <= 1) detectedProduct = p;
           }
           if (detectedProduct && PRODUCT_IMAGES[detectedProduct] && !isGreeting(text)) {
             const recentMessages = conv.messages.slice(-10);
