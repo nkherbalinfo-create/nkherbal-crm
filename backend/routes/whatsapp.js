@@ -268,6 +268,35 @@ function waApiCall(payload) {
   });
 }
 
+// ── GET: Status/config check — open endpoint for diagnostics ───
+router.get('/status', (req, res) => {
+  res.json({
+    ok: true,
+    phoneNumberId: process.env.WA_PHONE_NUMBER_ID ? '✅ set' : '❌ MISSING',
+    accessToken:   process.env.WA_ACCESS_TOKEN   ? '✅ set' : '❌ MISSING',
+    verifyToken:   process.env.WA_VERIFY_TOKEN   ? '✅ set' : '❌ MISSING',
+    webhookUrl:    `${req.protocol}://${req.get('host')}/api/whatsapp/webhook`,
+    time:          new Date().toISOString(),
+  });
+});
+
+// ── POST: Inject a test message (for debugging) ──────────
+router.post('/test-message', async (req, res) => {
+  try {
+    const { phone = '919999999999', text = 'hi test', name = 'Test User' } = req.body;
+    const WaConversation = require('../models/WaConversation');
+    const mobile10 = phone.slice(-10);
+    let conv = await WaConversation.findOne({ phone });
+    if (!conv) conv = await WaConversation.create({ phone, name, messages: [] });
+    conv.messages.push({ role: 'user', content: text });
+    conv.lastMessageAt = new Date();
+    await conv.save();
+    res.json({ ok: true, phone, text, totalMessages: conv.messages.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ── GET: Webhook verification ────────────────────────────
 router.get('/webhook', (req, res) => {
   const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
@@ -284,7 +313,11 @@ router.post('/webhook', async (req, res) => {
 
   try {
     const body = req.body;
-    if (body.object !== 'whatsapp_business_account') return;
+    console.log('[WhatsApp] 📥 Webhook received, object:', body?.object, '| entries:', body?.entry?.length || 0);
+    if (body.object !== 'whatsapp_business_account') {
+      console.log('[WhatsApp] ⚠️ Not a WA business account event, ignoring');
+      return;
+    }
 
     for (const entry of (body.entry || [])) {
       for (const change of (entry.changes || [])) {
