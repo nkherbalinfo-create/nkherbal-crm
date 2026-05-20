@@ -7,6 +7,7 @@ import Modal from '../components/Modal';
 import { useToast } from '../components/Toast';
 import { FilterBar, SelectInput } from '../components/FormControls';
 import { format } from 'date-fns';
+import CustomerPanel from '../components/CustomerPanel';
 
 const TYPE_CHIP = { Repeat:'chip-ok', New:'chip-info' };
 const STATUS_CHIP = { Delivered:'chip-ok', Cancelled:'chip-danger', RTO:'chip-warn', Shipped:'chip-info', Processing:'chip-muted' };
@@ -33,6 +34,7 @@ export default function Customers() {
   const [page, setPage] = useState(1);
   const [profileModal, setProfileModal] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [panelMobile, setPanelMobile] = useState(null);
   const [recalculating, setRecalculating] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState(null);
   const [exitMobile, setExitMobile] = useState(null);
@@ -139,7 +141,7 @@ export default function Customers() {
             <div key={c._id} data-row-id={c.mobile}
               className={exitMobile===c.mobile ? 'row-deleting' : ''}
               style={{ background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', gap:10 }}
-              onClick={()=>viewProfile(c.mobile)}>
+              onClick={()=>setPanelMobile(c.mobile)}>
               <input type="checkbox" checked={selected.has(c.mobile)} onChange={e=>{e.stopPropagation();toggleSelect(c.mobile)}} style={{ accentColor:'var(--accent)', flexShrink:0 }} />
               <Av name={c.name} />
               <div style={{ flex:1, minWidth:0 }}>
@@ -197,7 +199,7 @@ export default function Customers() {
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:11.5, color:'var(--faint)', fontVariantNumeric:'tabular-nums' }}>{c.lastOrderDate?format(new Date(c.lastOrderDate),'dd MMM yyyy'):'—'}</td>
                   <td style={{ padding:'11px 16px' }}>
                     <div style={{ display:'flex', gap:4 }}>
-                      <button onClick={()=>viewProfile(c.mobile)} style={{ padding:'4px 10px', borderRadius:7, border:'none', cursor:'pointer', background:'var(--accent-bg)', color:'var(--accent)', fontSize:12, fontWeight:500 }}>View</button>
+                      <button onClick={()=>setPanelMobile(c.mobile)} style={{ padding:'4px 10px', borderRadius:7, border:'none', cursor:'pointer', background:'var(--accent-bg)', color:'var(--accent)', fontSize:12, fontWeight:500 }}>View</button>
                       <button onClick={()=>setConfirmTarget({mobile:c.mobile,name:c.name})} style={{ width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:7, border:'none', cursor:'pointer', background:'var(--danger-bg)', color:'var(--danger)' }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       </button>
@@ -295,6 +297,8 @@ export default function Customers() {
         loading={deleting}
       />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {panelMobile && <CustomerPanel mobile={panelMobile} onClose={() => setPanelMobile(null)} />}
 
       {selected.size > 0 && (
         <div className="bulk-bar fade-in" style={{

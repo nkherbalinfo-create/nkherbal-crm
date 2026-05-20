@@ -1,6 +1,8 @@
 const express = require('express');
 const Customer = require('../models/Customer');
 const Order = require('../models/Order');
+const Lead = require('../models/Lead');
+const WaConversation = require('../models/WaConversation');
 const { protect } = require('../middleware/auth');
 const router = express.Router();
 
@@ -23,6 +25,32 @@ router.get('/', protect, async (req, res) => {
       .skip((page - 1) * limit)
       .limit(Number(limit));
     res.json({ customers, total, page: Number(page), pages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Customer 360 profile — customer + last 5 orders + linked lead + last WA messages
+router.get('/:mobile/profile', protect, async (req, res) => {
+  try {
+    const { mobile } = req.params;
+    const [customer, orders, lead] = await Promise.all([
+      Customer.findOne({ mobile }).lean(),
+      Order.find({ mobile }).sort({ orderDate: -1 }).limit(5).lean(),
+      Lead.findOne({ mobile }).sort({ date: -1 }).lean(),
+    ]);
+    // WA stores phone as 91XXXXXXXXXX, customer stores XXXXXXXXXX — try both
+    const waConv = await WaConversation.findOne({
+      phone: { $in: [mobile, `91${mobile}`] }
+    }).lean().catch(() => null);
+    const lastMessages = waConv ? waConv.messages.slice(-4) : [];
+    res.json({
+      customer: customer || { name: orders[0]?.customerName || 'Unknown', mobile, totalOrders: orders.length, totalRevenue: 0, isRepeat: false },
+      orders,
+      lead: lead || null,
+      lastMessages,
+      waPhone: waConv?.phone || null,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

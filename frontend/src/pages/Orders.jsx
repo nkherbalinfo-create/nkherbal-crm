@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast';
 import { DateInput, FilterBar, SelectInput } from '../components/FormControls';
 import Pagination from '../components/Pagination';
 import { format } from 'date-fns';
+import CustomerPanel from '../components/CustomerPanel';
 
 const PRODUCTS = [
   { name: 'Muejaza For Men (300g)', price: 4499 },
@@ -114,6 +115,7 @@ export default function Orders() {
   const [syncing, setSyncing] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [panelMobile, setPanelMobile] = useState(null);
   const pressTimer = useRef(null);
   const { addToast } = useToast();
 
@@ -544,7 +546,12 @@ export default function Orders() {
                     <div style={{ display:'flex', alignItems:'center', gap:9 }}>
                       <Av name={o.customerName} />
                       <div>
-                        <div style={{ fontSize:13, fontWeight:500, color:'var(--fg)', whiteSpace:'nowrap' }}>{o.customerName}</div>
+                        <button onClick={() => setPanelMobile(o.mobile)}
+                          style={{ fontSize:13, fontWeight:500, color:'var(--accent)', background:'none', border:'none', cursor:'pointer', padding:0, whiteSpace:'nowrap', textDecoration:'underline', textDecorationColor:'transparent', transition:'text-decoration-color 0.15s' }}
+                          onMouseEnter={e => e.currentTarget.style.textDecorationColor='var(--accent)'}
+                          onMouseLeave={e => e.currentTarget.style.textDecorationColor='transparent'}>
+                          {o.customerName}
+                        </button>
                         <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{o.city}</div>
                       </div>
                     </div>
@@ -791,6 +798,8 @@ export default function Orders() {
         loading={deleting}
       />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {panelMobile && <CustomerPanel mobile={panelMobile} onClose={() => setPanelMobile(null)} />}
 
       {/* Desktop bulk bar — fixed bottom */}
       {!isMobile && selected.size > 0 && (
