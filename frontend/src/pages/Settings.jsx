@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/Toast';
 import api from '../utils/api';
 
-const NAV_ITEMS = ['Profile','WooCommerce','WhatsApp Bot','Appearance'];
+const NAV_ITEMS = ['Profile','WooCommerce','WhatsApp Bot','Data','Appearance'];
 
 function Card({ title, subtitle, children }) {
   return (
@@ -38,6 +38,8 @@ export default function Settings() {
   const [showSecret, setShowSecret] = useState(false);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncingWaLeads, setSyncingWaLeads] = useState(false);
+  const [waLeadResult, setWaLeadResult] = useState(null);
 
   // Profile edit state
   const [profileForm, setProfileForm] = useState({ name: user?.name||'', email: user?.email||'' });
@@ -248,6 +250,36 @@ export default function Settings() {
                 </div>
               </div>
             </Card>
+          )}
+
+          {activeNav==='Data' && (
+            <>
+              <Card title="Sync WhatsApp → Leads" subtitle="Create a lead for every WhatsApp conversation that doesn't have one yet">
+                <div style={{ fontSize:12.5, color:'var(--muted)', lineHeight:1.6, marginBottom:16 }}>
+                  All your WhatsApp conversations (including Meta Ad click-to-WhatsApp contacts) will appear in the Leads page and be included in exports. Safe to run multiple times — it won't create duplicates.
+                </div>
+                {waLeadResult && (
+                  <div style={{ background:'var(--accent-bg)', borderRadius:9, padding:'10px 14px', fontSize:12.5, color:'var(--accent)', marginBottom:14, lineHeight:1.6 }}>
+                    ✅ {waLeadResult.created} leads created · {waLeadResult.linked} linked to existing · {waLeadResult.skipped} already up to date
+                  </div>
+                )}
+                <button className="btn-primary" disabled={syncingWaLeads} onClick={async () => {
+                  setSyncingWaLeads(true); setWaLeadResult(null);
+                  try {
+                    const { data } = await api.post('/sync/whatsapp-leads');
+                    setWaLeadResult(data);
+                    addToast(data.message);
+                  } catch (err) { addToast(err.response?.data?.message || 'Sync failed', 'error'); }
+                  finally { setSyncingWaLeads(false); }
+                }} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  {syncingWaLeads ? (
+                    <><span style={{ width:12, height:12, border:'2px solid rgba(255,255,255,.4)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> Syncing…</>
+                  ) : (
+                    <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync WhatsApp → Leads</>
+                  )}
+                </button>
+              </Card>
+            </>
           )}
 
           {activeNav==='Appearance' && (
