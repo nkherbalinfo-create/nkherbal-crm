@@ -28,7 +28,7 @@ function Spark({ data = [], w = 88, h = 44, id = 'sp' }) {
   const vals = data.map(Number);
   const min = Math.min(...vals), max = Math.max(...vals);
   const range = max - min || 1;
-  const pad = 5;
+  const pad = 7;
   const step = w / (vals.length - 1);
   const pts = vals.map((v, i) => [
     +(i * step).toFixed(2),
@@ -306,7 +306,7 @@ export default function Dashboard() {
         </div>
       ) : (
         /* Desktop: one wide surface with 4 columns */
-        <div className="surface metric-grid" style={{ padding: '20px 22px' }}>
+        <div className="surface metric-grid" style={{ padding: '22px 24px', overflow: 'visible' }}>
           {loading ? [0,1,2,3].map(i => (
             <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <Skel w="50%" h={11} />
@@ -319,15 +319,15 @@ export default function Dashboard() {
           )) : KPIs.map((m, i) => (
             <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0 }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, marginBottom: 4 }}>
                 <div className="num" style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
                   {m.v}
                 </div>
-                <div style={{ color: 'var(--accent)', flexShrink: 0, marginBottom: 2 }}>
-                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={88} h={44} id={m.l} />
+                <div style={{ color: 'var(--accent)', flexShrink: 0, opacity: 0.85 }}>
+                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={84} h={40} id={m.l} />
                 </div>
               </div>
-              <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)', marginTop: 6 }}>
+              <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)', marginTop: 4 }}>
                 {m.up ? '↑' : '↓'} {m.sub}
               </div>
             </div>
