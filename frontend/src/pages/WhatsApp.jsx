@@ -356,6 +356,24 @@ export default function WhatsApp() {
             {/* Messages */}
             <div style={{ flex:1, minHeight:0, overflowY:'auto', padding:'16px 14px', display:'flex', flexDirection:'column', gap:8, background:'var(--card-soft)' }}>
               {loading && <div style={{ textAlign:'center', color:'var(--faint)', fontSize:12 }}>Loading…</div>}
+              {!loading && messages.length === 0 && (
+                <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, padding:32, textAlign:'center' }}>
+                  <div style={{ width:48, height:48, borderRadius:'50%', background:'var(--chip)', display:'grid', placeItems:'center' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" strokeWidth="1.5" strokeLinecap="round"><path d="M3 21l1.65-4.5A8 8 0 1112 20a8 8 0 01-3.4-.8L3 21z"/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:500, color:'var(--muted)', marginBottom:4 }}>No message history</div>
+                    <div style={{ fontSize:12, color:'var(--faint)', lineHeight:1.5, maxWidth:220 }}>
+                      Earlier messages weren't captured.<br/>New messages will appear here when the customer replies.
+                    </div>
+                  </div>
+                  {!botPaused && (
+                    <button className="btn-secondary" style={{ fontSize:12, marginTop:4 }} onClick={toggleBot}>
+                      Take over to send a message
+                    </button>
+                  )}
+                </div>
+              )}
               {messages.map((m,i)=>(
                 <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:m.role==='user'?'flex-start':'flex-end' }}>
                   <div style={{
@@ -449,7 +467,7 @@ export default function WhatsApp() {
               <div>
                 <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', marginBottom:4 }}>Customer details</div>
                 <DetailRow label="Mobile" val={'+'+selected.phone} />
-                <DetailRow label="Messages" val={selected.messageCount} />
+                <DetailRow label="Messages" val={String(selected.messageCount ?? 0)} />
                 <DetailRow label="Last active" val={timeStr(selected.lastMessageAt)} />
                 {lead && (
                   <>
