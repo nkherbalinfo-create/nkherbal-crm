@@ -72,21 +72,23 @@ function DetailRow({ label, val }) {
 
 const BACKEND_URL = 'https://crm-backend-azu8.onrender.com';
 const PRODUCT_IMG_MAP = {
-  'Muejaza For Men (300g)':           `${BACKEND_URL}/images/products/muejaza.png`,
-  'Muejaza Plus For Men (300g)':      'https://nkherbal.com/wp-content/uploads/2026/01/NK-Herbal-24-1.webp',
-  'Testo – Vardhak For Men (300g)':  `${BACKEND_URL}/images/products/testovardhak.png`,
-  'Shahi Kalp For Men & Women (300g)':`${BACKEND_URL}/images/products/shahikalp.png`,
-  'Kashmiri Shilajit 25g':            `${BACKEND_URL}/images/products/shilajit.png`,
-  'Kashmiri Shilajit 50g':            `${BACKEND_URL}/images/products/shilajit.png`,
-  'Muejaza & Shahi Kalp Combo (300g)':`${BACKEND_URL}/images/products/muejaza-shahikalp-combo.png`,
+  'Muejaza For Men (300g)':           { url: `${BACKEND_URL}/images/products/muejaza.png`,           caption: '🌿 *Muejaza For Men (300g)* — ₹4,499\n🔗 https://nkherbal.com/product/muejaza-ayurvedic-food-preparation/' },
+  'Muejaza Plus For Men (300g)':      { url: 'https://nkherbal.com/wp-content/uploads/2026/01/NK-Herbal-24-1.webp', caption: '⭐ *Muejaza Plus For Men (300g)* — ₹15,000\n🔗 https://nkherbal.com/product/muejaza-plus-ayurvedic-herbal-preparation/' },
+  'Testo – Vardhak For Men (300g)':   { url: `${BACKEND_URL}/images/products/testovardhak.png`,      caption: '💪 *Testo Vardhak For Men (300g)* — ₹4,199\n🔗 https://nkherbal.com/product/testo-vardhak-ayurvedic-preparation/' },
+  'Shahi Kalp For Men & Women (300g)':{ url: `${BACKEND_URL}/images/products/shahikalp.png`,         caption: '👑 *Shahi Kalp For Men & Women (300g)* — ₹4,499\n🔗 https://nkherbal.com/product/shahi-kalp-ayurvedic-food-preparation/' },
+  'Kashmiri Shilajit 25g':            { url: `${BACKEND_URL}/images/products/shilajit.png`,          caption: '🏔️ *Kashmiri Shilajit 25g* — ₹1,499\n🔗 https://nkherbal.com/product/pure-kashmiri-shilajit/' },
+  'Kashmiri Shilajit 50g':            { url: `${BACKEND_URL}/images/products/shilajit.png`,          caption: '🏔️ *Kashmiri Shilajit 50g* — ₹2,499\n🔗 https://nkherbal.com/product/pure-kashmiri-shilajit/' },
+  'Muejaza & Shahi Kalp Combo (300g)':{ url: `${BACKEND_URL}/images/products/muejaza-shahikalp-combo.png`, caption: '🎁 *Muejaza + Shahi Kalp Combo* — ₹8,999\n🔗 https://nkherbal.com/product/nk-herbal-muejaza-shahi-kalp-combo/' },
 };
 
 // Extract [img:ProductName] tag from message content
 function parseImgTag(content) {
   const match = content?.match(/\[img:([^\]]+)\]/);
+  const product = match ? match[1] : null;
   return {
     text: content?.replace(/\s*\[img:[^\]]+\]/g, '').trim() || '',
-    product: match ? match[1] : null,
+    product,
+    imgUrl: product ? PRODUCT_IMG_MAP[product] : null,
   };
 }
 
@@ -319,7 +321,7 @@ export default function WhatsApp() {
     if (!ts) return '';
     const d = new Date(ts);
     const now = new Date();
-    if (d.toDateString()===now.toDateString()) return format(d,'HH:mm');
+    if (d.toDateString()===now.toDateString()) return format(d,'h:mm a');
     return format(d,'dd MMM');
   };
 
@@ -477,13 +479,15 @@ export default function WhatsApp() {
                         <WaText text={text} />
                       </div>
                     )}
-                    {/* Product image sent to customer */}
+                    {/* Product image — exact replica of what customer received */}
                     {imgUrl && (
                       <div style={{ maxWidth:'75%', borderRadius:12, overflow:'hidden', border:'1px solid var(--rule)', boxShadow:'var(--shadow-card)' }}>
-                        <img src={imgUrl} alt={product} style={{ width:'100%', display:'block', maxHeight:200, objectFit:'cover' }} />
-                        <div style={{ padding:'6px 10px', background:'var(--accent)', fontSize:11, color:'var(--accent-ink)', fontWeight:500 }}>
-                          📦 {product} — sent to customer
-                        </div>
+                        <img src={imgUrl.url} alt={product} style={{ width:'100%', display:'block', maxHeight:220, objectFit:'cover' }} />
+                        {imgUrl.caption && (
+                          <div style={{ padding:'8px 10px', background:'#1a1a1a', fontSize:12, color:'#e0e0e0', whiteSpace:'pre-wrap', wordBreak:'break-all', lineHeight:1.5 }}>
+                            <WaText text={imgUrl.caption} />
+                          </div>
+                        )}
                       </div>
                     )}
                     <div style={{ fontSize:10.5, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
