@@ -482,7 +482,7 @@ export default function WhatsApp() {
                     {/* Product image — exact replica of what customer received */}
                     {imgUrl && (
                       <div style={{ maxWidth:'75%', borderRadius:12, overflow:'hidden', border:'1px solid var(--rule)', boxShadow:'var(--shadow-card)' }}>
-                        <img src={imgUrl.url} alt={product} style={{ width:'100%', display:'block', maxHeight:220, objectFit:'cover' }} />
+                        <img src={imgUrl.url} alt={product} style={{ width:'100%', display:'block', maxHeight:280, objectFit:'contain', background:'#fff' }} />
                         {imgUrl.caption && (
                           <div style={{ padding:'8px 10px', background:'#1a1a1a', fontSize:12, color:'#e0e0e0', whiteSpace:'pre-wrap', wordBreak:'break-all', lineHeight:1.5 }}>
                             <WaText text={imgUrl.caption} />
