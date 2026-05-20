@@ -144,11 +144,15 @@ export default function NotificationCenter() {
         </svg>
         {hasNew && (
           <span style={{
-            position: 'absolute', top: 5, right: 5,
-            width: 7, height: 7, borderRadius: '50%',
-            background: 'var(--danger)',
+            position: 'absolute', top: 3, right: 3,
+            minWidth: 16, height: 16, padding: '0 4px',
+            borderRadius: 999, background: '#e53935', color: '#fff',
+            fontSize: 9.5, fontWeight: 800, display: 'grid', placeItems: 'center',
             boxShadow: '0 0 0 2px var(--sidebar-bg)',
-          }} />
+            fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums', lineHeight: 1,
+          }}>
+            {notifications.length > 9 ? '9+' : notifications.length}
+          </span>
         )}
       </button>
 
