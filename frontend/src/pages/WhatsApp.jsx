@@ -70,6 +70,26 @@ function DetailRow({ label, val }) {
   );
 }
 
+const BACKEND_URL = 'https://crm-backend-azu8.onrender.com';
+const PRODUCT_IMG_MAP = {
+  'Muejaza For Men (300g)':           `${BACKEND_URL}/images/products/muejaza.png`,
+  'Muejaza Plus For Men (300g)':      'https://nkherbal.com/wp-content/uploads/2026/01/NK-Herbal-24-1.webp',
+  'Testo – Vardhak For Men (300g)':  `${BACKEND_URL}/images/products/testovardhak.png`,
+  'Shahi Kalp For Men & Women (300g)':`${BACKEND_URL}/images/products/shahikalp.png`,
+  'Kashmiri Shilajit 25g':            `${BACKEND_URL}/images/products/shilajit.png`,
+  'Kashmiri Shilajit 50g':            `${BACKEND_URL}/images/products/shilajit.png`,
+  'Muejaza & Shahi Kalp Combo (300g)':`${BACKEND_URL}/images/products/muejaza-shahikalp-combo.png`,
+};
+
+// Extract [img:ProductName] tag from message content
+function parseImgTag(content) {
+  const match = content?.match(/\[img:([^\]]+)\]/);
+  return {
+    text: content?.replace(/\s*\[img:[^\]]+\]/g, '').trim() || '',
+    product: match ? match[1] : null,
+  };
+}
+
 const DEFAULT_TEMPLATES = [
   { id:'t1', label:'Pricing',   text:'*Muejaza For Men* — ₹4,000 (after ₹499 discount)\n*Testo Vardhak* — ₹3,700\n*Shahi Kalp* — ₹4,000\n*Shilajit 25g* — ₹1,000 | 50g — ₹2,000\n\nFree delivery 🚚 | Discreet packaging 📦\nOrder karne ke liye reply karen ya website visit karen: https://nkherbal.com/shop' },
   { id:'t2', label:'Delivery',  text:'Delivery 3–5 working days mein ho jati hai 🚚\nHum discreet packing mein bhejte hain — box par koi product name nahi hota.\nTracking link ship hone ke baad share kiya jayega 📦' },
@@ -354,7 +374,7 @@ export default function WhatsApp() {
                   </div>
                   <span style={{ fontSize:10.5, color:'var(--faint)', fontFamily:'Inter', flexShrink:0 }}>{timeStr(c.lastMessageAt)}</span>
                 </div>
-                <div style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic' }}>{c.lastMessage || 'Tap to open conversation'}</div>
+                <div style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic' }}>{c.lastMessage?.replace(/\s*\[img:[^\]]+\]/g,'') || 'Tap to open conversation'}</div>
               </div>
               {(() => {
                 const unread = Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0));
@@ -439,23 +459,39 @@ export default function WhatsApp() {
                   )}
                 </div>
               )}
-              {messages.map((m,i)=>(
-                <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:m.role==='user'?'flex-start':'flex-end' }}>
-                  <div style={{
-                    maxWidth:'75%', padding:'9px 12px', borderRadius:m.role==='user'?'4px 12px 12px 12px':'12px 4px 12px 12px',
-                    background:m.role==='user'?'var(--card)':'var(--accent)',
-                    color:m.role==='user'?'var(--fg)':'var(--accent-ink)',
-                    fontSize:13, lineHeight:1.6,
-                    border: m.role==='user'?'1px solid var(--rule)':'none',
-                    whiteSpace:'pre-wrap', wordBreak:'break-word',
-                  }}>
-                    <WaText text={m.content} />
+              {messages.map((m,i)=>{
+                const { text, product } = parseImgTag(m.content);
+                const imgUrl = product ? PRODUCT_IMG_MAP[product] : null;
+                return (
+                  <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:m.role==='user'?'flex-start':'flex-end', gap:4 }}>
+                    {/* Text bubble */}
+                    {text && (
+                      <div style={{
+                        maxWidth:'75%', padding:'9px 12px', borderRadius:m.role==='user'?'4px 12px 12px 12px':'12px 4px 12px 12px',
+                        background:m.role==='user'?'var(--card)':'var(--accent)',
+                        color:m.role==='user'?'var(--fg)':'var(--accent-ink)',
+                        fontSize:13, lineHeight:1.6,
+                        border: m.role==='user'?'1px solid var(--rule)':'none',
+                        whiteSpace:'pre-wrap', wordBreak:'break-word',
+                      }}>
+                        <WaText text={text} />
+                      </div>
+                    )}
+                    {/* Product image sent to customer */}
+                    {imgUrl && (
+                      <div style={{ maxWidth:'75%', borderRadius:12, overflow:'hidden', border:'1px solid var(--rule)', boxShadow:'var(--shadow-card)' }}>
+                        <img src={imgUrl} alt={product} style={{ width:'100%', display:'block', maxHeight:200, objectFit:'cover' }} />
+                        <div style={{ padding:'6px 10px', background:'var(--accent)', fontSize:11, color:'var(--accent-ink)', fontWeight:500 }}>
+                          📦 {product} — sent to customer
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ fontSize:10.5, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
+                      {m.role==='user'?'Customer':'Bot'} · {timeStr(m.timestamp)}
+                    </div>
                   </div>
-                  <div style={{ fontSize:10.5, color:'var(--faint)', marginTop:3, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
-                    {m.role==='user'?'Customer':'Bot'} · {timeStr(m.timestamp)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={msgEndRef} />
             </div>
 
