@@ -99,6 +99,8 @@ async function processWCOrder(wc) {
   });
 
   if (existing) {
+    // User manually deleted this order from CRM — never re-import it
+    if (existing.manuallyDeleted) return 'skipped';
     existing.orderStatus = mapOrderStatus(wc.status);
     existing.paymentStatus = mapPaymentStatus(wc);
     if (lineItems.length) existing.lineItems = lineItems;

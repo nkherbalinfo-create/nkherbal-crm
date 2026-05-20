@@ -45,7 +45,8 @@ const orderSchema = new mongoose.Schema({
     discountPct: { type: Number, default: 0 },
     total: { type: Number },
     gst: { type: Number }
-  }]
+  }],
+  manuallyDeleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 orderSchema.pre('save', async function (next) {

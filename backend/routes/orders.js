@@ -29,7 +29,7 @@ async function upsertCustomer(orderData) {
 router.get('/', protect, async (req, res) => {
   try {
     const { channel, status, paymentStatus, search, startDate, endDate, page = 1, limit = 20 } = req.query;
-    const filter = {};
+    const filter = { manuallyDeleted: { $ne: true } };
     if (channel) filter.salesChannel = channel;
     if (status) filter.orderStatus = status;
     if (paymentStatus) filter.paymentStatus = paymentStatus;
@@ -96,8 +96,14 @@ router.put('/:id', protect, async (req, res) => {
 
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const order = await Order.findByIdAndDelete(req.params.id);
+    const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
+    // WooCommerce orders: soft-delete so the sync doesn't re-import them
+    if (order.notes && order.notes.startsWith('wc:')) {
+      await Order.findByIdAndUpdate(req.params.id, { manuallyDeleted: true });
+    } else {
+      await Order.findByIdAndDelete(req.params.id);
+    }
     res.json({ message: 'Order deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
