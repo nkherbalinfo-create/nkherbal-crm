@@ -358,7 +358,7 @@ function Layout() {
       {isMobile && <BottomNav badges={badges} />}
       <style>{`
         @media (min-width: 1024px) {
-          .lg-main { margin-left: 72px; min-width: 0; overflow-x: hidden; }
+          .lg-main { margin-left: 248px; min-width: 0; overflow-x: hidden; }
           .mobile-header { display: none !important; }
         }
         @media (max-width: 767px) {
