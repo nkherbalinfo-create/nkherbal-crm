@@ -118,6 +118,11 @@ export default function WhatsApp() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [broadcastSelected, setBroadcastSelected] = useState(new Set());
+  const [broadcastModal, setBroadcastModal] = useState(false);
+  const [broadcastMsg, setBroadcastMsg] = useState('');
+  const [broadcastProgress, setBroadcastProgress] = useState(null); // { sent, failed, total } | null
+  const [broadcastDone, setBroadcastDone] = useState(false);
   // seenCounts: { [phone]: lastSeenCustomerMsgCount } — persisted in localStorage
   const [seenCounts, setSeenCounts] = useState(() => {
     try { return JSON.parse(localStorage.getItem('wa_seen') || '{}'); } catch { return {}; }
@@ -250,6 +255,43 @@ export default function WhatsApp() {
     finally { setSending(false); }
   };
 
+  const toggleBroadcastSelect = (phone, e) => {
+    e.stopPropagation();
+    setBroadcastSelected(prev => {
+      const next = new Set(prev);
+      next.has(phone) ? next.delete(phone) : next.add(phone);
+      return next;
+    });
+  };
+
+  const sendBroadcast = async () => {
+    if (!broadcastMsg.trim() || broadcastSelected.size === 0) return;
+    const phones = [...broadcastSelected];
+    setBroadcastProgress({ sent: 0, failed: 0, total: phones.length });
+    setBroadcastDone(false);
+    let sent = 0, failed = 0;
+    for (const phone of phones) {
+      try {
+        await api.post('/wa/send', { phone, message: broadcastMsg });
+        sent++;
+      } catch { failed++; }
+      setBroadcastProgress({ sent, failed, total: phones.length });
+    }
+    setBroadcastDone(true);
+    if (failed === 0) addToast(`Broadcast sent to ${sent} contacts`);
+    else addToast(`Sent ${sent}, failed ${failed}`, failed > 0 ? 'error' : 'success');
+    setBroadcastSelected(new Set());
+    setBroadcastMsg('');
+  };
+
+  const closeBroadcast = () => {
+    if (broadcastProgress && !broadcastDone) return; // prevent close while sending
+    setBroadcastModal(false);
+    setBroadcastProgress(null);
+    setBroadcastDone(false);
+    setBroadcastMsg('');
+  };
+
   const timeStr = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
@@ -269,17 +311,37 @@ export default function WhatsApp() {
 
         {/* Left — conversation list */}
         <div style={{ borderRight: isMobile ? 'none' : '1px solid var(--rule)', display: isMobile && mobileChatOpen ? 'none' : 'flex', flexDirection:'column', minHeight:0, overflowY:'auto' }}>
-          <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--rule)', fontSize:12, fontWeight:600, color:'var(--fg)' }}>
-            Conversations <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums', color:'var(--faint)', fontWeight:400 }}>({convs.length})</span>
+          <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--rule)', display:'flex', alignItems:'center', gap:8 }}>
+            <input type="checkbox"
+              style={{ accentColor:'var(--accent)', cursor:'pointer', width:14, height:14, flexShrink:0 }}
+              checked={convs.length > 0 && broadcastSelected.size === convs.length}
+              onChange={e => setBroadcastSelected(e.target.checked ? new Set(convs.map(c=>c.phone)) : new Set())}
+            />
+            <span style={{ fontSize:12, fontWeight:600, color:'var(--fg)', flex:1 }}>
+              Conversations <span style={{ fontFamily:'Inter', fontVariantNumeric:'tabular-nums', color:'var(--faint)', fontWeight:400 }}>({convs.length})</span>
+            </span>
+            {broadcastSelected.size > 0 && (
+              <button onClick={() => { setBroadcastModal(true); setBroadcastProgress(null); setBroadcastDone(false); }}
+                style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:7, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer', fontSize:11.5, fontWeight:600, flexShrink:0 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Broadcast ({broadcastSelected.size})
+              </button>
+            )}
           </div>
           {convs.length===0 && (
             <div style={{ padding:24, textAlign:'center', color:'var(--faint)', fontSize:12 }}>No conversations yet</div>
           )}
           {convs.map(c=>(
             <div key={c.phone} onClick={()=>selectConv(c)}
-              style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', cursor:'pointer', borderBottom:'1px solid var(--rule)', background:selected?.phone===c.phone?'var(--accent-bg)':'transparent', transition:'background 0.1s' }}
-              onMouseEnter={e=>{ if(selected?.phone!==c.phone) e.currentTarget.style.background='var(--hover)'; }}
-              onMouseLeave={e=>{ if(selected?.phone!==c.phone) e.currentTarget.style.background='transparent'; }}>
+              style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', cursor:'pointer', borderBottom:'1px solid var(--rule)', background: broadcastSelected.has(c.phone) ? 'var(--accent-bg)' : selected?.phone===c.phone?'var(--accent-bg)':'transparent', transition:'background 0.1s' }}
+              onMouseEnter={e=>{ if(selected?.phone!==c.phone && !broadcastSelected.has(c.phone)) e.currentTarget.style.background='var(--hover)'; }}
+              onMouseLeave={e=>{ if(selected?.phone!==c.phone && !broadcastSelected.has(c.phone)) e.currentTarget.style.background='transparent'; }}>
+              <input type="checkbox"
+                checked={broadcastSelected.has(c.phone)}
+                onClick={e => toggleBroadcastSelect(c.phone, e)}
+                onChange={()=>{}}
+                style={{ accentColor:'var(--accent)', cursor:'pointer', width:13, height:13, flexShrink:0 }}
+              />
               <Av name={c.name} size={36} />
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:2 }}>
@@ -524,6 +586,76 @@ export default function WhatsApp() {
           )}
         </div>}
       </div>
+
+      {/* Broadcast Modal */}
+      <Modal open={broadcastModal} onClose={closeBroadcast} title={`Broadcast to ${broadcastSelected.size} contact${broadcastSelected.size !== 1 ? 's' : ''}`}>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          {!broadcastProgress ? (
+            <>
+              <div style={{ background:'var(--warn-bg)', border:'1px solid var(--warn)', borderRadius:9, padding:'10px 14px', fontSize:12.5, color:'var(--warn)', lineHeight:1.5 }}>
+                ⚠️ This will send a WhatsApp message to <strong>{broadcastSelected.size}</strong> contact{broadcastSelected.size !== 1 ? 's' : ''} one by one. Make sure the message is relevant and not spammy to avoid getting your number flagged.
+              </div>
+              <div>
+                <label className="label">Message *</label>
+                <textarea className="input" style={{ height:120, resize:'vertical', fontSize:13 }}
+                  placeholder="Type your message here… Supports *bold*, _italic_ WhatsApp formatting"
+                  value={broadcastMsg} onChange={e => setBroadcastMsg(e.target.value)} />
+                <div style={{ fontSize:11, color:'var(--faint)', marginTop:4 }}>{broadcastMsg.length} characters</div>
+              </div>
+              <div>
+                <div style={{ fontSize:11, fontWeight:500, color:'var(--muted)', marginBottom:8 }}>Quick templates</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:180, overflowY:'auto' }}>
+                  {templates.map(t => (
+                    <button key={t.id} onClick={() => setBroadcastMsg(t.text)}
+                      style={{ textAlign:'left', padding:'8px 12px', borderRadius:8, border:'1px solid var(--rule)', background:'var(--bg)', cursor:'pointer', fontSize:12, transition:'all 0.12s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor='var(--accent)'; e.currentTarget.style.background='var(--accent-bg)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor='var(--rule)'; e.currentTarget.style.background='var(--bg)'; }}>
+                      <span style={{ fontWeight:600, color:'var(--accent)' }}>{t.label}</span>
+                      <span style={{ color:'var(--faint)', marginLeft:8 }}>{t.text.slice(0, 60)}…</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display:'flex', justifyContent:'flex-end', gap:8, borderTop:'1px solid var(--rule)', paddingTop:14 }}>
+                <button className="btn-secondary" onClick={closeBroadcast}>Cancel</button>
+                <button className="btn-primary" disabled={!broadcastMsg.trim()} onClick={sendBroadcast}
+                  style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  Send to {broadcastSelected.size}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:16, alignItems:'center', padding:'8px 0' }}>
+              <div style={{ textAlign:'center' }}>
+                <div style={{ fontSize:15, fontWeight:600, color:'var(--fg)', marginBottom:4 }}>
+                  {broadcastDone ? 'Broadcast complete' : 'Sending…'}
+                </div>
+                <div style={{ fontSize:13, color:'var(--muted)' }}>
+                  {broadcastProgress.sent} sent · {broadcastProgress.failed} failed · {broadcastProgress.total} total
+                </div>
+              </div>
+              <div style={{ width:'100%', height:8, background:'var(--rule)', borderRadius:4, overflow:'hidden' }}>
+                <div style={{
+                  height:'100%', borderRadius:4, transition:'width 0.3s ease',
+                  width: `${Math.round(((broadcastProgress.sent + broadcastProgress.failed) / broadcastProgress.total) * 100)}%`,
+                  background: broadcastDone && broadcastProgress.failed > 0 ? 'var(--warn)' : 'var(--accent)',
+                }} />
+              </div>
+              <div style={{ fontSize:12, color:'var(--faint)' }}>
+                {broadcastDone
+                  ? broadcastProgress.failed === 0
+                    ? '✅ All messages delivered successfully'
+                    : `⚠️ ${broadcastProgress.failed} message${broadcastProgress.failed > 1 ? 's' : ''} failed to send`
+                  : `Sending ${broadcastProgress.sent + broadcastProgress.failed + 1} of ${broadcastProgress.total}…`}
+              </div>
+              {broadcastDone && (
+                <button className="btn-primary" onClick={closeBroadcast}>Done</button>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       <Modal open={!!pendingDelete} onClose={()=>!deleting && setPendingDelete(null)} title="Delete conversation" size="sm">
         <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
