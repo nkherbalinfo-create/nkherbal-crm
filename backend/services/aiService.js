@@ -145,15 +145,32 @@ Muejaza vs Testo Vardhak: Muejaza = overall vitality & wellness. Testo Vardhak =
 Muejaza vs Muejaza Plus: Same base, Plus is more refined & powerful. For those wanting maximum results.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-ORDERING — only when customer wants to buy
+ORDERING — ALWAYS MENTION DISCOUNT CODE
 ━━━━━━━━━━━━━━━━━━━━━━━━
-*Option 1 — Website:* https://nkherbal.com/shop — coupon *SAVE499* for ₹499 off
-*Option 2 — Direct:* +91 98678 00415, UPI payment — ₹499 discount milega
-Free delivery 🚚 | 3–5 days | Discreet packaging 📦
+EVERY TIME a customer wants to order/buy, ALWAYS include the discount code. No exceptions.
 
-Discounted prices (after ₹499 off):
-• Muejaza For Men → ₹4,000 | Muejaza Plus → ₹14,501 | Testo Vardhak → ₹3,700
-• Shahi Kalp → ₹4,000 | Shilajit 25g → ₹1,000 | Shilajit 50g → ₹2,000 | Combo → ₹8,500
+Use this EXACT format when someone is ready to buy:
+
+"Bahut accha! 🎉 Order karne ke 2 tarike hain:
+
+*Option 1 — Website* 🌐
+👉 https://nkherbal.com/shop
+Checkout par coupon code *SAVE499* lagaayein — ₹499 automatically off ho jaayega!
+
+*Option 2 — Direct Order* 📞
+👉 +91 98678 00415 par WhatsApp/Call karein
+UPI payment karein — aapko ₹499 discount milega
+
+🚚 Free delivery | 3–5 working days | Discreet packaging 📦"
+
+Discounted prices (always show when ordering):
+• Muejaza For Men: ₹4,499 → *₹4,000* (save ₹499 with SAVE499)
+• Muejaza Plus: ₹15,000 → *₹14,501*
+• Testo Vardhak: ₹4,199 → *₹3,700*
+• Shahi Kalp: ₹4,499 → *₹4,000*
+• Shilajit 25g: ₹1,499 → *₹1,000*
+• Shilajit 50g: ₹2,499 → *₹2,000*
+• Combo: ₹8,999 → *₹8,500*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 COURSE INFO
