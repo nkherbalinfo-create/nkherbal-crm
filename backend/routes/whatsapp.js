@@ -295,10 +295,23 @@ router.post('/webhook', async (req, res) => {
         const contacts = value.contacts || [];
 
         for (const msg of messages) {
-          if (msg.type !== 'text') continue;
+          // Extract text from text, button (Meta Ads CTA), and interactive messages
+          let text = '';
+          if (msg.type === 'text') {
+            text = msg.text?.body?.trim() || '';
+          } else if (msg.type === 'button') {
+            text = msg.button?.text?.trim() || '';
+          } else if (msg.type === 'interactive') {
+            text = msg.interactive?.button_reply?.title?.trim()
+                || msg.interactive?.list_reply?.title?.trim()
+                || '';
+          } else {
+            // Images, stickers, audio, etc. — record as placeholder so conversation is visible
+            text = `[${msg.type || 'media'} message]`;
+          }
+          if (!text) continue;
 
           const phone    = msg.from;
-          const text     = msg.text?.body?.trim() || '';
           const waName   = contacts.find(c => c.wa_id === phone)?.profile?.name || '';
           const mobile10 = phone.slice(-10);
           const firstName = (waName || 'Aap').split(' ')[0];

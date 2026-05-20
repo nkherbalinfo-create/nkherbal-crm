@@ -289,7 +289,7 @@ export default function WhatsApp() {
                   </div>
                   <span style={{ fontSize:10.5, color:'var(--faint)', fontFamily:'Inter', flexShrink:0 }}>{timeStr(c.lastMessageAt)}</span>
                 </div>
-                <div style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.lastMessage||'—'}</div>
+                <div style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic' }}>{c.lastMessage || 'Tap to open conversation'}</div>
               </div>
               {(() => {
                 const unread = Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0));

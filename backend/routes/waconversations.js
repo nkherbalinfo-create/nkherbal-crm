@@ -15,7 +15,7 @@ router.get('/', protect, async (req, res) => {
     const result = convs.map(c => ({
       phone: c.phone,
       name:  c.name || `+${c.phone}`,
-      lastMessage: c.messages[c.messages.length - 1]?.content?.slice(0, 80) || '',
+      lastMessage: c.messages.filter(m => m.content).slice(-1)[0]?.content?.slice(0, 80) || '',
       lastMessageAt: c.lastMessageAt,
       messageCount: c.messages.filter(m => m.role === 'user').length,
       botPaused: c.botPaused || false,
