@@ -138,6 +138,9 @@ export default function WhatsApp() {
   const [deleting, setDeleting] = useState(false);
   const [templates, setTemplates] = useState(loadTemplates);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showTyping, setShowTyping] = useState(false);
+  const typingTimerRef = useRef(null);
+  const lastUserMsgCountRef = useRef(0);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [broadcastSelected, setBroadcastSelected] = useState(new Set());
@@ -197,6 +200,22 @@ export default function WhatsApp() {
         setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior: scroll ? 'auto' : 'smooth' }), 30);
       }
       msgCountRef.current = newCount;
+      // Show typing animation when a new customer message arrives (bot is about to reply)
+      const userMsgCount = incoming.filter(m => m.role === 'user').length;
+      if (!data.botPaused && userMsgCount > lastUserMsgCountRef.current) {
+        lastUserMsgCountRef.current = userMsgCount;
+        setShowTyping(true);
+        clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = setTimeout(() => setShowTyping(false), 15000);
+      } else if (userMsgCount <= lastUserMsgCountRef.current) {
+        lastUserMsgCountRef.current = userMsgCount;
+      }
+      // Hide typing animation once bot has replied
+      const lastMsg = incoming[incoming.length - 1];
+      if (lastMsg?.role === 'assistant') {
+        clearTimeout(typingTimerRef.current);
+        setShowTyping(false);
+      }
     } catch { if (showLoading) addToast('Failed to load conversation','error'); }
     finally { if (showLoading) setLoading(false); }
   };
@@ -204,6 +223,9 @@ export default function WhatsApp() {
   const selectConv = async (conv) => {
     selectedPhoneRef.current = conv.phone;
     msgCountRef.current = 0;
+    lastUserMsgCountRef.current = 0;
+    setShowTyping(false);
+    clearTimeout(typingTimerRef.current);
     setSelected(conv);
     // Clear badge immediately on click
     markSeen(conv.phone, conv.messageCount);
@@ -461,8 +483,8 @@ export default function WhatsApp() {
                   )}
                 </div>
               )}
-              {/* Typing indicator — shown when bot is active and last message was from customer */}
-              {!loading && !botPaused && messages.length > 0 && messages[messages.length-1]?.role === 'user' && (
+              {/* Typing indicator — shown for 15s after new customer message, hides when bot replies */}
+              {showTyping && !botPaused && (
                 <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
                   <div style={{ padding:'10px 14px', borderRadius:'12px 4px 12px 12px', background:'var(--accent)', display:'flex', alignItems:'center', gap:4 }}>
                     {[0,1,2].map(i => (
