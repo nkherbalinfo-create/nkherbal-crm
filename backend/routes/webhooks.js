@@ -241,35 +241,75 @@ router.post('/ccavenue', async (req, res) => {
     }
 
     const phone = `91${mobile10}`;
-    const amount = data.amount || data.trans_amount || '';
-    const orderId = data.order_id || data.tracking_id || '';
-    console.log(`[CCAvenue] ✅ Payment SUCCESS — ${phone} | ₹${amount} | Order: ${orderId}`);
+    const amount = parseFloat((data.amount || data.trans_amount || '0').replace(/,/g, ''));
+    const ccOrderId = data.order_id || data.tracking_id || '';
+    const customerName = (data.billing_name || data.shipping_name || `Customer-${mobile10}`).trim();
+    const city = data.billing_city || data.shipping_city || '';
+    const address = [data.billing_address, data.billing_city, data.billing_state, data.billing_zip].filter(Boolean).join(', ');
+    const email = data.billing_email || '';
+    const productName = data.merchant_param3 || data.item_code || 'NK Herbal Product';
 
-    // Find WhatsApp conversation
-    const conv = await WaConversation.findOne({
-      phone: { $in: [phone, mobile10] }
-    });
+    console.log(`[CCAvenue] ✅ Payment SUCCESS — ${customerName} (${phone}) | ₹${amount} | CC Order: ${ccOrderId}`);
 
-    const confirmMsg =
-      `✅ *Payment Verified!* 🎉\n\n` +
-      `Aapka payment confirm ho gaya hai. Shukriya!\n\n` +
-      `Ab apna order ship karne ke liye yeh details bhejein:\n\n` +
-      `• *Full Name*\n` +
-      `• *Complete Delivery Address*\n` +
-      `• *Pincode*\n` +
-      `• *Mobile Number*\n` +
-      `• *Product Name* (Muejaza, Shahi Kalp, etc.)\n` +
-      `• *Quantity* (kitne jars)\n\n` +
-      `Details milte hi hum 24 ghante mein ship kar denge! 🚚📦`;
+    // ── Auto-create order in CRM ──────────────────────────
+    try {
+      const existingOrder = await Order.findOne({ notes: `cca:${ccOrderId}` });
+      if (!existingOrder && mobile10 && amount > 0) {
+        const customerType = await upsertCustomer(mobile10, customerName, city, amount, new Date());
+        await Order.create({
+          orderDate: new Date(),
+          customerName,
+          mobile: mobile10,
+          city,
+          email,
+          billingAddress: address,
+          productName: productName.includes('Herbal') ? productName : `NK Herbal Product`,
+          quantity: 1,
+          orderValue: amount,
+          salesChannel: 'Website',
+          leadSource: 'Organic',
+          paymentStatus: 'Paid',
+          orderStatus: 'Processing',
+          customerType,
+          followUpDone: false,
+          upsellDone: false,
+          notes: `cca:${ccOrderId}`
+        });
+        console.log(`[CCAvenue] ✅ CRM order created for ${customerName}`);
+      }
+    } catch (orderErr) {
+      console.error('[CCAvenue] CRM order creation failed:', orderErr.message);
+    }
+
+    // ── Send WhatsApp confirmation with full order details ─
+    const firstName = customerName.split(' ')[0];
+    const hasAddress = address.replace(/,\s*/g, '').trim().length > 5;
+
+    let confirmMsg = `✅ *Order Confirmed!* 🎉\n\nNamaste *${firstName} Ji*! Aapka payment verify ho gaya hai.\n\n`;
+    confirmMsg += `📦 *Order Summary:*\n`;
+    confirmMsg += `• Amount: *₹${amount.toLocaleString('en-IN')}*\n`;
+    confirmMsg += `• Order ID: *${ccOrderId}*\n`;
+    if (hasAddress) {
+      confirmMsg += `• Delivery: *${address}*\n`;
+    }
+    confirmMsg += `\n🚚 Aapka order 3–5 working days mein deliver ho jaayega.\n`;
+    confirmMsg += `Tracking details aapko WhatsApp/SMS par milegi.\n\n`;
+
+    if (!hasAddress) {
+      confirmMsg += `📍 Ek kaam karein — apna *delivery address aur pincode* yahan bhejein taaki hum jaldi ship kar sakein.\n\n`;
+    }
+
+    confirmMsg += `Shukriya NK Herbal choose karne ke liye! 🌿🙏`;
 
     await sendWhatsAppMessageDirect(phone, confirmMsg);
 
-    if (conv) {
-      await WaConversation.findOneAndUpdate({ phone }, { paymentClaimed: false });
-      sse.broadcast({ type: 'payment_confirmed', phone });
-    }
-
-    console.log(`[CCAvenue] ✅ Confirmation message sent to ${phone}`);
+    // ── Update CRM state ──────────────────────────────────
+    await WaConversation.findOneAndUpdate(
+      { phone: { $in: [phone, mobile10] } },
+      { paymentClaimed: false }
+    );
+    sse.broadcast({ type: 'payment_confirmed', phone });
+    console.log(`[CCAvenue] ✅ Full confirmation sent to ${phone}`);
   } catch (err) {
     console.error('[CCAvenue] IPN error:', err.message);
   }
