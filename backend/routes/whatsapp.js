@@ -103,7 +103,8 @@ const BACKEND_URL = process.env.BACKEND_URL || 'https://crm-backend-azu8.onrende
 
 function isPaymentClaim(text) {
   const t = text.toLowerCase();
-  return /paid|payment (done|kiya|ho gaya|kar diya|bhej diya|sent)|screenshot (bheja|send|diya|kar diya)|transfer (kiya|ho gaya)|paise (bheje|bhej diye|de diye)|payment complete|order (de do|kardo|place)|upi (kiya|done|sent)/.test(t);
+  // Only match EXPLICIT payment proof — not "le liya" or "lena hai" (intent to buy)
+  return /\bpaid\b|payment (done|kiya|ho gaya|kar diya|bhej diya|sent|complete)|screenshot (bheja|send kiya|diya|kar diya|bhejta)|transfer (kiya|kar diya|ho gaya)|paise (bhej diye|de diye|bheje)|transaction (done|complete|ho gaya)|upi (kiya|kar diya|done|sent)/.test(t);
 }
 
 
