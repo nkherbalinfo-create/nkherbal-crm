@@ -82,7 +82,7 @@ function GlobalSearch({ open, onClose }) {
   const debounceRef = useRef(null);
 
   useEffect(() => {
-    if (open) { setQ(''); setResults({ orders: [], customers: [] }); setTimeout(() => inputRef.current?.focus(), 50); }
+    if (open) { setQ(''); setResults({ orders: [], customers: [], leads: [] }); setTimeout(() => inputRef.current?.focus(), 50); }
   }, [open]);
 
   useEffect(() => {
