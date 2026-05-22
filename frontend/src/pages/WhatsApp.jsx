@@ -183,6 +183,40 @@ export default function WhatsApp() {
 
   useEffect(() => { loadConvs(); const t = setInterval(loadConvs, 6000); return ()=>clearInterval(t); }, []);
 
+  // ── Real-time SSE connection ─────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const BACKEND = import.meta.env.VITE_API_URL || '';
+    const es = new EventSource(`${BACKEND}/api/wa/stream?token=${token}`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'typing') {
+          // Update conv list instantly
+          setConvs(prev => prev.map(c => c.phone === data.phone ? { ...c, lastMessageAt: new Date() } : c));
+          // Show typing dots if this conversation is open
+          if (selectedPhoneRef.current === data.phone) {
+            setShowTyping(true);
+            clearTimeout(typingTimerRef.current);
+            typingTimerRef.current = setTimeout(() => setShowTyping(false), 20000);
+          }
+        }
+        if (data.type === 'message') {
+          // Refresh conv list and open conversation instantly
+          loadConvs();
+          if (selectedPhoneRef.current === data.phone) {
+            loadConversation({ phone: data.phone }, { showLoading: false, scroll: true });
+            setShowTyping(false);
+            clearTimeout(typingTimerRef.current);
+          }
+        }
+      } catch {}
+    };
+    es.onerror = () => {}; // reconnects automatically
+    return () => es.close();
+  }, []);
+
   const loadConversation = async (conv, { showLoading = false, scroll = false } = {}) => {
     if (!conv?.phone) return;
     if (showLoading) setLoading(true);

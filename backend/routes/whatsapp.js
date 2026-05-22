@@ -4,6 +4,7 @@ const http     = require('http');
 const Lead     = require('../models/Lead');
 const WaConversation = require('../models/WaConversation');
 const { getAIReply, classifyIntent } = require('../services/aiService');
+const { broadcastSSE } = require('./waconversations');
 const router   = express.Router();
 
 // ── Media ID cache (upload once, reuse for 25 days) ─────
@@ -472,6 +473,9 @@ router.post('/webhook', async (req, res) => {
 
           console.log(`[WhatsApp] 💬 User message saved: "${text.slice(0, 60)}" from ${phone}`);
 
+          // ── Broadcast typing event to CRM in real-time ──────
+          broadcastSSE({ type: 'typing', phone, name: conv.name || waName });
+
           // ── Show typing indicator to customer while AI processes ──
           sendTypingIndicator(phone); // fire-and-forget, don't await
 
@@ -506,6 +510,8 @@ router.post('/webhook', async (req, res) => {
           // ── Send AI text reply ────────────────────────────
           await sendWhatsAppMessage(phone, aiReply, false);
           console.log(`[WhatsApp] ✅ Reply sent to ${phone}`);
+          // ── Broadcast message event so CRM refreshes instantly ──
+          broadcastSSE({ type: 'message', phone });
 
           // ── Send product image ────────────────────────────
           // Priority: 1) product in customer message  2) image request → look back in history
