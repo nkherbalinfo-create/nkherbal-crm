@@ -197,6 +197,78 @@ router.post('/woocommerce', async (req, res) => {
   }
 });
 
+// ── Test endpoint — simulate a CC Avenue payment (for testing only) ──
+// Usage: POST https://crm-backend-azu8.onrender.com/api/webhooks/ccavenue-test
+// Body: { "mobile": "9876543210", "name": "Test User", "amount": "4000", "product": "Muejaza For Men" }
+router.post('/ccavenue-test', async (req, res) => {
+  const { mobile = '9999999999', name = 'Test Customer', amount = '4000', product = 'Muejaza For Men (300g)' } = req.body;
+  console.log(`[CCAvenue TEST] Simulating payment: ${name} (${mobile}) ₹${amount}`);
+
+  // Inject fake CC Avenue data and call the same handler logic
+  req.body = {
+    order_status:   'Success',
+    billing_tel:    mobile,
+    billing_name:   name,
+    billing_address: '123 Test Street',
+    billing_city:   'Mumbai',
+    billing_state:  'Maharashtra',
+    billing_zip:    '400001',
+    billing_email:  'test@test.com',
+    amount:         amount,
+    order_id:       `TEST-${Date.now()}`,
+    tracking_id:    `TRK-${Date.now()}`,
+    merchant_param3: product
+  };
+
+  // Reuse the same handler
+  res.json({ ok: true, message: `Test payment simulated for ${mobile}. Check WhatsApp and Render logs.` });
+
+  // Fire the actual CC Avenue logic asynchronously
+  const WaConversation = require('../models/WaConversation');
+  const { sendWhatsAppMessageDirect } = require('../services/waSender');
+  const sse = require('../services/sseBroadcaster');
+  const data = req.body;
+
+  try {
+    const mobile10 = String(data.billing_tel).replace(/\D/g, '').slice(-10);
+    const phone = `91${mobile10}`;
+    const amt = parseFloat(data.amount);
+    const customerName = data.billing_name;
+    const city = data.billing_city;
+    const address = [data.billing_address, data.billing_city, data.billing_state, data.billing_zip].filter(Boolean).join(', ');
+    const ccOrderId = data.order_id;
+    const firstName = customerName.split(' ')[0];
+
+    const customerType = await upsertCustomer(mobile10, customerName, city, amt, new Date());
+    const existingOrder = await Order.findOne({ notes: `cca:${ccOrderId}` });
+    if (!existingOrder) {
+      await Order.create({
+        orderDate: new Date(), customerName, mobile: mobile10, city,
+        email: data.billing_email, billingAddress: address,
+        productName: data.merchant_param3 || 'NK Herbal Product',
+        quantity: 1, orderValue: amt,
+        salesChannel: 'Website', leadSource: 'Organic',
+        paymentStatus: 'Paid', orderStatus: 'Processing',
+        customerType, followUpDone: false, upsellDone: false,
+        notes: `cca:${ccOrderId}`
+      });
+    }
+
+    const confirmMsg =
+      `✅ *Order Confirmed!* 🎉\n\nNamaste *${firstName} Ji*! Aapka payment verify ho gaya hai.\n\n` +
+      `📦 *Order Summary:*\n• Product: *${data.merchant_param3}*\n• Amount: *₹${amt.toLocaleString('en-IN')}*\n• Order ID: *${ccOrderId}*\n\n` +
+      `🚚 Aapka order 3–5 working days mein deliver ho jaayega. Tracking details milegi.\n\n` +
+      `Shukriya NK Herbal choose karne ke liye! 🌿🙏`;
+
+    await sendWhatsAppMessageDirect(phone, confirmMsg);
+    await WaConversation.findOneAndUpdate({ phone: { $in: [phone, mobile10] } }, { paymentClaimed: false });
+    sse.broadcast({ type: 'payment_confirmed', phone });
+    console.log(`[CCAvenue TEST] ✅ All done for ${phone}`);
+  } catch (err) {
+    console.error('[CCAvenue TEST] Error:', err.message);
+  }
+});
+
 // ── CC Avenue IPN — auto-confirm payment when CC Avenue notifies us ──
 // Setup: in CC Avenue merchant panel → Payment Options → Notify URL:
 //   https://crm-backend-azu8.onrender.com/api/webhooks/ccavenue
