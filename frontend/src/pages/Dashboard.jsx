@@ -141,12 +141,12 @@ export default function Dashboard() {
   const switchTrendRange = (n) => {
     if (n === activeRange) return;
     setActiveRange(n);        // button highlights immediately
-    setChartFading(true);
+    setChartFading(true);     // start fade out
     setTimeout(() => {
-      setTrendRange(n);
-      setChartKey(k => k + 1);
-    }, 200);
-    setTimeout(() => setChartFading(false), 280);
+      setTrendRange(n);       // change data while fully invisible
+      setChartKey(k => k + 1); // remount clean
+    }, 250);                  // wait for fade to fully complete
+    setTimeout(() => setChartFading(false), 320); // fade in after remount
   };
   const hasLoadedRef = useRef(false);
 
@@ -441,7 +441,7 @@ export default function Dashboard() {
           {loading ? (
             <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
           ) : (
-            <div key={chartKey} style={{ opacity: chartFading ? 0 : 1, transition: 'opacity 0.2s ease' }}>
+            <div key={chartKey} style={{ opacity: chartFading ? 0 : 1, transition: chartFading ? 'opacity 0.15s ease' : 'opacity 0.25s ease' }}>
             <ResponsiveContainer width="100%" height={210}>
               <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
                 <defs>
