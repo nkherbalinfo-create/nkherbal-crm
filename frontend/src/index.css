@@ -71,7 +71,7 @@
   body {
     background: var(--bg);
     color: var(--fg);
-    font-family: 'Abel', 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 13px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
@@ -103,7 +103,7 @@
 
   .num,
   .mono {
-    font-family: 'Abel', 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';
   }
@@ -643,6 +643,16 @@
 @keyframes typing-dot {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
   30%            { transform: translateY(-5px); opacity: 1; }
+}
+
+/* ── Geist for headings and large display numbers ─── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Geist', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.num, .page-title {
+  font-family: 'Geist', system-ui, sans-serif;
 }
 
 @keyframes pulse-dot {
