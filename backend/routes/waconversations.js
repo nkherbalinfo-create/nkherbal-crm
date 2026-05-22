@@ -4,19 +4,10 @@ const { protect } = require('../middleware/auth');
 const { sendWhatsAppMessageDirect } = require('../services/waSender');
 const router = express.Router();
 
-// ── SSE broadcast system ─────────────────────────────────
-const sseClients = new Set();
-
-function broadcastSSE(event) {
-  const payload = `data: ${JSON.stringify(event)}\n\n`;
-  sseClients.forEach(res => {
-    try { res.write(payload); } catch {}
-  });
-}
-module.exports.broadcastSSE = broadcastSSE;
-
-// SSE stream endpoint — accepts token via query param since EventSource can't set headers
+const sse = require('../services/sseBroadcaster');
 const jwt = require('jsonwebtoken');
+
+// SSE stream endpoint — CRM connects here for real-time push
 router.get('/stream', (req, res) => {
   const token = req.query.token || req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).end();
@@ -25,11 +16,11 @@ router.get('/stream', (req, res) => {
     'Content-Type':  'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection':    'keep-alive',
-    'X-Accel-Buffering': 'no', // disable Nginx buffering
+    'X-Accel-Buffering': 'no',
   });
   res.write('data: {"type":"connected"}\n\n');
-  sseClients.add(res);
-  req.on('close', () => sseClients.delete(res));
+  sse.addClient(res);
+  req.on('close', () => sse.removeClient(res));
 });
 
 // List all conversations
