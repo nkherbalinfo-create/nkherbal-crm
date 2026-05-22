@@ -398,6 +398,36 @@ router.post('/webhook', async (req, res) => {
         const contacts = value.contacts || [];
 
         for (const msg of messages) {
+          // ── Detect CC Avenue Order Alert WhatsApp notification ──
+          // CC Avenue sends: "Order ID: xxx\nAmount: ₹4000\nCustomer: Rahul\nMobile: 9876543210\nStatus: Success"
+          // These come from CC Avenue's system to the business number
+          const rawText = msg.text?.body || msg.button?.text || '';
+          if (/ccavenue|order.*success|payment.*success|amount.*₹|transaction.*success/i.test(rawText)) {
+            const mobileMatch = rawText.match(/(?:mobile|phone|tel|number)[:\s]+(\d{10,12})/i)
+                             || rawText.match(/\b(91\d{10}|\d{10})\b/);
+            const amountMatch = rawText.match(/(?:amount|₹|rs)[:\s]*[\s₹]?([\d,]+)/i);
+            if (mobileMatch) {
+              const mobile10 = mobileMatch[1].slice(-10);
+              const phone = `91${mobile10}`;
+              const amount = amountMatch ? amountMatch[1] : '';
+              console.log(`[WhatsApp] 💰 CC Avenue payment alert detected — ${phone} | ₹${amount}`);
+              const confirmMsg =
+                `✅ *Payment Verified!* 🎉\n\n` +
+                `Aapka payment confirm ho gaya hai.${amount ? ` (₹${amount})` : ''}\n\n` +
+                `Ab apna order ship karne ke liye yeh details bhejein:\n\n` +
+                `• *Full Name*\n• *Complete Delivery Address*\n• *Pincode*\n` +
+                `• *Mobile Number*\n• *Product Name*\n• *Quantity*\n\n` +
+                `Details milte hi hum 24 ghante mein ship kar denge! 🚚📦`;
+              try {
+                await sendWhatsAppMessage(phone, confirmMsg, false);
+                await WaConversation.findOneAndUpdate({ phone }, { paymentClaimed: false });
+                sse.broadcast({ type: 'payment_confirmed', phone });
+                console.log(`[WhatsApp] ✅ Auto-confirmed payment for ${phone}`);
+              } catch (e) { console.error('[WhatsApp] Auto-confirm failed:', e.message); }
+            }
+            continue; // Don't process as customer message
+          }
+
           // Extract text from text, button (Meta Ads CTA), and interactive messages
           let text = '';
           if (msg.type === 'text') {

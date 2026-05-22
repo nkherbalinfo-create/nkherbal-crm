@@ -162,6 +162,33 @@ router.post('/woocommerce', async (req, res) => {
     });
 
     console.log(`[WooCommerce] New order synced: ${order.orderId} for ${customerName}`);
+
+    // ── Auto-send WhatsApp confirmation for paid website orders ──
+    const isPaid = ['paid', 'processing', 'completed'].includes((wc.status || '').toLowerCase())
+      || mapPaymentStatus(wc) === 'Paid';
+    if (isPaid && mobile) {
+      try {
+        const { sendWhatsAppMessageDirect } = require('../services/waSender');
+        const WaConversation = require('../models/WaConversation');
+        const phone = `91${mobile}`;
+        const msg =
+          `✅ *Order Confirmed!* 🎉\n\n` +
+          `Namaste *${customerName.split(' ')[0]} Ji*! Aapka order receive ho gaya hai.\n\n` +
+          `📦 *Order Details:*\n` +
+          `• Product: *${productName}*\n` +
+          `• Amount: *₹${orderValue.toLocaleString('en-IN')}*\n` +
+          `• Order ID: *${order.orderId}*\n\n` +
+          `🚚 Aapka order 3–5 working days mein deliver ho jaayega.\n` +
+          `Tracking details aapko WhatsApp/SMS par milegi.\n\n` +
+          `Shukriya NK Herbal choose karne ke liye! 🌿🙏`;
+        await sendWhatsAppMessageDirect(phone, msg);
+        await WaConversation.findOneAndUpdate({ phone }, { paymentClaimed: false });
+        console.log(`[WooCommerce] ✅ WhatsApp confirmation sent to ${phone}`);
+      } catch (waErr) {
+        console.error('[WooCommerce] WhatsApp confirmation failed:', waErr.message);
+      }
+    }
+
     res.status(201).json({ message: 'Order created', orderId: order.orderId });
 
   } catch (err) {
