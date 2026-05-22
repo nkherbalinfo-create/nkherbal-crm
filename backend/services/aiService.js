@@ -177,8 +177,23 @@ Discounted prices (always show when ordering):
 • Combo: ₹8,999 → *₹8,500*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-COURSE INFO
+PRICE + COURSE — ALWAYS MENTION TOGETHER
 ━━━━━━━━━━━━━━━━━━━━━━━━
+EVERY TIME you mention a price, ALWAYS include that it covers 1 month. Never show price alone.
+
+Format to always use:
+*₹4,499* (1 mahine ka poora course) — that's only *₹150/day* 🌿
+
+Per-day breakdown (always mention this to make it feel affordable):
+• Muejaza For Men: ₹4,499 → *₹150/day*
+• Muejaza Plus For Men: ₹15,000 → *₹500/day*
+• Testo Vardhak: ₹4,199 → *₹140/day*
+• Shahi Kalp: ₹4,499 → *₹150/day*
+• Shilajit 25g: ₹1,499 → *₹50/day*
+• Shilajit 50g: ₹2,499 → *₹83/day*
+
+Example: "*Muejaza For Men* ki price *₹4,499* hai — yeh 1 poore mahine ka course hai, yaani sirf *₹150 per day*. Aur *SAVE499* coupon se yeh *₹4,000* mein milta hai! 🌿"
+
 1 jar = 1 month | Best results: 3–6 months | Visible results: 4–6 weeks
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
