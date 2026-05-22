@@ -4,32 +4,33 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 import NotificationCenter from './NotificationCenter';
+import {
+  LayoutDashboard, Package, Crosshair, Users, Bell,
+  MessageCircle, BarChart2, Settings2, Search,
+  Sun, Moon, Leaf, LogOut, Plus, Zap
+} from 'lucide-react';
 
-// Exact icon implementations from the design file primitives.jsx
-const Icon = ({ name, size = 16, stroke = 1.6, color = 'currentColor' }) => {
-  const p = {
-    width: size, height: size, viewBox: '0 0 24 24',
-    fill: 'none', stroke: color, strokeWidth: stroke,
-    strokeLinecap: 'round', strokeLinejoin: 'round',
-    style: { display: 'block', flexShrink: 0 }
-  };
-  switch (name) {
-    case 'grid':    return <svg {...p}><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>;
-    case 'box':     return <svg {...p}><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>;
-    case 'target':  return <svg {...p}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill={color} stroke="none"/></svg>;
-    case 'users':   return <svg {...p}><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.5 3.5 0 010 7"/><path d="M21 20c0-2.5-1.6-4.6-4-5.5"/></svg>;
-    case 'bell':    return <svg {...p}><path d="M6 8a6 6 0 1112 0c0 6 2 7 2 7H4s2-1 2-7z"/><path d="M10 19a2 2 0 004 0"/></svg>;
-    case 'message': return <svg {...p}><path d="M4 12a8 8 0 1116 0c0 4.4-3.6 8-8 8H4l1.6-3.5A8 8 0 014 12z"/></svg>;
-    case 'chart':   return <svg {...p}><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>;
-    case 'gear':    return <svg {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>;
-    case 'search':  return <svg {...p}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>;
-    case 'sun':     return <svg {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>;
-    case 'moon':    return <svg {...p}><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>;
-    case 'leaf':    return <svg {...p}><path d="M3 21c0-9 7-16 18-16-1 11-7 18-18 16z"/><path d="M3 21c4-4 8-7 14-10"/></svg>;
-    case 'logout':  return <svg {...p}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
-    case 'whatsapp':return <svg {...p}><path d="M3 21l1.65-4.5A8 8 0 1112 20a8 8 0 01-3.4-.8L3 21z"/></svg>;
-    default:        return null;
-  }
+const ICON_MAP = {
+  grid:     LayoutDashboard,
+  box:      Package,
+  target:   Crosshair,
+  users:    Users,
+  bell:     Bell,
+  message:  MessageCircle,
+  whatsapp: MessageCircle,
+  chart:    BarChart2,
+  gear:     Settings2,
+  search:   Search,
+  sun:      Sun,
+  moon:     Moon,
+  leaf:     Leaf,
+  logout:   LogOut,
+};
+
+const Icon = ({ name, size = 16, color = 'currentColor' }) => {
+  const Comp = ICON_MAP[name];
+  if (!Comp) return null;
+  return <Comp size={size} color={color} strokeWidth={1.8} style={{ display:'block', flexShrink:0 }} />;
 };
 
 const NAV = [
