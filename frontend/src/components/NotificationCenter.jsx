@@ -107,10 +107,17 @@ export default function NotificationCenter() {
     finally { setLoading(false); }
   };
 
+  // Fetch on mount so badge shows immediately without clicking
+  useEffect(() => {
+    fetchNotifications();
+    const t = setInterval(() => fetchNotifications(), 120000); // refresh every 2min
+    return () => clearInterval(t);
+  }, []);
+
   const handleOpen = () => {
     const next = !open;
     setOpen(next);
-    if (next) fetchNotifications();
+    if (next) fetchNotifications(true);
   };
 
   const markAllRead = () => {
@@ -144,15 +151,12 @@ export default function NotificationCenter() {
         </svg>
         {hasNew && (
           <span style={{
-            position: 'absolute', top: 3, right: 3,
-            minWidth: 16, height: 16, padding: '0 4px',
-            borderRadius: 999, background: '#e53935', color: '#fff',
-            fontSize: 9.5, fontWeight: 800, display: 'grid', placeItems: 'center',
-            boxShadow: '0 0 0 2px var(--sidebar-bg)',
-            fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums', lineHeight: 1,
-          }}>
-            {notifications.length > 9 ? '9+' : notifications.length}
-          </span>
+            position: 'absolute', top: 4, right: 4,
+            width: 8, height: 8,
+            borderRadius: '50%',
+            background: '#e53935',
+            border: '1.5px solid var(--sidebar-bg)',
+          }} />
         )}
       </button>
 
