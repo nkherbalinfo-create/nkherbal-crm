@@ -1018,19 +1018,6 @@ h1, h2, h3, h4, h5, h6 {
 .chip-warn:hover   { box-shadow: 0 0 0 2px rgba(168,122,26,.2); }
 
 
-/* ── Smooth dark/light mode transition ───────────────── */
-html.theme-transitioning,
-html.theme-transitioning *,
-html.theme-transitioning *::before,
-html.theme-transitioning *::after {
-  transition:
-    background-color 0.35s ease,
-    background 0.35s ease,
-    color 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease !important;
-}
-
 /* ── Reduced motion ───────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .page-enter { animation: none !important; }

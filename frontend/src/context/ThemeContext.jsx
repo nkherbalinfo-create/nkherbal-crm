@@ -16,10 +16,18 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   const toggle = () => {
-    const root = document.documentElement;
-    root.classList.add('theme-transitioning');
-    setTheme(t => (t === 'dark' ? 'light' : 'dark'));
-    setTimeout(() => root.classList.remove('theme-transitioning'), 400);
+    const body = document.body;
+    body.style.transition = 'opacity 0.18s ease';
+    body.style.opacity = '0';
+    setTimeout(() => {
+      setTheme(t => (t === 'dark' ? 'light' : 'dark'));
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          body.style.opacity = '1';
+          setTimeout(() => { body.style.transition = ''; }, 200);
+        });
+      });
+    }, 180);
   };
 
   return (
