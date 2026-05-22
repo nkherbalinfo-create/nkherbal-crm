@@ -131,9 +131,18 @@ export default function Dashboard() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chartKey, setChartKey] = useState(0);
+  const [chartFading, setChartFading] = useState(false);
   const [channel, setChannel] = useState('');
   const [monthOffset, setMonthOffset] = useState(0);
   const [trendRange, setTrendRange] = useState(6);
+
+  const switchTrendRange = (n) => {
+    setChartFading(true);
+    setTimeout(() => {
+      setTrendRange(n);
+      setChartFading(false);
+    }, 180);
+  };
   const hasLoadedRef = useRef(false);
 
   const today = new Date();
@@ -412,7 +421,7 @@ export default function Dashboard() {
             </div>
             <div style={{ display: 'flex', background: 'var(--chip)', border: '1px solid var(--rule)', borderRadius: 8, overflow: 'hidden' }}>
               {[3, 6, 12].map(n => (
-                <button key={n} onClick={() => setTrendRange(n)}
+                <button key={n} onClick={() => switchTrendRange(n)}
                   style={{
                     padding: '5px 11px', border: 'none', cursor: 'pointer', fontSize: 11.5, fontWeight: 500,
                     background: trendRange === n ? 'var(--accent)' : 'transparent',
@@ -427,7 +436,7 @@ export default function Dashboard() {
           {loading ? (
             <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
           ) : (
-            <div style={{ opacity: 1, transition: 'opacity 0.2s ease' }}>
+            <div style={{ opacity: chartFading ? 0 : 1, transition: 'opacity 0.18s ease' }}>
             <ResponsiveContainer width="100%" height={210}>
               <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
                 <defs>
