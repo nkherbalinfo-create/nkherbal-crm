@@ -379,15 +379,15 @@ export default function Dashboard() {
             ].map((step, i, arr) => {
               const pct = funnel.total > 0 ? Math.round((step.value / funnel.total) * 100) : 0;
               return (
-                <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: i < arr.length - 1 ? '1 1 0' : 'none' }}>
-                  <div style={{ padding: '12px 16px', borderRadius: 10, background: step.bg, minWidth: 110, textAlign: 'center' }}>
+                <div key={step.label} style={{ display: 'flex', alignItems: 'center', flex: '1 1 0' }}>
+                  <div style={{ padding: '12px 16px', borderRadius: 10, background: step.bg, minWidth: 100, flex: 1, textAlign: 'center' }}>
                     <div className="num" style={{ fontSize: 22, fontWeight: 700, color: step.color, lineHeight: 1 }}>{step.value}</div>
                     <div style={{ fontSize: 11, color: step.color, opacity: 0.8, marginTop: 3 }}>{step.label}</div>
                     {i > 0 && <div className="num" style={{ fontSize: 10, color: step.color, opacity: 0.65, marginTop: 2 }}>{pct}% of total</div>}
                   </div>
                   {i < arr.length - 1 && (
-                    <div style={{ flex: 1, height: 2, background: 'var(--rule)', margin: '0 6px', position: 'relative', minWidth: 20 }}>
-                      <div style={{ height: '100%', background: step.color, opacity: 0.4, width: `${pct}%`, transition: 'width 0.5s ease' }} />
+                    <div style={{ flex: 1, height: 2, background: 'var(--rule)', margin: '0 6px', position: 'relative', minWidth: 40, borderRadius: 2 }}>
+                      <div style={{ height: '100%', background: step.color, borderRadius: 2, width: `${Math.max(pct, 4)}%`, opacity: pct > 0 ? 0.5 : 0.15, transition: 'width 0.6s ease' }} />
                     </div>
                   )}
                 </div>
