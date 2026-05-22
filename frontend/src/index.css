@@ -71,7 +71,7 @@
   body {
     background: var(--bg);
     color: var(--fg);
-    font-family: Inter, system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     font-size: 13px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
@@ -103,7 +103,7 @@
 
   .num,
   .mono {
-    font-family: Inter, system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';
   }
