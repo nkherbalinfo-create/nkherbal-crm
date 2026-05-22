@@ -461,6 +461,23 @@ export default function WhatsApp() {
                   )}
                 </div>
               )}
+              {/* Typing indicator — shown when bot is active and last message was from customer */}
+              {!loading && !botPaused && messages.length > 0 && messages[messages.length-1]?.role === 'user' && (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
+                  <div style={{ padding:'10px 14px', borderRadius:'12px 4px 12px 12px', background:'var(--accent)', display:'flex', alignItems:'center', gap:4 }}>
+                    {[0,1,2].map(i => (
+                      <span key={i} style={{
+                        width:7, height:7, borderRadius:'50%', background:'rgba(255,255,255,0.85)',
+                        display:'inline-block',
+                        animation:'typing-dot 1.2s ease-in-out infinite',
+                        animationDelay:`${i * 0.2}s`,
+                      }} />
+                    ))}
+                  </div>
+                  <div style={{ fontSize:10.5, color:'var(--faint)', marginTop:3, fontFamily:'Inter' }}>Bot · typing…</div>
+                </div>
+              )}
+
               {messages.map((m,i)=>{
                 const { text, product } = parseImgTag(m.content);
                 const imgUrl = product ? PRODUCT_IMG_MAP[product] : null;

@@ -230,6 +230,31 @@ function isGreeting(text) {
   return greetings.some(g => t === g || t.startsWith(g + ' ') || t.startsWith(g + '!'));
 }
 
+// ── Send typing indicator to customer ───────────────────
+function sendTypingIndicator(to) {
+  return new Promise((resolve) => {
+    const body = JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'typing',
+      typing: { action: 'typing_on' }
+    });
+    const req = https.request({
+      hostname: 'graph.facebook.com',
+      path:     `/v25.0/${process.env.WA_PHONE_NUMBER_ID}/messages`,
+      method:   'POST',
+      headers: {
+        'Authorization':  `Bearer ${process.env.WA_ACCESS_TOKEN}`,
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    }, (res) => { res.on('data', () => {}); res.on('end', resolve); });
+    req.on('error', resolve); // silent fail — typing indicator is best-effort
+    req.write(body);
+    req.end();
+  });
+}
+
 // ── Send text message ────────────────────────────────────
 function sendWhatsAppMessage(to, text, previewUrl = false) {
   return waApiCall({
@@ -446,6 +471,9 @@ router.post('/webhook', async (req, res) => {
           await conv.save(); // ← CRITICAL: save before AI call so message persists even if AI fails
 
           console.log(`[WhatsApp] 💬 User message saved: "${text.slice(0, 60)}" from ${phone}`);
+
+          // ── Show typing indicator to customer while AI processes ──
+          sendTypingIndicator(phone); // fire-and-forget, don't await
 
           // ── Skip AI if bot is paused ──────────────────────
           if (conv.botPaused) {
