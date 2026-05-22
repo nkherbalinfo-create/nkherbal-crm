@@ -68,30 +68,17 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
     } catch {}
   };
 
-  // Listen to manual badge refresh events (from WhatsApp page markSeen)
+  // Poll WA unread badge every 5s — always live on any page
+  useEffect(() => {
+    loadWaBadge();
+    const t = setInterval(loadWaBadge, 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Also update immediately when WhatsApp page marks messages as seen
   useEffect(() => {
     window.addEventListener('wa-unread-changed', loadWaBadge);
     return () => window.removeEventListener('wa-unread-changed', loadWaBadge);
-  }, []);
-
-  // SSE — always-on connection so badge updates live on ANY page
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    const base = window.location.hostname === 'localhost'
-      ? 'http://localhost:5000'
-      : 'https://crm-backend-azu8.onrender.com';
-    const es = new EventSource(`${base}/api/wa/stream?token=${token}`);
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === 'message' || data.type === 'payment_confirmed') {
-          loadWaBadge();
-        }
-      } catch {}
-    };
-    es.onerror = () => {};
-    return () => es.close();
   }, []);
 
   useEffect(() => {
