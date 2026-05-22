@@ -61,9 +61,9 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
     try {
       const { data } = await api.get('/wa');
       const seenCounts = JSON.parse(localStorage.getItem('wa_seen_v2') || '{}');
-      const waUnread = (data || []).filter(c =>
-        Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0)) > 0
-      ).length;
+      const waUnread = (data || []).reduce((total, c) =>
+        total + Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0)), 0
+      );
       setBadges(b => ({ ...b, whatsapp: waUnread }));
     } catch {}
   };
@@ -185,7 +185,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                       fontWeight: 700,
                       minWidth: 18, textAlign: 'center',
                     }}>
-                      {badges[badge] > 99 ? '99+' : badges[badge]}
+                      {badges[badge] > 50 ? '50+' : badges[badge]}
                     </span>
                   )}
                 </>
