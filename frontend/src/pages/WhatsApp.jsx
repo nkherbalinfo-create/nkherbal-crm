@@ -162,6 +162,7 @@ export default function WhatsApp() {
     setSeenCounts(prev => {
       const next = { ...prev, [phone]: count };
       localStorage.setItem('wa_seen_v2', JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent('wa-unread-changed'));
       return next;
     });
   };
@@ -194,6 +195,8 @@ export default function WhatsApp() {
         if (data.type === 'message') {
           // Refresh conv list and open conversation instantly
           loadConvs();
+          // Tell the Sidebar to refresh its WA badge instantly
+          window.dispatchEvent(new CustomEvent('wa-unread-changed'));
           if (selectedPhoneRef.current === data.phone) {
             loadConversation({ phone: data.phone }, { showLoading: false, scroll: true });
             setShowTyping(false);

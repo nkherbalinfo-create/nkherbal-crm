@@ -57,6 +57,22 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   const [badges, setBadges] = useState({ followups: 0 });
   const [target, setTarget] = useState(null);
 
+  const loadWaBadge = async () => {
+    try {
+      const { data } = await api.get('/wa');
+      const seenCounts = JSON.parse(localStorage.getItem('wa_seen_v2') || '{}');
+      const waUnread = (data || []).filter(c =>
+        Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0)) > 0
+      ).length;
+      setBadges(b => ({ ...b, whatsapp: waUnread }));
+    } catch {}
+  };
+
+  useEffect(() => {
+    window.addEventListener('wa-unread-changed', loadWaBadge);
+    return () => window.removeEventListener('wa-unread-changed', loadWaBadge);
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       try {
