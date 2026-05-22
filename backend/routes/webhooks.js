@@ -251,6 +251,12 @@ router.post('/ccavenue', async (req, res) => {
 
     console.log(`[CCAvenue] ✅ Payment SUCCESS — ${customerName} (${phone}) | ₹${amount} | CC Order: ${ccOrderId}`);
 
+    // ── Auto-capture/confirm order on CC Avenue ───────────
+    const trackingId = data.tracking_id || '';
+    captureCCAvOrder(ccOrderId, trackingId, amount).catch(e =>
+      console.error('[CCAvenue] Auto-capture error:', e.message)
+    );
+
     // ── Auto-create order in CRM ──────────────────────────
     try {
       const existingOrder = await Order.findOne({ notes: `cca:${ccOrderId}` });
@@ -314,6 +320,81 @@ router.post('/ccavenue', async (req, res) => {
     console.error('[CCAvenue] IPN error:', err.message);
   }
 });
+
+// ── CC Avenue Order Capture API — auto-confirm pending order ──
+async function captureCCAvOrder(orderId, trackingId, amount) {
+  const accessCode = process.env.CCAVENUE_ACCESS_CODE;
+  const workingKey = process.env.CCAVENUE_WORKING_KEY;
+  if (!accessCode || !workingKey) {
+    console.warn('[CCAvenue] CCAVENUE_ACCESS_CODE or WORKING_KEY not set — skipping capture');
+    return;
+  }
+
+  try {
+    const payload = JSON.stringify({
+      reference_no: trackingId,
+      order_no:     orderId,
+      amount:       String(amount),
+      currency:     'INR'
+    });
+
+    const encReq = encryptCCAvenue(payload, workingKey);
+
+    const body = `command=captureOrder&enc_request=${encodeURIComponent(encReq)}&access_code=${encodeURIComponent(accessCode)}&request_type=JSON&response_type=JSON`;
+
+    const result = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'www.ccavenue.com',
+        path:     '/merchant_api.do',
+        method:   'POST',
+        headers: {
+          'Content-Type':   'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(body)
+        }
+      }, (res) => {
+        let data = '';
+        res.on('data', c => { data += c; });
+        res.on('end', () => {
+          try {
+            // CC Avenue returns encrypted response — decrypt it
+            const parsed = JSON.parse(data);
+            if (parsed.enc_response) {
+              const dec = decryptCCAvenue(parsed.enc_response);
+              resolve(dec);
+            } else {
+              resolve(parsed);
+            }
+          } catch { resolve({ raw: data }); }
+        });
+      });
+      req.on('error', reject);
+      req.setTimeout(10000, () => { req.destroy(); reject(new Error('CC Avenue capture timeout')); });
+      req.write(body);
+      req.end();
+    });
+
+    console.log('[CCAvenue] Capture response:', JSON.stringify(result));
+    const status = (result.order_status || result.status || '').toLowerCase();
+    if (status.includes('success') || status.includes('shipped') || status.includes('confirm')) {
+      console.log(`[CCAvenue] ✅ Order ${orderId} auto-captured/confirmed on CC Avenue`);
+    } else {
+      console.log(`[CCAvenue] ⚠️ Capture returned: ${JSON.stringify(result)}`);
+    }
+  } catch (err) {
+    console.error('[CCAvenue] Order capture failed:', err.message);
+  }
+}
+
+// Encrypt data for CC Avenue API requests (same AES-128-CBC)
+function encryptCCAvenue(data, workingKey) {
+  const md5hex = (s) => crypto.createHash('md5').update(s).digest('hex');
+  const key = Buffer.from(md5hex(workingKey), 'hex');
+  const iv  = Buffer.from(md5hex(md5hex(workingKey)), 'hex').slice(0, 16);
+  const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
+  let enc = cipher.update(data, 'utf8', 'hex');
+  enc += cipher.final('hex');
+  return enc;
+}
 
 // Decrypt CC Avenue encrypted response (AES-128-CBC)
 function decryptCCAvenue(encResp) {
