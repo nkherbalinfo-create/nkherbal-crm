@@ -112,9 +112,9 @@ function GlobalSearch({ open, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 80, padding: '80px 16px 16px' }} onClick={onClose}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', backdropFilter: 'blur(6px)' }} />
-      <div className="modal-enter" style={{ position: 'relative', width: '100%', maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 32px rgba(37,35,32,.12)' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.2)', backdropFilter: 'blur(4px)', zIndex: 0 }} />
+      <div className="modal-enter" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,.15)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--rule)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--faint)', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders, customers, leads…"
@@ -250,8 +250,8 @@ function Layout() {
       {quickAdd === 'menu' && createPortal(
         <div style={{ position:'fixed', inset:0, zIndex:9998, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
           onClick={() => setQuickAdd(null)}>
-          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.25)', backdropFilter:'blur(6px)' }} />
-          <div className="modal-enter" style={{ position:'relative', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:16, padding:24, width:300, boxShadow:'0 8px 40px rgba(37,35,32,.18)' }}
+          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.2)', backdropFilter:'blur(4px)', zIndex:0 }} />
+          <div className="modal-enter" style={{ position:'relative', zIndex:1, background:'var(--card)', border:'1px solid var(--rule)', borderRadius:16, padding:24, width:300, boxShadow:'0 8px 40px rgba(0,0,0,.15)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:15, fontWeight:600, color:'var(--fg)', marginBottom:4 }}>Quick add</div>
             <div style={{ fontSize:12, color:'var(--muted)', marginBottom:18 }}>Press N to open · Esc to close</div>
