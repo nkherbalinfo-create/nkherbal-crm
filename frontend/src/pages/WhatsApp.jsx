@@ -79,7 +79,6 @@ const PRODUCT_IMG_MAP = {
   'Kashmiri Shilajit 25g':            { url: `${BACKEND_URL}/images/products/shilajit.png`,          caption: '🏔️ *Kashmiri Shilajit 25g* — ₹1,499\n🔗 https://nkherbal.com/product/pure-kashmiri-shilajit/' },
   'Kashmiri Shilajit 50g':            { url: `${BACKEND_URL}/images/products/shilajit.png`,          caption: '🏔️ *Kashmiri Shilajit 50g* — ₹2,499\n🔗 https://nkherbal.com/product/pure-kashmiri-shilajit/' },
   'Muejaza & Shahi Kalp Combo (300g)':{ url: `${BACKEND_URL}/images/products/muejaza-shahikalp-combo.png`, caption: '🎁 *Muejaza + Shahi Kalp Combo* — ₹8,999\n🔗 https://nkherbal.com/product/nk-herbal-muejaza-shahi-kalp-combo/' },
-  'qr': { url: `${BACKEND_URL}/images/nk-herbal-upi-qr.jpeg`, caption: '📱 *NK Herbal UPI QR Code*\nScan karein aur payment karein. Payment ke baad apna naam aur order details bhejein 🙏' },
 };
 
 // Extract [img:ProductName] tag from message content
