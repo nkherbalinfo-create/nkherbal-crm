@@ -96,4 +96,54 @@ app.use('/api/wa', require('./routes/waconversations'));
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  // Auto-sync WhatsApp conversations → Leads on startup
+  autoSyncWaLeads();
+});
+
+// ── Auto-sync all WhatsApp conversations to Leads ────────
+async function autoSyncWaLeads() {
+  try {
+    const WaConversation = require('./models/WaConversation');
+    const Lead = require('./models/Lead');
+    const convs = await WaConversation.find().lean();
+    let created = 0, linked = 0;
+    for (const conv of convs) {
+      const mobile10 = conv.phone.slice(-10);
+      if (conv.leadId) {
+        const exists = await Lead.findById(conv.leadId);
+        if (exists) continue;
+      }
+      const existing = await Lead.findOne({ mobile: mobile10 });
+      if (existing) {
+        await WaConversation.findByIdAndUpdate(conv._id, { leadId: existing._id });
+        linked++;
+        continue;
+      }
+      const firstMsg = conv.messages?.find(m => m.role === 'user');
+      try {
+        const lead = await Lead.create({
+          date: conv.createdAt || new Date(),
+          name: conv.name || `WA-${mobile10}`,
+          mobile: mobile10,
+          source: 'WhatsApp',
+          interestedProduct: 'Muejaza For Men (300g)',
+          status: 'Interested',
+          notes: firstMsg ? `First message: "${firstMsg.content.slice(0, 200)}"` : 'WhatsApp contact',
+        });
+        await WaConversation.findByIdAndUpdate(conv._id, { leadId: lead._id });
+        created++;
+      } catch {
+        const fallback = await Lead.findOne({ mobile: mobile10 });
+        if (fallback) { await WaConversation.findByIdAndUpdate(conv._id, { leadId: fallback._id }); linked++; }
+      }
+    }
+    console.log(`[AutoSync] WA→Leads: ${created} created, ${linked} linked`);
+  } catch (err) {
+    console.error('[AutoSync] Error:', err.message);
+  }
+}
+
+// Re-run every hour to catch new conversations
+setInterval(autoSyncWaLeads, 60 * 60 * 1000);
