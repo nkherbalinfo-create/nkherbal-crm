@@ -524,10 +524,13 @@ router.post('/webhook', async (req, res) => {
           await sendWhatsAppMessage(phone, aiReply, false);
           console.log(`[WhatsApp] ✅ Reply sent to ${phone}`);
 
-          // ── Send QR code if customer asked for it or asked about payment ──
+          // ── Send QR code if customer asked for it ──────────
           if (isQRRequest(text)) {
             console.log(`[WhatsApp] 💳 Sending QR code to ${phone}`);
             await sendProductImage(phone, 'qr', QR_IMAGE);
+            // Tag message so CRM shows the QR image in chat view
+            conv.messages[conv.messages.length - 1].content += ' [img:qr]';
+            await conv.save();
           }
 
           // ── Broadcast message event so CRM refreshes instantly ──
