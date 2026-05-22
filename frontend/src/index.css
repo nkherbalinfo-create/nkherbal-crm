@@ -865,10 +865,10 @@ h1, h2, h3, h4, h5, h6 {
 /* ── Sidebar nav link ─────────────────────────────────── */
 .nav-link {
   position: relative;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition: background 0.18s ease, color 0.18s ease, opacity 0.15s ease;
 }
 .nav-link:hover {
-  transform: translateX(2px);
+  opacity: 0.85;
 }
 .nav-link.active {
   transform: translateX(0) !important;
