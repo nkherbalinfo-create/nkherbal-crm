@@ -136,7 +136,8 @@ export default function Dashboard() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [trendRange, setTrendRange] = useState(6);
 
-  const [activeRange, setActiveRange] = useState(6); // visual button state — updates instantly
+  const [activeRange, setActiveRange] = useState(6);
+  const chartAnimatedRef = useRef(false); // animate only on first load
 
   const switchTrendRange = (n) => {
     if (n === activeRange) return;
@@ -469,7 +470,10 @@ export default function Dashboard() {
                   fill="url(#revArea)"
                   dot={false}
                   activeDot={{ r: 4, fill: '#3d8a5c', strokeWidth: 2, stroke: 'var(--card)' }}
-                  isAnimationActive={false}
+                  isAnimationActive={!chartAnimatedRef.current}
+                  animationDuration={900}
+                  animationEasing="ease-out"
+                  onAnimationEnd={() => { chartAnimatedRef.current = true; }}
                 />
               </AreaChart>
             </ResponsiveContainer>
