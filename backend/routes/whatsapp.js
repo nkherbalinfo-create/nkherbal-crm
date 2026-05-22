@@ -433,13 +433,10 @@ router.post('/webhook', async (req, res) => {
             }
           }
 
-          // ── Send welcome message on first contact ───────
-          if (isFirstMessage) {
-            const welcome =
-              `Namaste *${firstName} Ji* 🙏\n\n` +
-              `*NK Herbal* mein aapka warm swagat hai! 😊\n\n` +
-              `Main hoon aapka NK Herbal Assistant — products ki jaankari, price, comparison, ya order karne mein — sab mein help karunga! 🌿\n\n` +
-              `Batao, kaise help kar sakta hoon? 😊`;
+          // ── Send welcome on first contact ONLY if it's a plain greeting (no question asked)
+          // If customer already asked something, let the AI greet + answer in one message
+          if (isFirstMessage && isGreeting(text)) {
+            const welcome = `Namaste *${firstName} Ji*! 🙏 *NK Herbal* mein aapka swagat hai!`;
             await sendWhatsAppMessage(phone, welcome);
           }
 
