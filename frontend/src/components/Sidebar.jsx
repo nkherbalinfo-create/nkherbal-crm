@@ -179,15 +179,17 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
 
       {/* Bottom: theme + notifications + user */}
       <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: 10, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 4px', height: 38 }}>
           <button onClick={toggle}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', flex: 1, fontFamily: 'inherit', transition: 'background 0.15s, color 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', flex: 1, fontFamily: 'inherit', transition: 'background 0.15s ease, color 0.15s ease', lineHeight: 1, height: 38, whiteSpace: 'nowrap' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--fg)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}>
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} stroke={1.6} />
             {theme === 'dark' ? 'Light mode' : 'Dark mode'}
           </button>
-          <NotificationCenter />
+          <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+            <NotificationCenter />
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 4px', borderRadius: 9, marginTop: 2 }}>
