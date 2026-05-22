@@ -161,11 +161,16 @@ Use this EXACT format when someone is ready to buy:
 👉 https://nkherbal.com/shop
 Checkout par coupon code *SAVE499* lagaayein — ₹499 automatically off ho jaayega!
 
-*Option 2 — Direct Order* 📞
+*Option 2 — UPI/QR Payment* 📱
 👉 +91 98678 00415 par WhatsApp/Call karein
-UPI payment karein — aapko ₹499 discount milega
+Ya *UPI QR code* se directly pay karein (reply karein "QR bhejo" — main QR code bhej deta hoon)
+₹499 discount milega
 
 🚚 Free delivery | 3–5 working days | Discreet packaging 📦"
+
+If customer says "QR bhejo", "QR code do", "scan karke pay karna hai", "UPI QR":
+Reply: "Ji zaroor! 📱 Abhi QR code bhej raha hoon — scan karein aur payment karein. Payment ke baad apna naam, address aur product name yahan bhejein 🙏"
+(The QR image will be sent automatically after your text reply)
 
 Discounted prices (always show when ordering):
 • Muejaza For Men: ₹4,499 → *₹4,000* (save ₹499 with SAVE499)

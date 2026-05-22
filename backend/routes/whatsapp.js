@@ -101,6 +101,22 @@ async function getMediaId(productKey, imageUrl) {
 //   shahi-kalp.jpg, shilajit-25g.jpg, shilajit-50g.jpg, combo.jpg
 const BACKEND_URL = process.env.BACKEND_URL || 'https://crm-backend-azu8.onrender.com';
 
+// UPI QR code image
+const QR_IMAGE = {
+  url:     `${BACKEND_URL}/images/nk-herbal-upi-qr.jpeg`,
+  caption: '📱 *NK Herbal UPI QR Code*\nIs QR ko scan karein aur payment karein.\nPayment ke baad apna naam aur order details yahan bhejein — hum 24 ghante mein ship kar denge! 🚚'
+};
+
+function isQRRequest(text) {
+  const t = text.toLowerCase();
+  return /\bqr\b|qr code|scan|upi|payment karna|pay karna|payment bhejo|qr bhejo|qr send/.test(t);
+}
+
+function isPaymentQuery(text) {
+  const t = text.toLowerCase();
+  return /payment|pay\b|upi|paytm|gpay|phonepe|neft|transfer|kitne|kaise pay|kaise bhejun|paise|order karna|buy|khareed/.test(t);
+}
+
 const PRODUCT_IMAGES = {
   'Muejaza For Men (300g)': {
     url:     `${BACKEND_URL}/images/products/muejaza.png`,
@@ -507,6 +523,13 @@ router.post('/webhook', async (req, res) => {
           // ── Send AI text reply ────────────────────────────
           await sendWhatsAppMessage(phone, aiReply, false);
           console.log(`[WhatsApp] ✅ Reply sent to ${phone}`);
+
+          // ── Send QR code if customer asked for it or asked about payment ──
+          if (isQRRequest(text)) {
+            console.log(`[WhatsApp] 💳 Sending QR code to ${phone}`);
+            await sendProductImage(phone, 'qr', QR_IMAGE);
+          }
+
           // ── Broadcast message event so CRM refreshes instantly ──
           sse.broadcast({ type: 'message', phone });
 
