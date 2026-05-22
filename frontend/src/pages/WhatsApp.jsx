@@ -187,8 +187,10 @@ export default function WhatsApp() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
-    const BACKEND = import.meta.env.VITE_API_URL || '';
-    const es = new EventSource(`${BACKEND}/api/wa/stream?token=${token}`);
+    // Use the same backend base URL that axios uses, falling back to relative path for dev
+    const base = import.meta.env.VITE_API_URL
+      || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://crm-backend-azu8.onrender.com');
+    const es = new EventSource(`${base}/api/wa/stream?token=${token}`);
     es.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
