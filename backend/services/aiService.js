@@ -253,8 +253,8 @@ function callAI(messages) {
     const body = JSON.stringify({
       model: 'anthropic/claude-3.5-haiku',
       messages,
-      max_tokens: 400,
-      temperature: 0.2
+      max_tokens: 380,
+      temperature: 0.15
     });
 
     const options = {
@@ -290,12 +290,53 @@ function callAI(messages) {
   });
 }
 
+// Detect garbled/corrupted AI output
+function isGarbled(text) {
+  if (!text || text.length < 5) return true;
+  // Unicode replacement character — encoding failure
+  if (text.includes('�')) return true;
+  // Zero-width / invisible junk characters
+  if (/[​-‍­﻿]/.test(text)) return true;
+  // Corrupted product names (the most common hallucination pattern)
+  if (/muejaz[^a\s*]/i.test(text)) return true;
+  if (/muakie|muakiej|mukejaz|mujeza[^a]/i.test(text)) return true;
+  // Mixed script corruption — Devanagari char immediately adjacent to emoji
+  if (/[ऀ-ॿ][\u{1F300}-\u{1F9FF}]/u.test(text)) return true;
+  // Nonsensical repeated characters or obvious hallucination
+  if (/(.)\1{6,}/.test(text)) return true;
+  return false;
+}
+
+// Clean minor issues that don't warrant a retry
+function cleanResponse(text) {
+  return text
+    .replace(/[​-‍­﻿]/g, '') // strip invisible chars
+    .replace(/\*\*/g, '*')                          // fix double asterisks to single
+    .trim();
+}
+
 async function getAIReply(conversationMessages) {
   const messages = [
     { role: 'system', content: NK_HERBAL_SYSTEM_PROMPT },
     ...conversationMessages.slice(-20)
   ];
-  return callAI(messages);
+
+  const MAX_RETRIES = 2;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const raw = await callAI(messages);
+      if (isGarbled(raw)) {
+        console.warn(`[AI] Garbled response on attempt ${attempt + 1}, ${attempt < MAX_RETRIES ? 'retrying' : 'using fallback'}`);
+        if (attempt < MAX_RETRIES) continue;
+        // All retries exhausted — safe fallback
+        return 'Maafi chahta hoon, ek choti si technical problem aa gayi. Kripya dobara message karein ya seedha hamare team se baat karein: *+91 98678 00415* (Mon–Sat, 10AM–7PM) 🙏';
+      }
+      return cleanResponse(raw);
+    } catch (err) {
+      if (attempt === MAX_RETRIES) throw err;
+      console.warn(`[AI] Error on attempt ${attempt + 1}:`, err.message);
+    }
+  }
 }
 
 // Classify customer intent — returns: 'Interested' | 'Not Interested' | 'Converted' | 'Follow Up' | null
