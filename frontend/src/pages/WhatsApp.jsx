@@ -286,7 +286,7 @@ export default function WhatsApp() {
   const confirmPayment = async () => {
     if (!selected?.phone) return;
     try {
-      const msg = `✅ *Payment Verified!*\n\nAapka payment confirm ho gaya hai. 🎉\n\nAapka order process mein hai aur jaldi ship ho jaayega. Tracking details aapko WhatsApp/SMS par milegi.\n\nShukriya NK Herbal choose karne ke liye! 🌿🙏`;
+      const msg = `✅ *Payment Verified!* 🎉\n\nAapka payment confirm ho gaya hai. Shukriya!\n\nAb apna order ship karne ke liye yeh details bhejein:\n\n• *Full Name*\n• *Complete Delivery Address*\n• *Pincode*\n• *Mobile Number*\n• *Product Name* (Muejaza, Shahi Kalp, etc.)\n• *Quantity* (kitne jars)\n\nDetails milte hi hum 24 ghante mein ship kar denge! 🚚📦`;
       await api.post('/wa/send', { phone: selected.phone, message: msg });
       await api.patch(`/wa/${selected.phone}/payment`, { paymentClaimed: false });
       setConvs(prev => prev.map(c => c.phone === selected.phone ? { ...c, paymentClaimed: false } : c));
