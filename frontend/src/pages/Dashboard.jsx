@@ -427,7 +427,7 @@ export default function Dashboard() {
           {loading ? (
             <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
           ) : (
-            <div key={chartKey} className="fade-in">
+            <div style={{ opacity: 1, transition: 'opacity 0.2s ease' }}>
             <ResponsiveContainer width="100%" height={210}>
               <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
                 <defs>
@@ -448,13 +448,16 @@ export default function Dashboard() {
                 <YAxis hide domain={[0, 'auto']} />
                 <Tooltip content={<ChartTip />} cursor={{ stroke: 'var(--rule)', strokeWidth: 1 }} />
                 <Area
-                  type="linear"
+                  type="monotone"
                   dataKey="Revenue"
                   stroke="#3d8a5c"
-                  strokeWidth={1.8}
+                  strokeWidth={2}
                   fill="url(#revArea)"
                   dot={false}
-                  activeDot={{ r: 5, fill: '#3d8a5c', strokeWidth: 2, stroke: 'var(--card)' }}
+                  activeDot={{ r: 4, fill: '#3d8a5c', strokeWidth: 2, stroke: 'var(--card)' }}
+                  isAnimationActive={true}
+                  animationDuration={500}
+                  animationEasing="ease-out"
                 />
               </AreaChart>
             </ResponsiveContainer>
