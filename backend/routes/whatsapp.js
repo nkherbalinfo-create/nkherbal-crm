@@ -473,9 +473,6 @@ router.post('/webhook', async (req, res) => {
 
           console.log(`[WhatsApp] 💬 User message saved: "${text.slice(0, 60)}" from ${phone}`);
 
-          // ── Broadcast typing event to CRM in real-time ──────
-          sse.broadcast({ type: 'typing', phone, name: conv.name || waName });
-
           // ── Show typing indicator to customer while AI processes ──
           sendTypingIndicator(phone); // fire-and-forget, don't await
 
