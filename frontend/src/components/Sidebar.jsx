@@ -39,7 +39,7 @@ const NAV = [
   { to: '/leads',      id:'leads',      label: 'Leads',      icon: 'target',  badge: 'leads'  },
   { to: '/customers',  id:'customers',  label: 'Customers',  icon: 'users'   },
   { to: '/followups',  id:'followups',  label: 'Follow-ups', icon: 'bell',    badge: 'followups' },
-  { to: '/whatsapp',   id:'whatsapp',   label: 'WhatsApp',   icon: 'whatsapp'},
+  { to: '/whatsapp',   id:'whatsapp',   label: 'WhatsApp',   icon: 'whatsapp', badge: 'whatsapp' },
   { to: '/reports',    id:'reports',    label: 'Reports',    icon: 'chart'   },
   { to: '/settings',   id:'settings',   label: 'Settings',   icon: 'gear'    },
 ];
@@ -60,11 +60,20 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const [fu, dash] = await Promise.all([
+        const [fu, dash, wa] = await Promise.all([
           api.get('/followups/count'),
           api.get('/dashboard/stats'),
+          api.get('/wa'),
         ]);
         setBadges(b => ({ ...b, followups: fu.data.count || 0 }));
+        // Count WA conversations with unread messages using seenCounts from localStorage
+        try {
+          const seenCounts = JSON.parse(localStorage.getItem('wa_seen_v2') || '{}');
+          const waUnread = (wa.data || []).filter(c =>
+            Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0)) > 0
+          ).length;
+          setBadges(b => ({ ...b, whatsapp: waUnread }));
+        } catch {}
         const ov = dash.data?.overview;
         if (ov) {
           const pct = Math.min(100, Math.round(((ov.totalRevenue || 0) / 500000) * 100));
@@ -147,9 +156,10 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                   {badge && badges[badge] > 0 && (
                     <span style={{
                       fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999,
-                      background: isActive ? 'rgba(255,255,255,.25)' : 'var(--chip)',
-                      color: isActive ? '#fff' : 'var(--faint)',
-                      fontWeight: 600,
+                      background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--accent-bg)',
+                      color: isActive ? 'var(--accent)' : 'var(--accent)',
+                      fontWeight: 700,
+                      minWidth: 18, textAlign: 'center',
                     }}>
                       {badges[badge] > 99 ? '99+' : badges[badge]}
                     </span>
