@@ -469,9 +469,7 @@ export default function Dashboard() {
                   fill="url(#revArea)"
                   dot={false}
                   activeDot={{ r: 4, fill: '#3d8a5c', strokeWidth: 2, stroke: 'var(--card)' }}
-                  isAnimationActive={true}
-                  animationDuration={500}
-                  animationEasing="ease-out"
+                  isAnimationActive={false}
                 />
               </AreaChart>
             </ResponsiveContainer>
