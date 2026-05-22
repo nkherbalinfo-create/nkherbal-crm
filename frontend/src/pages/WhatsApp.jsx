@@ -283,6 +283,17 @@ export default function WhatsApp() {
     } catch { addToast('Failed','error'); }
   };
 
+  const confirmPayment = async () => {
+    if (!selected?.phone) return;
+    try {
+      const msg = `✅ *Payment Verified!*\n\nAapka payment confirm ho gaya hai. 🎉\n\nAapka order process mein hai aur jaldi ship ho jaayega. Tracking details aapko WhatsApp/SMS par milegi.\n\nShukriya NK Herbal choose karne ke liye! 🌿🙏`;
+      await api.post('/wa/send', { phone: selected.phone, message: msg });
+      await api.patch(`/wa/${selected.phone}/payment`, { paymentClaimed: false });
+      setConvs(prev => prev.map(c => c.phone === selected.phone ? { ...c, paymentClaimed: false } : c));
+      addToast('Payment confirmed — customer notified ✅', 'success');
+    } catch { addToast('Failed to confirm payment', 'error'); }
+  };
+
   const updateLeadStatus = async (newStatus) => {
     if (!lead?._id) return;
     setUpdatingStatus(true);
@@ -403,7 +414,12 @@ export default function WhatsApp() {
                   </div>
                   <span style={{ fontSize:10.5, color:'var(--faint)', fontFamily:'Inter', flexShrink:0 }}>{timeStr(c.lastMessageAt)}</span>
                 </div>
-                <div style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic' }}>{c.lastMessage?.replace(/\s*\[img:[^\]]+\]/g,'') || 'Tap to open conversation'}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                  {c.paymentClaimed && (
+                    <span style={{ fontSize:9.5, fontWeight:700, padding:'1px 6px', borderRadius:999, background:'#fef08a', color:'#854d0e', flexShrink:0, whiteSpace:'nowrap' }}>💰 Payment</span>
+                  )}
+                  <span style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic' }}>{c.lastMessage?.replace(/\s*\[img:[^\]]+\]/g,'') || 'Tap to open conversation'}</span>
+                </div>
               </div>
               {(() => {
                 const unread = Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0));
@@ -459,6 +475,13 @@ export default function WhatsApp() {
                 <div style={{ fontSize:13, fontWeight:500, color:'var(--fg)' }}>{selected.name}</div>
                 <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>+{selected.phone}</div>
               </div>
+              {/* Payment claimed alert */}
+              {convs.find(c=>c.phone===selected.phone)?.paymentClaimed && (
+                <button onClick={confirmPayment}
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:9, border:'none', background:'#16a34a', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, flexShrink:0, animation:'pulse-dot 1.5s ease-in-out infinite', boxShadow:'0 2px 10px rgba(22,163,74,.4)' }}>
+                  💰 Confirm Payment
+                </button>
+              )}
               <span className={`chip ${botPaused?'chip-warn':'chip-ok'}`} style={{ fontSize:10 }}>
                 {botPaused?'Bot paused':'Bot active'}
               </span>

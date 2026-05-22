@@ -107,6 +107,11 @@ const QR_IMAGE = {
   caption: '📱 *NK Herbal UPI QR Code*\nIs QR ko scan karein aur payment karein.\nPayment ke baad apna naam aur order details yahan bhejein — hum 24 ghante mein ship kar denge! 🚚'
 };
 
+function isPaymentClaim(text) {
+  const t = text.toLowerCase();
+  return /paid|payment (done|kiya|ho gaya|kar diya|bhej diya|sent)|screenshot (bheja|send|diya|kar diya)|transfer (kiya|ho gaya)|paise (bheje|bhej diye|de diye)|payment complete|order (de do|kardo|place)|upi (kiya|done|sent)/.test(t);
+}
+
 function isQRRequest(text) {
   const t = text.toLowerCase();
   return /\bqr\b|qr code|scan|upi|payment karna|pay karna|payment bhejo|qr bhejo|qr send/.test(t);
@@ -523,6 +528,13 @@ router.post('/webhook', async (req, res) => {
           // ── Send AI text reply ────────────────────────────
           await sendWhatsAppMessage(phone, aiReply, false);
           console.log(`[WhatsApp] ✅ Reply sent to ${phone}`);
+
+          // ── Flag payment claim — alert CRM for manual verification ──
+          if (isPaymentClaim(text)) {
+            await WaConversation.findOneAndUpdate({ phone }, { paymentClaimed: true });
+            sse.broadcast({ type: 'payment_claimed', phone, name: conv.name || waName });
+            console.log(`[WhatsApp] 💰 Payment claimed by ${phone} — needs manual verification`);
+          }
 
           // ── Send QR code if customer asked for it ──────────
           if (isQRRequest(text)) {

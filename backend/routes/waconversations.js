@@ -38,6 +38,7 @@ router.get('/', protect, async (req, res) => {
       lastMessageAt: c.lastMessageAt,
       messageCount: c.messages.filter(m => m.role === 'user').length,
       botPaused: c.botPaused || false,
+      paymentClaimed: c.paymentClaimed || false,
       leadId: c.leadId,
     }));
 
@@ -56,6 +57,18 @@ router.get('/:phone', protect, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+});
+
+// Clear payment claimed flag after manual verification
+router.patch('/:phone/payment', protect, async (req, res) => {
+  try {
+    const conv = await WaConversation.findOneAndUpdate(
+      { phone: req.params.phone },
+      { paymentClaimed: req.body.paymentClaimed ?? false },
+      { new: true }
+    );
+    res.json({ paymentClaimed: conv.paymentClaimed });
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 // Toggle bot pause
