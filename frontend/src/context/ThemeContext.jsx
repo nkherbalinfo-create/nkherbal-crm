@@ -16,18 +16,25 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   const toggle = () => {
-    const body = document.body;
-    body.style.transition = 'opacity 0.18s ease';
-    body.style.opacity = '0';
+    // Create overlay that covers screen during switch
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:99999;pointer-events:none;
+      background:var(--bg);opacity:0;transition:opacity 0.15s ease;
+    `;
+    document.body.appendChild(overlay);
+    // Fade in overlay
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+    });
+    // Switch theme while covered, then fade out
     setTimeout(() => {
       setTheme(t => (t === 'dark' ? 'light' : 'dark'));
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          body.style.opacity = '1';
-          setTimeout(() => { body.style.transition = ''; }, 200);
-        });
-      });
-    }, 180);
+      setTimeout(() => {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 160);
+      }, 50);
+    }, 160);
   };
 
   return (
