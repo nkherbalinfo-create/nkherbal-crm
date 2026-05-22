@@ -112,7 +112,7 @@ function GlobalSearch({ open, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={onClose}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.18)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 0 }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.18)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 0, animation: 'overlay-in 0.2s ease both' }} />
       <div className="modal-enter" style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 540, marginBottom: '15vh' }} onClick={e => e.stopPropagation()}>
         <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,.15)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--rule)' }}>
