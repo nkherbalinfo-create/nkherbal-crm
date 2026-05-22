@@ -136,14 +136,17 @@ export default function Dashboard() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [trendRange, setTrendRange] = useState(6);
 
+  const [activeRange, setActiveRange] = useState(6); // visual button state — updates instantly
+
   const switchTrendRange = (n) => {
-    if (n === trendRange) return;
-    setChartFading(true);                          // 1. fade out
+    if (n === activeRange) return;
+    setActiveRange(n);        // button highlights immediately
+    setChartFading(true);
     setTimeout(() => {
-      setTrendRange(n);                            // 2. change data while invisible
-      setChartKey(k => k + 1);                     // 3. remount chart cleanly
+      setTrendRange(n);
+      setChartKey(k => k + 1);
     }, 200);
-    setTimeout(() => setChartFading(false), 260);  // 4. fade back in after remount
+    setTimeout(() => setChartFading(false), 280);
   };
   const hasLoadedRef = useRef(false);
 
@@ -426,8 +429,8 @@ export default function Dashboard() {
                 <button key={n} onClick={() => switchTrendRange(n)}
                   style={{
                     padding: '5px 11px', border: 'none', cursor: 'pointer', fontSize: 11.5, fontWeight: 500,
-                    background: trendRange === n ? 'var(--accent)' : 'transparent',
-                    color: trendRange === n ? 'var(--accent-ink)' : 'var(--muted)',
+                    background: activeRange === n ? 'var(--accent)' : 'transparent',
+                    color: activeRange === n ? 'var(--accent-ink)' : 'var(--muted)',
                     transition: 'background 0.15s, color 0.15s',
                   }}>
                   {n}M
