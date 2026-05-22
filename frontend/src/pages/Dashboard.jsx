@@ -137,11 +137,13 @@ export default function Dashboard() {
   const [trendRange, setTrendRange] = useState(6);
 
   const switchTrendRange = (n) => {
-    setChartFading(true);
+    if (n === trendRange) return;
+    setChartFading(true);                          // 1. fade out
     setTimeout(() => {
-      setTrendRange(n);
-      setChartFading(false);
-    }, 180);
+      setTrendRange(n);                            // 2. change data while invisible
+      setChartKey(k => k + 1);                     // 3. remount chart cleanly
+    }, 200);
+    setTimeout(() => setChartFading(false), 260);  // 4. fade back in after remount
   };
   const hasLoadedRef = useRef(false);
 
@@ -436,7 +438,7 @@ export default function Dashboard() {
           {loading ? (
             <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
           ) : (
-            <div style={{ opacity: chartFading ? 0 : 1, transition: 'opacity 0.18s ease' }}>
+            <div key={chartKey} style={{ opacity: chartFading ? 0 : 1, transition: 'opacity 0.2s ease' }}>
             <ResponsiveContainer width="100%" height={210}>
               <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
                 <defs>
