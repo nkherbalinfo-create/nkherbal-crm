@@ -112,7 +112,7 @@ function GlobalSearch({ open, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 80, padding: '80px 16px 16px' }} onClick={onClose}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(37,35,32,.5)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.25)', backdropFilter: 'blur(6px)' }} />
       <div className="modal-enter" style={{ position: 'relative', width: '100%', maxWidth: 520 }} onClick={e => e.stopPropagation()}>
         <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 8px 32px rgba(37,35,32,.12)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--rule)' }}>
@@ -250,7 +250,7 @@ function Layout() {
       {quickAdd === 'menu' && createPortal(
         <div style={{ position:'fixed', inset:0, zIndex:9998, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
           onClick={() => setQuickAdd(null)}>
-          <div style={{ position:'absolute', inset:0, background:'rgba(37,35,32,.5)', backdropFilter:'blur(4px)' }} />
+          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.25)', backdropFilter:'blur(6px)' }} />
           <div className="modal-enter" style={{ position:'relative', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:16, padding:24, width:300, boxShadow:'0 8px 40px rgba(37,35,32,.18)' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:15, fontWeight:600, color:'var(--fg)', marginBottom:4 }}>Quick add</div>
