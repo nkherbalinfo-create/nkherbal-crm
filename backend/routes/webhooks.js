@@ -170,4 +170,95 @@ router.post('/woocommerce', async (req, res) => {
   }
 });
 
+// ── CC Avenue IPN — auto-confirm payment when CC Avenue notifies us ──
+// Setup: in CC Avenue merchant panel → Payment Options → Notify URL:
+//   https://crm-backend-azu8.onrender.com/api/webhooks/ccavenue
+router.post('/ccavenue', async (req, res) => {
+  res.sendStatus(200); // Always respond immediately so CC Avenue doesn't retry
+
+  try {
+    const WaConversation = require('../models/WaConversation');
+    const { sendWhatsAppMessageDirect } = require('../services/waSender');
+    const sse = require('../services/sseBroadcaster');
+
+    let data = {};
+
+    // CC Avenue sends either encrypted (encResp) or plain text response
+    if (req.body.encResp) {
+      data = decryptCCAvenue(req.body.encResp);
+      console.log('[CCAvenue] Decrypted IPN:', JSON.stringify(data));
+    } else {
+      data = req.body;
+      console.log('[CCAvenue] Plain IPN:', JSON.stringify(data));
+    }
+
+    const status = (data.order_status || data.payment_status || '').toLowerCase();
+    if (status !== 'success' && status !== 'successful') {
+      console.log(`[CCAvenue] Payment not successful: ${status}`);
+      return;
+    }
+
+    // Extract mobile — CC Avenue puts it in billing_tel or merchant_param fields
+    const rawMobile = (
+      data.billing_tel ||
+      data.merchant_param1 ||
+      data.merchant_param2 ||
+      data.shipping_tel ||
+      ''
+    ).replace(/\D/g, '');
+
+    const mobile10 = rawMobile.slice(-10);
+    if (!mobile10 || mobile10.length !== 10) {
+      console.log('[CCAvenue] Could not extract mobile from IPN data');
+      return;
+    }
+
+    const phone = `91${mobile10}`;
+    const amount = data.amount || data.trans_amount || '';
+    const orderId = data.order_id || data.tracking_id || '';
+    console.log(`[CCAvenue] ✅ Payment SUCCESS — ${phone} | ₹${amount} | Order: ${orderId}`);
+
+    // Find WhatsApp conversation
+    const conv = await WaConversation.findOne({
+      phone: { $in: [phone, mobile10] }
+    });
+
+    const confirmMsg =
+      `✅ *Payment Verified!* 🎉\n\n` +
+      `Aapka payment confirm ho gaya hai. Shukriya!\n\n` +
+      `Ab apna order ship karne ke liye yeh details bhejein:\n\n` +
+      `• *Full Name*\n` +
+      `• *Complete Delivery Address*\n` +
+      `• *Pincode*\n` +
+      `• *Mobile Number*\n` +
+      `• *Product Name* (Muejaza, Shahi Kalp, etc.)\n` +
+      `• *Quantity* (kitne jars)\n\n` +
+      `Details milte hi hum 24 ghante mein ship kar denge! 🚚📦`;
+
+    await sendWhatsAppMessageDirect(phone, confirmMsg);
+
+    if (conv) {
+      await WaConversation.findOneAndUpdate({ phone }, { paymentClaimed: false });
+      sse.broadcast({ type: 'payment_confirmed', phone });
+    }
+
+    console.log(`[CCAvenue] ✅ Confirmation message sent to ${phone}`);
+  } catch (err) {
+    console.error('[CCAvenue] IPN error:', err.message);
+  }
+});
+
+// Decrypt CC Avenue encrypted response (AES-128-CBC)
+function decryptCCAvenue(encResp) {
+  const workingKey = process.env.CCAVENUE_WORKING_KEY;
+  if (!workingKey) throw new Error('CCAVENUE_WORKING_KEY not set');
+  const md5hex = (s) => crypto.createHash('md5').update(s).digest('hex');
+  const key = Buffer.from(md5hex(workingKey), 'hex');          // 16 bytes
+  const iv  = Buffer.from(md5hex(md5hex(workingKey)), 'hex').slice(0, 16); // 16 bytes
+  const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+  let dec = decipher.update(encResp, 'hex', 'utf8');
+  dec += decipher.final('utf8');
+  return Object.fromEntries(new URLSearchParams(dec));
+}
+
 module.exports = router;

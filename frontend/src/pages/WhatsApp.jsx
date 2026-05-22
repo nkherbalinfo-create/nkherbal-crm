@@ -475,12 +475,11 @@ export default function WhatsApp() {
                 <div style={{ fontSize:13, fontWeight:500, color:'var(--fg)' }}>{selected.name}</div>
                 <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>+{selected.phone}</div>
               </div>
-              {/* Payment claimed alert */}
+              {/* Payment claimed — waiting for CC Avenue auto-confirm */}
               {convs.find(c=>c.phone===selected.phone)?.paymentClaimed && (
-                <button onClick={confirmPayment}
-                  style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:9, border:'none', background:'#16a34a', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, flexShrink:0, animation:'pulse-dot 1.5s ease-in-out infinite', boxShadow:'0 2px 10px rgba(22,163,74,.4)' }}>
-                  💰 Confirm Payment
-                </button>
+                <span style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:8, background:'#fef08a', color:'#854d0e', fontSize:11.5, fontWeight:600 }}>
+                  💰 Verifying payment…
+                </span>
               )}
               <span className={`chip ${botPaused?'chip-warn':'chip-ok'}`} style={{ fontSize:10 }}>
                 {botPaused?'Bot paused':'Bot active'}
