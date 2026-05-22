@@ -330,9 +330,12 @@ function cleanResponse(text) {
     .trim();
 }
 
-async function getAIReply(conversationMessages) {
+async function getAIReply(conversationMessages, customerName = '') {
+  const nameContext = customerName && customerName !== 'Aap'
+    ? `\n\nCUSTOMER NAME: ${customerName} (always address them as "${customerName} Ji" — never just "Ji" without their name)`
+    : '';
   const messages = [
-    { role: 'system', content: NK_HERBAL_SYSTEM_PROMPT },
+    { role: 'system', content: NK_HERBAL_SYSTEM_PROMPT + nameContext },
     ...conversationMessages.slice(-20)
   ];
 

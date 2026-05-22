@@ -457,7 +457,7 @@ router.post('/webhook', async (req, res) => {
           let aiReply, detectedIntent;
           try {
             [aiReply, detectedIntent] = await Promise.all([
-              getAIReply(conv.messages.slice(-6).map(m => ({ role: m.role, content: m.content }))),
+              getAIReply(conv.messages.slice(-6).map(m => ({ role: m.role, content: m.content })), firstName),
               classifyIntent(text)
             ]);
           } catch (aiErr) {
