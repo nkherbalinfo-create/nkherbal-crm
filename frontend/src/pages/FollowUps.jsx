@@ -82,7 +82,7 @@ export default function FollowUps() {
     <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
         <div>
           <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Follow-up reminders</div>
           <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Send monthly follow-ups to encourage the 3–6 month Ayurvedic journey</div>

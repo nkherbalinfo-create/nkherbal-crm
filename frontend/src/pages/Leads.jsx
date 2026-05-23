@@ -64,6 +64,18 @@ const emptyForm = {
   interestedProduct: PRODUCTS[0], status:'Interested', notes:''
 };
 
+function SkeletonRow() {
+  return (
+    <tr style={{ borderBottom: '1px solid var(--rule)' }}>
+      {[36, 80, 80, 160, 110, 72, 140, 64, 96, 90, 56].map((w, i) => (
+        <td key={i} style={{ padding: '13px 16px' }}>
+          <div className="skeleton" style={{ width: w, height: 12, borderRadius: 4 }} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
 function Av({ name }) {
   const i = (name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
   return <span className="avatar avatar-md">{i}</span>;
@@ -174,6 +186,13 @@ export default function Leads() {
   const [exitId, setExitId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [editingCell, setEditingCell] = useState(null); // { id, field, value }
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('leads_view') || 'table');
+  const [boardLeads, setBoardLeads] = useState([]);
+  const [boardLoading, setBoardLoading] = useState(false);
+  const [draggedId, setDraggedId] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
   const isMobile = useIsMobile(767);
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
@@ -223,6 +242,7 @@ export default function Leads() {
   };
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const params = { page, limit:8, ...Object.fromEntries(Object.entries(filters).filter(([,v])=>v)) };
       const { data } = await api.get('/leads', { params });
@@ -232,12 +252,50 @@ export default function Leads() {
       if (data.statusCounts) setStatusCounts(data.statusCounts);
       setListKey(k => k + 1);
     } catch { addToast('Failed to load leads','error'); }
+    finally { setLoading(false); }
   }, [page, filters]);
+
+  const saveInlineEdit = async (id, field, value) => {
+    const trimmed = value.trim();
+    setEditingCell(null);
+    if (!trimmed) return;
+    const original = leads.find(l => l._id === id)?.[field];
+    if (trimmed === original) return;
+    setLeads(prev => prev.map(l => l._id === id ? { ...l, [field]: trimmed } : l));
+    try {
+      await api.put(`/leads/${id}`, { [field]: trimmed });
+    } catch {
+      setLeads(prev => prev.map(l => l._id === id ? { ...l, [field]: original } : l));
+      addToast('Update failed', 'error');
+    }
+  };
+
+  const loadBoard = useCallback(async () => {
+    setBoardLoading(true);
+    try {
+      const { data } = await api.get('/leads', { params: { limit: 200 } });
+      const scored = (data.leads || []).map(l => ({ ...l, _score: calcScore(l) }));
+      setBoardLeads(scored);
+    } catch { addToast('Failed to load board', 'error'); }
+    finally { setBoardLoading(false); }
+  }, []);
+
+  const switchView = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('leads_view', mode);
+    if (mode === 'board') loadBoard();
+  };
 
   useEffect(() => { load(); }, [load]);
 
   // Auto-refresh every 8s — picks up WhatsApp bot status changes
-  useEffect(() => { const t = setInterval(load, 8000); return () => clearInterval(t); }, [load]);
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (viewMode === 'table') load();
+      else loadBoard();
+    }, 8000);
+    return () => clearInterval(t);
+  }, [load, loadBoard, viewMode]);
 
   const updateStatus = async (id, newStatus) => {
     setUpdatingId(id);
@@ -337,11 +395,43 @@ export default function Leads() {
   };
   const deleteSavedView = (idx) => persistViews(savedViews.filter((_, i) => i !== idx));
 
+  const handleDragStart = (e, leadId) => {
+    setDraggedId(leadId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', leadId);
+  };
+
+  const handleDragOver = (e, colStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCol(colStatus);
+  };
+
+  const handleDrop = async (e, colStatus) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    if (!draggedId) return;
+    const lead = boardLeads.find(l => l._id === draggedId);
+    setDraggedId(null);
+    if (!lead || lead.status === colStatus) return;
+    // Optimistic update
+    setBoardLeads(prev => prev.map(l => l._id === lead._id ? { ...l, status: colStatus } : l));
+    try {
+      await api.put(`/leads/${lead._id}`, { status: colStatus });
+      addToast(`Moved to ${colStatus}`);
+    } catch {
+      addToast('Update failed', 'error');
+      loadBoard();
+    }
+  };
+
+  const handleDragEnd = () => { setDraggedId(null); setDragOverCol(null); };
+
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:20, paddingBottom: selected.size > 0 ? 80 : 0, overflow:'hidden', maxWidth:'100%' }}>
 
       {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:12 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
         <div>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Leads</div>
@@ -352,7 +442,28 @@ export default function Leads() {
           </div>
           <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>auto-captured from WhatsApp · status syncs every 8s</div>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          {/* View toggle — desktop only */}
+          {!isMobile && (
+            <div style={{ display:'flex', borderRadius:9, border:'1px solid var(--rule)', overflow:'hidden', background:'var(--card)' }}>
+              {[
+                { mode:'table', label:'Table', path:'M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z' },
+                { mode:'board', label:'Board', path:'M3 3h7v18H3zM14 3h7v18h-7z' },
+              ].map(({ mode, label, path }) => (
+                <button key={mode} onClick={() => switchView(mode)}
+                  style={{
+                    display:'flex', alignItems:'center', gap:5,
+                    padding:'6px 12px', border:'none', cursor:'pointer', fontSize:12, fontWeight:500,
+                    background: viewMode === mode ? 'var(--accent)' : 'transparent',
+                    color: viewMode === mode ? 'var(--accent-ink)' : 'var(--muted)',
+                    transition:'background 0.15s, color 0.15s',
+                  }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={path}/></svg>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <button className="btn-secondary" onClick={exportLeads} disabled={exporting} style={{ display:'flex', alignItems:'center', gap:5, fontSize:12 }}>
             {exporting
               ? <><span style={{ width:11, height:11, border:'2px solid var(--muted)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> Exporting…</>
@@ -476,8 +587,86 @@ export default function Leads() {
       </FilterBar>
       )}
 
+      {/* Kanban board — desktop only, shown when viewMode === 'board' */}
+      {viewMode === 'board' && !isMobile && (
+        <div key={listKey} className="fade-in" style={{ overflowX: 'auto', paddingBottom: 8 }}>
+          {boardLoading ? (
+            <div style={{ textAlign:'center', padding:'48px 0', color:'var(--faint)', fontSize:13 }}>Loading board…</div>
+          ) : (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, minWidth:760 }}>
+              {[
+                { status:'Interested',     cls:'chip-info'   },
+                { status:'Follow Up',      cls:'chip-warn'   },
+                { status:'Not Interested', cls:'chip-danger' },
+                { status:'Converted',      cls:'chip-ok'     },
+              ].map(col => {
+                const colLeads = boardLeads
+                  .filter(l => l.status === col.status)
+                  .sort((a, b) => (b._score||0) - (a._score||0));
+                const isTarget = dragOverCol === col.status;
+                return (
+                  <div key={col.status}
+                    onDragOver={e => handleDragOver(e, col.status)}
+                    onDragLeave={() => setDragOverCol(null)}
+                    onDrop={e => handleDrop(e, col.status)}
+                    style={{
+                      background: isTarget ? 'var(--accent-bg)' : 'var(--bg)',
+                      border: `2px dashed ${isTarget ? 'var(--accent)' : 'var(--rule)'}`,
+                      borderRadius: 14, padding: 10, minHeight: 200,
+                      transition: 'border-color 0.15s, background 0.15s',
+                    }}>
+                    {/* Column header */}
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, padding:'2px 2px 8px', borderBottom:'1px solid var(--rule)' }}>
+                      <span className={`chip ${col.cls}`} style={{ fontSize:11 }}>{col.status}</span>
+                      <span style={{ fontSize:11.5, color:'var(--faint)', fontWeight:500, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{colLeads.length}</span>
+                    </div>
+                    {/* Lead cards */}
+                    <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                      {colLeads.map(lead => (
+                        <div key={lead._id}
+                          draggable
+                          onDragStart={e => handleDragStart(e, lead._id)}
+                          onDragEnd={handleDragEnd}
+                          style={{
+                            background: draggedId === lead._id ? 'var(--accent-bg)' : 'var(--card)',
+                            border: '1px solid var(--rule)',
+                            borderRadius: 10, padding: '10px 12px',
+                            cursor: 'grab', userSelect: 'none', WebkitUserSelect: 'none',
+                            opacity: draggedId === lead._id ? 0.45 : 1,
+                            boxShadow: draggedId === lead._id ? '0 4px 14px rgba(61,138,92,.2)' : 'var(--shadow-card)',
+                            transition: 'opacity 0.15s, box-shadow 0.15s',
+                          }}
+                          onMouseEnter={e => { if (draggedId !== lead._id) e.currentTarget.style.boxShadow='0 4px 16px rgba(37,35,32,.12)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.boxShadow = draggedId === lead._id ? '0 4px 14px rgba(61,138,92,.2)' : 'var(--shadow-card)'; }}>
+                          <div style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)', marginBottom:3 }}>{lead.name}</div>
+                          <div style={{ fontSize:11.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:7 }}>
+                            {lead.interestedProduct}
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
+                            <span className={`chip ${SOURCE_CHIP[lead.source]||'chip-muted'}`} style={{ fontSize:10 }}>{lead.source}</span>
+                            <ScoreBadge lead={lead} />
+                          </div>
+                          <div style={{ fontSize:10.5, color:'var(--faint)', marginTop:6, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
+                            {lead.mobile} · {lead.date ? new Date(lead.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' }) : ''}
+                          </div>
+                        </div>
+                      ))}
+                      {colLeads.length === 0 && !boardLoading && (
+                        <div style={{ textAlign:'center', color:'var(--faint)', fontSize:12, padding:'20px 8px', lineHeight:1.5 }}>
+                          Drop leads here
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Mobile card list */}
-      {isMobile && (
+      {viewMode === 'table' && isMobile && (
         <div key={listKey} className="fade-in" style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {leads.map(l => (
             <div key={l._id} data-row-id={l._id}
@@ -542,7 +731,9 @@ export default function Leads() {
               </tr>
             </thead>
             <tbody>
-              {leads.map(l=>(
+              {loading && leads.length === 0
+                ? Array.from({ length: 8 }, (_, i) => <SkeletonRow key={i} />)
+                : leads.map(l=>(
                 <tr key={l._id} data-row-id={l._id} className={`tr-hover${exitId===l._id?' row-deleting':''}`}
                   style={{ borderBottom:'1px solid var(--rule)', background: selected.has(l._id) ? 'var(--accent-bg)' : '' }}
                   onMouseEnter={e=>{ if (!selected.has(l._id)) e.currentTarget.style.background='var(--hover)'; }}
@@ -553,12 +744,23 @@ export default function Leads() {
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:11, color:'var(--faint)', fontVariantNumeric:'tabular-nums' }}>{l.leadId}</td>
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:13, color:'var(--muted)', whiteSpace:'nowrap', fontVariantNumeric:'tabular-nums' }}>{format(new Date(l.date),'dd MMM yy')}</td>
                   <td style={{ padding:'11px 16px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-                      <Av name={l.name} />
-                      <div style={{ fontSize:12.5, fontWeight:500, color:'var(--fg)' }}>{l.name}</div>
-                    </div>
+                    {editingCell?.id === l._id && editingCell?.field === 'name' ? (
+                      <input autoFocus className="input" defaultValue={l.name}
+                        style={{ padding:'3px 8px', fontSize:12.5, width:140, height:28 }}
+                        onBlur={e => saveInlineEdit(l._id, 'name', e.target.value)}
+                        onKeyDown={e => { if (e.key==='Enter') e.target.blur(); if (e.key==='Escape') setEditingCell(null); }} />
+                    ) : (
+                      <div style={{ display:'flex', alignItems:'center', gap:9 }} onDoubleClick={() => setEditingCell({ id: l._id, field: 'name' })} title="Double-click to edit">
+                        <Av name={l.name} />
+                        <div style={{ fontSize:12.5, fontWeight:500, color:'var(--fg)', cursor:'text' }}>{l.name}</div>
+                      </div>
+                    )}
                   </td>
-                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:11.5, color:'var(--muted)', fontVariantNumeric:'tabular-nums' }}>{l.mobile}</td>
+                  <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:11.5, color:'var(--muted)', fontVariantNumeric:'tabular-nums', cursor:'pointer', userSelect:'none' }}
+                    onClick={() => { navigator.clipboard?.writeText(l.mobile); addToast('Phone copied'); }}
+                    title="Click to copy">
+                    {l.mobile}
+                  </td>
                   <td style={{ padding:'11px 16px' }}><span className={`chip ${SOURCE_CHIP[l.source]||'chip-muted'}`}>{l.source}</span></td>
                   <td style={{ padding:'11px 16px', maxWidth:130, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:12, color:'var(--muted)' }}>{l.interestedProduct}</td>
                   <td style={{ padding:'10px 16px' }}><ScoreBadge lead={l} /></td>
@@ -570,10 +772,21 @@ export default function Leads() {
                       disabled={updatingId === l._id}
                     />
                   </td>
-                  <td style={{ padding:'11px 16px', maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:11.5, color:'var(--faint)' }}>
-                    {l.convertedOrderId
-                      ? <span className="chip chip-ok" style={{ fontSize:10 }}>→ Order placed</span>
-                      : l.notes}
+                  <td style={{ padding:'11px 16px', maxWidth:120, fontSize:11.5 }}>
+                    {l.convertedOrderId ? (
+                      <span className="chip chip-ok" style={{ fontSize:10 }}>→ Order placed</span>
+                    ) : editingCell?.id === l._id && editingCell?.field === 'notes' ? (
+                      <input autoFocus className="input" defaultValue={l.notes || ''}
+                        style={{ padding:'3px 8px', fontSize:11.5, width:110, height:26 }}
+                        onBlur={e => saveInlineEdit(l._id, 'notes', e.target.value)}
+                        onKeyDown={e => { if (e.key==='Enter') e.target.blur(); if (e.key==='Escape') setEditingCell(null); }} />
+                    ) : (
+                      <div onClick={() => !l.convertedOrderId && setEditingCell({ id: l._id, field: 'notes' })}
+                        title="Click to edit notes"
+                        style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--faint)', cursor:'text', minWidth:60, minHeight:18 }}>
+                        {l.notes || <span style={{ color:'var(--rule)', fontStyle:'italic' }}>add note…</span>}
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding:'11px 16px' }}>
                     <div style={{ display:'flex', gap:4 }}>
@@ -589,7 +802,7 @@ export default function Leads() {
                   </td>
                 </tr>
               ))}
-              {!leads.length&&<tr><td colSpan={9} style={{ padding:'48px 16px', textAlign:'center', color:'var(--faint)', fontSize:13 }}>No leads found</td></tr>}
+              {!loading && !leads.length && <tr><td colSpan={11} style={{ padding:'48px 16px', textAlign:'center', color:'var(--faint)', fontSize:13 }}>No leads found</td></tr>}
             </tbody>
           </table>
         </div>
