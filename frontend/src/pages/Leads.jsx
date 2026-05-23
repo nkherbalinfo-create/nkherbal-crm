@@ -639,6 +639,8 @@ export default function Leads() {
                             userSelect: 'none', WebkitUserSelect: 'none',
                             boxShadow: draggedId === lead._id ? '0 4px 12px rgba(61,138,92,.15)' : 'var(--shadow-card)',
                             transition: 'all 0.2s ease',
+                            position: draggedId === lead._id ? 'relative' : 'static',
+                            zIndex: draggedId === lead._id ? 10 : 'auto',
                             transform: draggedId === lead._id ? 'translateY(-2px)' : 'translateY(0)',
                           }}
                           onMouseEnter={e => { if (draggedId !== lead._id) e.currentTarget.style.boxShadow='0 4px 16px rgba(37,35,32,.12)'; }}
