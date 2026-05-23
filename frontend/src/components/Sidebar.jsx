@@ -183,20 +183,22 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         </div>
 
         {/* Search — hidden when collapsed */}
+        {!c && (
         <div onClick={() => { onSearchOpen?.(); onClose?.(); }}
-          style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', opacity: c ? 0 : 1, pointerEvents: c ? 'none' : 'auto', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.15s, border-color 0.15s' }}
+          style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', transition: 'box-shadow 0.15s, border-color 0.15s' }}
           onMouseEnter={e => { if (!c) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(61,138,92,.1)'; } }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(37,35,32,.05)'; }}>
           <Icon name="search" size={13} />
           <span style={{ fontSize: 12, flex: 1, color: 'var(--faint)' }}>Search…</span>
           <kbd style={{ fontFamily: 'Inter', fontSize: 9.5, color: 'var(--faint)', background: 'var(--chip)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--rule)' }}>⌘K</kbd>
         </div>
+        )}
 
         {/* Navigation */}
         {NAV_SECTIONS.map(({ label, items }, si) => (
           <div key={si} style={{ marginTop: label ? 14 : 0, transition: 'margin-top 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
-            {label && (
-              <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', opacity: c ? 0 : 1, pointerEvents: c ? 'none' : 'auto', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
+            {label && !c && (
+              <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none' }}>
                 {label}
               </div>
             )}
@@ -212,19 +214,18 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                   fontSize: 13, fontWeight: isActive ? 600 : 400,
                   marginBottom: 1,
                   marginLeft: c ? 'auto' : 0, marginRight: c ? 'auto' : 0,
-                  transition: 'gap 0.35s, padding 0.35s, width 0.35s, height 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)',
+                  transition: 'gap 0.35s, padding 0.35s, width 0.35s, height 0.35s, justify-content 0.35s, margin 0.35s cubic-bezier(0.4,0,0.2,1)',
                 })}>
                 {({ isActive }) => (
                   <>
                     <Icon name={icon} size={16} stroke={isActive ? 2 : 1.6} color={isActive ? 'var(--accent-ink)' : 'var(--faint)'} />
-                    <span style={{ flex: 1, opacity: c ? 0 : 1, pointerEvents: c ? 'none' : 'auto', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)' }}>{navLabel}</span>
-                    {badge && badges[badge] > 0 && (
+                    {!c && <span style={{ flex: 1 }}>{navLabel}</span>}
+                    {!c && badge && badges[badge] > 0 && (
                       <span style={{
                         fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999,
                         background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--accent-bg)',
                         color: 'var(--accent)', fontWeight: 700,
                         minWidth: 18, textAlign: 'center',
-                        opacity: c ? 0 : 1, pointerEvents: c ? 'none' : 'auto', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)'
                       }}>
                         {badges[badge] > 50 ? '50+' : badges[badge]}
                       </span>
@@ -237,8 +238,8 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         ))}
 
         {/* Monthly target — hidden when collapsed */}
-        {target && (
-          <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)', opacity: c ? 0 : 1, pointerEvents: c ? 'none' : 'auto', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
+        {!c && target && (
+          <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}>Monthly target</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.pct}%</div>
