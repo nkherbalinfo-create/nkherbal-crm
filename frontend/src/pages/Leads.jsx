@@ -14,9 +14,6 @@ import { saveAs } from 'file-saver';
 const SOURCES  = ['Ads', 'WhatsApp', 'Website', 'Referral', 'Direct'];
 const STATUSES = ['Interested', 'Not Interested', 'Converted', 'Follow Up'];
 
-// Black grab cursor SVG
-const BLACK_GRAB_CURSOR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M10 2v10c0 1 1 2 2 2h2v8c0 2 1 3 3 3h2c2 0 3-1 3-3v-8h2c1 0 2-1 2-2V2M8 12h16M9 12v8h2M13 12v8h2M17 12v8h2M21 12v8h2" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const BLACK_GRABBING_CURSOR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" rx="3" fill="black" opacity="0.2"/><path d="M10 8v6c0 1 1 2 2 2h2v6c0 2 1 3 3 3h2c2 0 3-1 3-3v-6h2c1 0 2-1 2-2V8" stroke="black" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const PRODUCTS = [
   'Muejaza For Men (300g)', 'Shahi Kalp For Men & Women (300g)',
   'Testo – Vardhak For Men (300g)', 'Kashmiri Shilajit 25g',
@@ -638,7 +635,7 @@ export default function Leads() {
                             background: draggedId === lead._id ? 'var(--accent)' : 'var(--card)',
                             border: `1px solid ${draggedId === lead._id ? 'var(--accent)' : 'var(--rule)'}`,
                             borderRadius: 10, padding: '10px 12px',
-                            cursor: `url('${draggedId === lead._id ? BLACK_GRABBING_CURSOR : BLACK_GRAB_CURSOR}') 10 2, auto`,
+                            cursor: draggedId === lead._id ? 'grabbing' : 'grab',
                             userSelect: 'none', WebkitUserSelect: 'none',
                             opacity: 1,
                             boxShadow: draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)',
@@ -646,8 +643,17 @@ export default function Leads() {
                           }}
                           onMouseEnter={e => { if (draggedId !== lead._id) e.currentTarget.style.boxShadow='0 4px 16px rgba(37,35,32,.12)'; }}
                           onMouseLeave={e => { e.currentTarget.style.boxShadow = draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)'; }}>
-                          <div style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)', marginBottom:3 }}>{lead.name}</div>
-                          <div style={{ fontSize:11.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:7 }}>
+                          <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:6 }}>
+                            <div style={{ width:16, height:16, display:'flex', flexDirection:'column', justifyContent:'center', gap:1.5, flexShrink:0, marginTop:2 }}>
+                              <div style={{ width:'100%', height:'1px', background:'var(--muted)', borderRadius:1 }} />
+                              <div style={{ width:'100%', height:'1px', background:'var(--muted)', borderRadius:1 }} />
+                              <div style={{ width:'100%', height:'1px', background:'var(--muted)', borderRadius:1 }} />
+                            </div>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)' }}>{lead.name}</div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize:11.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:6 }}>
                             {lead.interestedProduct}
                           </div>
                           <div style={{ display:'flex', alignItems:'center', gap:5, flexWrap:'wrap' }}>
