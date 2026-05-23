@@ -532,7 +532,13 @@ router.post('/webhook', async (req, res) => {
             msgCount % 10 === 0
           );
           if (needsSummary) {
-            buildContextSummary(conv.messages, firstName).then(summary => {
+            const cleanMsgs = conv.messages.map(m => ({
+              ...m,
+              content: (m.content || '')
+                .replace(/\[media-img:data:[^\]]+\]/g, '[image sent]')
+                .replace(/\[media-doc:[^:]+:data:[^\]]+\]/g, '[document sent]')
+            }));
+            buildContextSummary(cleanMsgs, firstName).then(summary => {
               if (summary) {
                 WaConversation.findOneAndUpdate(
                   { phone },
@@ -546,12 +552,16 @@ router.post('/webhook', async (req, res) => {
           // ── Run AI reply + intent classification in parallel ──
           let aiReply, detectedIntent;
           try {
+            // Strip base64 data URLs before sending to AI (they're huge and cause token errors)
+            const msgsForAI = conv.messages.slice(-20).map(m => ({
+              role: m.role,
+              content: (m.content || '')
+                .replace(/\[media-img:data:[^\]]+\]/g, '[image sent]')
+                .replace(/\[media-doc:[^:]+:data:[^\]]+\]/g, '[document sent]')
+                .replace(/\[img:([^\]]+)\]/g, '[product image: $1]')
+            }));
             [aiReply, detectedIntent] = await Promise.all([
-              getAIReply(
-                conv.messages.slice(-20).map(m => ({ role: m.role, content: m.content })),
-                firstName,
-                conv.contextSummary || ''
-              ),
+              getAIReply(msgsForAI, firstName, conv.contextSummary || ''),
               classifyIntent(text)
             ]);
           } catch (aiErr) {
