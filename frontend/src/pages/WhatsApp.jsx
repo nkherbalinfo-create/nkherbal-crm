@@ -524,34 +524,36 @@ export default function WhatsApp() {
               {messages.map((m,i)=>{
                 const { text, product } = parseImgTag(m.content);
                 const imgUrl = product ? PRODUCT_IMG_MAP[product] : null;
+                const isUser = m.role === 'user';
                 return (
-                  <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:m.role==='user'?'flex-start':'flex-end', gap:4 }}>
+                  <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}>
                     {/* Text bubble */}
                     {text && (
                       <div style={{
-                        maxWidth:'75%', padding:'9px 12px', borderRadius:m.role==='user'?'4px 12px 12px 12px':'12px 4px 12px 12px',
-                        background:m.role==='user'?'var(--card)':'var(--accent)',
-                        color:m.role==='user'?'var(--fg)':'var(--accent-ink)',
-                        fontSize:13, lineHeight:1.6,
-                        border: m.role==='user'?'1px solid var(--rule)':'none',
+                        maxWidth:'78%', padding:'8px 12px', borderRadius:isUser?'2px 14px 14px 14px':'14px 2px 14px 14px',
+                        background:isUser?'var(--card)':'var(--accent)',
+                        color:isUser?'var(--fg)':'var(--accent-ink)',
+                        fontSize:13.5, lineHeight:1.5,
+                        border: isUser?'1px solid var(--rule)':'none',
                         whiteSpace:'pre-wrap', wordBreak:'break-word',
+                        boxShadow: isUser ? 'none' : '0 1px 2px rgba(61,138,92,.15)',
                       }}>
                         <WaText text={text} />
                       </div>
                     )}
                     {/* Product image — exact replica of what customer received */}
                     {imgUrl && (
-                      <div style={{ maxWidth:'75%', borderRadius:12, overflow:'hidden', border:'1px solid var(--rule)', boxShadow:'var(--shadow-card)' }}>
+                      <div style={{ maxWidth:'78%', borderRadius:14, overflow:'hidden', border: isUser ? '1px solid var(--rule)' : 'none', boxShadow: isUser ? 'var(--shadow-card)' : '0 1px 3px rgba(61,138,92,.1)' }}>
                         <img src={imgUrl.url} alt={product} style={{ width:'100%', height:'auto', display:'block', objectFit:'contain', background:'#fff' }} />
                         {imgUrl.caption && (
-                          <div style={{ padding:'8px 10px', background:'#1a1a1a', fontSize:12, color:'#e0e0e0', whiteSpace:'pre-wrap', wordBreak:'break-all', lineHeight:1.5 }}>
+                          <div style={{ padding:'9px 11px', background:'#1a1a1a', fontSize:12.5, color:'#e0e0e0', whiteSpace:'pre-wrap', wordBreak:'break-all', lineHeight:1.5 }}>
                             <WaText text={imgUrl.caption} />
                           </div>
                         )}
                       </div>
                     )}
-                    <div style={{ fontSize:10.5, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
-                      {m.role==='user'?'Customer':'Bot'} · {timeStr(m.timestamp)}
+                    <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums', marginTop:1 }}>
+                      {timeStr(m.timestamp)}
                     </div>
                   </div>
                 );
@@ -565,27 +567,35 @@ export default function WhatsApp() {
               {showTemplates && botPaused && (() => {
                 const lastCustomerMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
                 const ranked = rankTemplates(lastCustomerMsg, templates);
-                const topMatch = ranked[0] && rankTemplates(lastCustomerMsg, [ranked[0]])[0];
                 return (
-                  <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--rule)', display:'flex', flexDirection:'column', gap:6, maxHeight:240, overflowY:'auto' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:2 }}>
-                      <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.04em' }}>
-                        ⚡ Quick replies
-                        {lastCustomerMsg && <span style={{ fontWeight:400, textTransform:'none', marginLeft:6, color:'var(--faint)' }}>· sorted by relevance</span>}
-                      </div>
+                  <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--rule)', display:'flex', flexDirection:'column', gap:8, maxHeight:280, overflowY:'auto' }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.04em' }}>
+                      ⚡ Quick replies
+                      {lastCustomerMsg && <span style={{ fontWeight:400, textTransform:'none', marginLeft:6, color:'var(--faint)', fontSize:'10.5px' }}>sorted by relevance</span>}
                     </div>
-                    {ranked.map((tmpl, i) => (
-                      <button key={tmpl.id} onClick={() => { setManualMsg(tmpl.text); setShowTemplates(false); }}
-                        style={{ textAlign:'left', padding:'9px 12px', borderRadius:9, border:`1px solid ${i===0&&lastCustomerMsg?'var(--accent)':'var(--rule)'}`, background: i===0&&lastCustomerMsg?'var(--accent-bg)':'var(--bg)', cursor:'pointer', transition:'background 0.12s' }}
-                        onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
-                        onMouseLeave={e=>e.currentTarget.style.background=i===0&&lastCustomerMsg?'var(--accent-bg)':'var(--bg)'}>
-                        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
-                          <span style={{ fontSize:11, fontWeight:600, color: i===0&&lastCustomerMsg?'var(--accent)':'var(--muted)' }}>{tmpl.label}</span>
-                          {i===0&&lastCustomerMsg&&<span style={{ fontSize:9.5, padding:'1px 6px', borderRadius:999, background:'var(--accent)', color:'#fff', fontWeight:600 }}>Best match</span>}
-                        </div>
-                        <div style={{ fontSize:11.5, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{tmpl.text.slice(0, 90)}…</div>
-                      </button>
-                    ))}
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                      {ranked.map((tmpl, i) => {
+                        const isBest = i===0&&lastCustomerMsg;
+                        return (
+                          <button key={tmpl.id} onClick={() => { setManualMsg(tmpl.text); setShowTemplates(false); }}
+                            style={{
+                              textAlign:'left', padding:'10px 11px', borderRadius:10,
+                              border:`1px solid ${isBest?'var(--accent)':'var(--rule)'}`,
+                              background: isBest?'var(--accent-bg)':'var(--bg)',
+                              cursor:'pointer', transition:'all 0.12s',
+                              display:'flex', flexDirection:'column', gap:4
+                            }}
+                            onMouseEnter={e=>{ e.currentTarget.style.borderColor='var(--accent)'; if(!isBest) e.currentTarget.style.background='var(--hover)'; }}
+                            onMouseLeave={e=>{ e.currentTarget.style.borderColor=isBest?'var(--accent)':'var(--rule)'; if(!isBest) e.currentTarget.style.background='var(--bg)'; }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                              <span style={{ fontSize:11.5, fontWeight:600, color: isBest?'var(--accent)':'var(--fg)', flex:1 }}>{tmpl.label}</span>
+                              {isBest&&<span style={{ fontSize:8.5, padding:'2px 6px', borderRadius:999, background:'var(--accent)', color:'#fff', fontWeight:700, whiteSpace:'nowrap' }}>BEST</span>}
+                            </div>
+                            <div style={{ fontSize:11, color:'var(--faint)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', lineHeight:1.3 }}>{tmpl.text.slice(0, 80)}…</div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })()}
@@ -706,15 +716,19 @@ export default function WhatsApp() {
                 <div style={{ fontSize:11, color:'var(--faint)', marginTop:4 }}>{broadcastMsg.length} characters</div>
               </div>
               <div>
-                <div style={{ fontSize:11, fontWeight:500, color:'var(--muted)', marginBottom:8 }}>Quick templates</div>
-                <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:180, overflowY:'auto' }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:8 }}>Quick templates</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, maxHeight:200, overflowY:'auto' }}>
                   {templates.map(t => (
                     <button key={t.id} onClick={() => setBroadcastMsg(t.text)}
-                      style={{ textAlign:'left', padding:'8px 12px', borderRadius:8, border:'1px solid var(--rule)', background:'var(--bg)', cursor:'pointer', fontSize:12, transition:'all 0.12s' }}
+                      style={{
+                        textAlign:'left', padding:'10px 11px', borderRadius:10, border:'1px solid var(--rule)',
+                        background:'var(--bg)', cursor:'pointer', transition:'all 0.12s',
+                        display:'flex', flexDirection:'column', gap:4
+                      }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor='var(--accent)'; e.currentTarget.style.background='var(--accent-bg)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor='var(--rule)'; e.currentTarget.style.background='var(--bg)'; }}>
-                      <span style={{ fontWeight:600, color:'var(--accent)' }}>{t.label}</span>
-                      <span style={{ color:'var(--faint)', marginLeft:8 }}>{t.text.slice(0, 60)}…</span>
+                      <span style={{ fontWeight:600, color:'var(--fg)', fontSize:11.5 }}>{t.label}</span>
+                      <span style={{ color:'var(--faint)', fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.text.slice(0, 70)}…</span>
                     </button>
                   ))}
                 </div>
