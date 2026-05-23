@@ -643,11 +643,11 @@ export default function Leads() {
                           }}
                           onMouseEnter={e => { if (draggedId !== lead._id) e.currentTarget.style.boxShadow='0 4px 16px rgba(37,35,32,.12)'; }}
                           onMouseLeave={e => { e.currentTarget.style.boxShadow = draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)'; }}>
-                          <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:6 }}>
-                            <div style={{ width:16, height:16, display:'flex', flexDirection:'column', justifyContent:'center', gap:1.5, flexShrink:0, marginTop:2 }}>
-                              <div style={{ width:'100%', height:'1px', background:'var(--muted)', borderRadius:1 }} />
-                              <div style={{ width:'100%', height:'1px', background:'var(--muted)', borderRadius:1 }} />
-                              <div style={{ width:'100%', height:'1px', background:'var(--muted)', borderRadius:1 }} />
+                          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                            <div style={{ width:14, height:14, display:'flex', flexDirection:'column', justifyContent:'center', gap:1.2, flexShrink:0, opacity:0.6 }}>
+                              <div style={{ width:'100%', height:'1.5px', background:'var(--muted)', borderRadius:'0.75px' }} />
+                              <div style={{ width:'100%', height:'1.5px', background:'var(--muted)', borderRadius:'0.75px' }} />
+                              <div style={{ width:'100%', height:'1.5px', background:'var(--muted)', borderRadius:'0.75px' }} />
                             </div>
                             <div style={{ flex:1, minWidth:0 }}>
                               <div style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)' }}>{lead.name}</div>
