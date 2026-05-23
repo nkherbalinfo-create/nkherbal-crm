@@ -85,10 +85,12 @@ const PRODUCT_IMG_MAP = {
 function parseImgTag(content) {
   const match = content?.match(/\[img:([^\]]+)\]/);
   const product = match ? match[1] : null;
+  const isAll = product === 'all-products';
   return {
     text: content?.replace(/\s*\[img:[^\]]+\]/g, '').trim() || '',
-    product,
-    imgUrl: product ? PRODUCT_IMG_MAP[product] : null,
+    product: isAll ? null : product,
+    imgUrl: (product && !isAll) ? PRODUCT_IMG_MAP[product] : null,
+    allImages: isAll ? Object.entries(PRODUCT_IMG_MAP) : null,
   };
 }
 
@@ -522,8 +524,7 @@ export default function WhatsApp() {
               )}
 
               {messages.map((m,i)=>{
-                const { text, product } = parseImgTag(m.content);
-                const imgUrl = product ? PRODUCT_IMG_MAP[product] : null;
+                const { text, product, imgUrl, allImages } = parseImgTag(m.content);
                 const isUser = m.role === 'user';
                 return (
                   <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}>
@@ -541,7 +542,7 @@ export default function WhatsApp() {
                         <WaText text={text} />
                       </div>
                     )}
-                    {/* Product image — exact replica of what customer received */}
+                    {/* Single product image */}
                     {imgUrl && (
                       <div style={{ maxWidth:'78%', borderRadius:14, overflow:'hidden', border: isUser ? '1px solid var(--rule)' : 'none', boxShadow: isUser ? 'var(--shadow-card)' : '0 1px 3px rgba(61,138,92,.1)' }}>
                         <img src={imgUrl.url} alt={product} style={{ width:'100%', height:'auto', display:'block', objectFit:'contain', background:'#fff' }} />
@@ -552,6 +553,17 @@ export default function WhatsApp() {
                         )}
                       </div>
                     )}
+                    {/* All product images */}
+                    {allImages && allImages.map(([name, img]) => (
+                      <div key={name} style={{ maxWidth:'78%', borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(61,138,92,.1)' }}>
+                        <img src={img.url} alt={name} style={{ width:'100%', height:'auto', display:'block', objectFit:'contain', background:'#fff' }} />
+                        {img.caption && (
+                          <div style={{ padding:'9px 11px', background:'#1a1a1a', fontSize:12.5, color:'#e0e0e0', whiteSpace:'pre-wrap', wordBreak:'break-all', lineHeight:1.5 }}>
+                            <WaText text={img.caption} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
                     <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums', marginTop:1 }}>
                       {timeStr(m.timestamp)}
                     </div>
