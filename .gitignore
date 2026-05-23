@@ -22,3 +22,5 @@ Thumbs.db
 
 # Last sync file
 backend/.last-sync
+*.png
+*.mp4
