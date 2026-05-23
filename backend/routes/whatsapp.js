@@ -159,6 +159,12 @@ function isImageRequest(text) {
   return /image|photo|pic\b|picture|dikhao|dikha|bhejo|dekh|tasveer|tasweer|photo bhejo|image bhejo|image send|send image|show me/.test(t);
 }
 
+// Detect if customer wants ALL product images
+function isAllProductsRequest(text) {
+  const t = text.toLowerCase().trim();
+  return /sab(ki|ka|ke|hi|)|saare|sare|all product|all image|sabhi|every product|sab bhejo|sab product|sab image|all photo|sab photo/.test(t);
+}
+
 // Find the last product mentioned in recent conversation history
 function lastMentionedProduct(messages) {
   const recent = [...messages].reverse().slice(0, 10);
@@ -577,31 +583,52 @@ router.post('/webhook', async (req, res) => {
           // ── Broadcast message event so CRM refreshes instantly ──
           sse.broadcast({ type: 'message', phone });
 
-          // ── Send product image ────────────────────────────
-          // Priority: 1) product in customer message  2) image request → look back in history
-          // We do NOT use detectProduct(aiReply) to avoid sending wrong image when bot mentions multiple products
+          // ── Send product images ────────────────────────────
           const imgRequest = isImageRequest(text);
-          let detectedProduct = detectProduct(text);
-          if (!detectedProduct && imgRequest) {
-            detectedProduct = lastMentionedProduct(conv.messages);
-          }
-          // Only use AI reply as fallback when bot clearly recommended exactly one product
-          if (!detectedProduct) {
-            const p = detectProduct(aiReply);
-            // Only use it if the AI reply doesn't mention multiple products
-            const mentionCount = ['muejaza','testo','shahi kalp','shilajit','vardhak'].filter(k => aiReply.toLowerCase().includes(k)).length;
-            if (p && mentionCount <= 1) detectedProduct = p;
-          }
-          if (detectedProduct && PRODUCT_IMAGES[detectedProduct] && !isGreeting(text)) {
-            const recentMessages = conv.messages.slice(-10);
-            const alreadySentImage = !imgRequest && recentMessages.some(
-              m => m.role === 'assistant' && m.content.includes(`[img:${detectedProduct}]`)
+          const allProductsRequest = isAllProductsRequest(text);
+
+          // Check AI reply also mentions sending all products (e.g. "Sab products ki images bhej raha hoon")
+          const aiMentionsAll = /sab product|all product|sabhi product|sab image|all image/i.test(aiReply);
+
+          if (allProductsRequest || aiMentionsAll) {
+            // Send all product images one by one
+            const alreadySentAll = conv.messages.slice(-5).some(
+              m => m.role === 'assistant' && m.content.includes('[img:all-products]')
             );
-            if (!alreadySentImage) {
-              console.log(`[WhatsApp] 🖼️ Sending product image: ${detectedProduct}${imgRequest ? ' (image request)' : ''}`);
-              await sendProductImage(phone, detectedProduct, PRODUCT_IMAGES[detectedProduct]);
-              conv.messages[conv.messages.length - 1].content += ` [img:${detectedProduct}]`;
+            if (!alreadySentAll) {
+              console.log(`[WhatsApp] 📸 Sending ALL product images to ${phone}`);
+              const productKeys = Object.keys(PRODUCT_IMAGES);
+              for (const productKey of productKeys) {
+                await sendProductImage(phone, productKey, PRODUCT_IMAGES[productKey]);
+                await new Promise(r => setTimeout(r, 600));
+              }
+              conv.messages[conv.messages.length - 1].content += ' [img:all-products]';
               await conv.save();
+            }
+          } else {
+            // Single product detection
+            // Priority: 1) product in customer message  2) image request → look back in history
+            let detectedProduct = detectProduct(text);
+            if (!detectedProduct && imgRequest) {
+              detectedProduct = lastMentionedProduct(conv.messages);
+            }
+            // Only use AI reply as fallback when bot clearly recommended exactly one product
+            if (!detectedProduct) {
+              const p = detectProduct(aiReply);
+              const mentionCount = ['muejaza','testo','shahi kalp','shilajit','vardhak'].filter(k => aiReply.toLowerCase().includes(k)).length;
+              if (p && mentionCount <= 1) detectedProduct = p;
+            }
+            if (detectedProduct && PRODUCT_IMAGES[detectedProduct] && !isGreeting(text)) {
+              const recentMessages = conv.messages.slice(-10);
+              const alreadySentImage = !imgRequest && recentMessages.some(
+                m => m.role === 'assistant' && m.content.includes(`[img:${detectedProduct}]`)
+              );
+              if (!alreadySentImage) {
+                console.log(`[WhatsApp] 🖼️ Sending product image: ${detectedProduct}${imgRequest ? ' (image request)' : ''}`);
+                await sendProductImage(phone, detectedProduct, PRODUCT_IMAGES[detectedProduct]);
+                conv.messages[conv.messages.length - 1].content += ` [img:${detectedProduct}]`;
+                await conv.save();
+              }
             }
           }
         }
