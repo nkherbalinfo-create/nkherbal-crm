@@ -142,10 +142,10 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         background: 'var(--sidebar-bg)', borderRight: '1px solid var(--rule)',
         padding: c ? '16px 0 12px' : '16px 12px 12px',
         overflowY: 'auto', overflowX: 'hidden',
-        transition: 'padding 0.22s cubic-bezier(0.4,0,0.2,1)',
+        transition: 'padding 0.35s cubic-bezier(0.4,0,0.2,1)',
       }}>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: c ? 8 : 10, padding: c ? '4px 0 18px' : '4px 8px 18px', justifyContent: c ? 'center' : 'flex-start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: c ? 8 : 10, padding: c ? '4px 0 18px' : '4px 8px 18px', justifyContent: c ? 'center' : 'flex-start', transition: 'gap 0.35s, padding 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
           <div
             onClick={c ? toggleCollapse : undefined}
             title={c ? 'Expand sidebar' : undefined}
@@ -156,7 +156,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
           </div>
           {!c && (
             <>
-              <div>
+              <div style={{ transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
                 <div style={{ fontSize: 10.5, color: 'var(--faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
               </div>
@@ -185,7 +185,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         {/* Search — hidden when collapsed */}
         {!c && (
           <div onClick={() => { onSearchOpen?.(); onClose?.(); }}
-            style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', transition: 'box-shadow 0.15s, border-color 0.15s' }}
+            style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.15s, border-color 0.15s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(61,138,92,.1)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(37,35,32,.05)'; }}>
             <Icon name="search" size={13} />
@@ -214,6 +214,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                   fontSize: 13, fontWeight: isActive ? 600 : 400,
                   marginBottom: 1,
                   justifyContent: c ? 'center' : 'flex-start',
+                  transition: 'gap 0.35s, padding 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)',
                 })}>
                 {({ isActive }) => (
                   <>
@@ -238,7 +239,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
 
         {/* Monthly target — hidden when collapsed */}
         {!c && target && (
-          <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}>Monthly target</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.pct}%</div>
@@ -336,6 +337,10 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
           inset: 0 auto 0 0;
           width: 248px;
           z-index: 30;
+          transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .lg-sidebar--collapsed {
+          width: 88px;
         }
         @media (min-width: 1024px) { .lg-sidebar { display: flex; flex-direction: column; } }
       `}</style>
