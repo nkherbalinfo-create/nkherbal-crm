@@ -589,11 +589,11 @@ export default function Leads() {
 
       {/* Kanban board — desktop only, shown when viewMode === 'board' */}
       {viewMode === 'board' && !isMobile && (
-        <div key={listKey} className="fade-in" style={{ overflowX: 'auto', paddingBottom: 8 }}>
+        <div key={listKey} className="fade-in" style={{ overflow:'hidden' }}>
           {boardLoading ? (
             <div style={{ textAlign:'center', padding:'48px 0', color:'var(--faint)', fontSize:13 }}>Loading board…</div>
           ) : (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, minWidth:760 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:12 }}>
               {[
                 { status:'Interested',     cls:'chip-info'   },
                 { status:'Follow Up',      cls:'chip-warn'   },
@@ -610,10 +610,11 @@ export default function Leads() {
                     onDragLeave={() => setDragOverCol(null)}
                     onDrop={e => handleDrop(e, col.status)}
                     style={{
-                      background: isTarget ? 'var(--accent-bg)' : 'var(--bg)',
+                      background: isTarget ? 'var(--accent-bg)' : 'var(--card)',
                       border: `2px dashed ${isTarget ? 'var(--accent)' : 'var(--rule)'}`,
-                      borderRadius: 14, padding: 10, minHeight: 200,
+                      borderRadius: 12, padding: 12, minHeight: 400,
                       transition: 'border-color 0.15s, background 0.15s',
+                      display: 'flex', flexDirection: 'column',
                     }}>
                     {/* Column header */}
                     <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, padding:'2px 2px 8px', borderBottom:'1px solid var(--rule)' }}>
@@ -621,7 +622,7 @@ export default function Leads() {
                       <span style={{ fontSize:11.5, color:'var(--faint)', fontWeight:500, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>{colLeads.length}</span>
                     </div>
                     {/* Lead cards */}
-                    <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                    <div style={{ display:'flex', flexDirection:'column', gap:8, flex:1, overflowY:'auto', minHeight:0 }}>
                       {colLeads.map(lead => (
                         <div key={lead._id}
                           draggable
