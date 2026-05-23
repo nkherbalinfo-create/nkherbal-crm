@@ -591,19 +591,22 @@ router.post('/webhook', async (req, res) => {
           const aiMentionsAll = /sab product|all product|sabhi product|sab image|all image/i.test(aiReply);
 
           if (allProductsRequest || aiMentionsAll) {
-            // Send all product images one by one
-            const alreadySentAll = conv.messages.slice(-5).some(
-              m => m.role === 'assistant' && m.content.includes('[img:all-products]')
-            );
+            // Check if already sent all products recently
+            const recentMsgs = conv.messages.slice(-15);
+            const sentKeys = recentMsgs
+              .filter(m => m.role === 'assistant')
+              .flatMap(m => { const x = m.content.match(/\[img:([^\]]+)\]/g) || []; return x; });
+            const alreadySentAll = sentKeys.length >= 3 || recentMsgs.some(m => m.role === 'assistant' && m.content.includes('[img:all-products]'));
+
             if (!alreadySentAll) {
               console.log(`[WhatsApp] 📸 Sending ALL product images to ${phone}`);
-              const productKeys = Object.keys(PRODUCT_IMAGES);
-              for (const productKey of productKeys) {
-                await sendProductImage(phone, productKey, PRODUCT_IMAGES[productKey]);
+              for (const [productKey, imgData] of Object.entries(PRODUCT_IMAGES)) {
+                await sendProductImage(phone, productKey, imgData);
+                // Save each image as its own message so CRM mirrors WhatsApp exactly
+                conv.messages.push({ role: 'assistant', content: `[img:${productKey}]`, timestamp: new Date() });
+                await conv.save();
                 await new Promise(r => setTimeout(r, 600));
               }
-              conv.messages[conv.messages.length - 1].content += ' [img:all-products]';
-              await conv.save();
             }
           } else {
             // Single product detection
