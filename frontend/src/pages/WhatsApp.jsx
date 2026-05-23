@@ -145,6 +145,7 @@ export default function WhatsApp() {
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcastProgress, setBroadcastProgress] = useState(null); // { sent, failed, total } | null
   const [broadcastDone, setBroadcastDone] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
   // seenCounts: { [phone]: lastSeenCustomerMsgCount } — persisted in localStorage
   const [seenCounts, setSeenCounts] = useState(() => {
     try {
@@ -376,7 +377,7 @@ export default function WhatsApp() {
 
         {/* Left — conversation list */}
         <div style={{ borderRight: isMobile ? 'none' : '1px solid var(--rule)', display: isMobile && mobileChatOpen ? 'none' : 'flex', flexDirection:'column', minHeight:0, overflowY:'auto' }}>
-          <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--rule)', display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--rule)', display:'flex', alignItems:'center', gap:8 }}>
             <input type="checkbox"
               style={{ accentColor:'var(--accent)', cursor:'pointer', width:14, height:14, flexShrink:0 }}
               checked={convs.length > 0 && broadcastSelected.size === convs.length}
@@ -393,11 +394,14 @@ export default function WhatsApp() {
               </button>
             )}
           </div>
+          <div style={{ padding:'10px 12px', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
+            <input type="text" className="input" placeholder="Search conversations…" value={searchFilter} onChange={e => setSearchFilter(e.target.value.toLowerCase())} style={{ fontSize:12 }} />
+          </div>
           {convs.length===0 && (
             <div style={{ padding:24, textAlign:'center', color:'var(--faint)', fontSize:12 }}>No conversations yet</div>
           )}
-          <div style={{ display:'flex', flexDirection:'column', gap:4, padding:'8px 10px' }}>
-          {convs.map(c=>{
+          <div style={{ display:'flex', flexDirection:'column', gap:6, padding:'10px 12px', overflow:'auto', flex:1 }}>
+          {convs.filter(c => !searchFilter || c.name.toLowerCase().includes(searchFilter) || c.phone.includes(searchFilter)).map(c=>{
             const isSelected = selected?.phone===c.phone;
             const isBroadcast = broadcastSelected.has(c.phone);
             const unread = Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0));
@@ -405,42 +409,38 @@ export default function WhatsApp() {
             <div key={c.phone} onClick={()=>selectConv(c)}
               style={{
                 display:'flex', alignItems:'center', gap:10,
-                padding:'10px 12px', cursor:'pointer',
-                borderRadius:12,
-                background: isBroadcast ? 'var(--accent-bg)' : isSelected ? 'var(--accent-bg)' : 'var(--card)',
+                padding:'9px 11px', cursor:'pointer',
+                borderRadius:10,
+                background: isBroadcast ? 'var(--accent-bg)' : isSelected ? 'var(--accent-bg)' : 'var(--hover)',
                 border: `1px solid ${isSelected ? 'var(--accent)' : isBroadcast ? 'var(--accent)' : 'var(--rule)'}`,
-                boxShadow: isSelected ? '0 2px 8px rgba(61,138,92,.12)' : 'var(--shadow-soft)',
-                transition:'all 0.15s',
+                boxShadow: isSelected ? '0 2px 8px rgba(61,138,92,.1)' : 'none',
+                transition:'all 0.12s',
               }}
-              onMouseEnter={e=>{ if(!isSelected && !isBroadcast) { e.currentTarget.style.background='var(--hover)'; e.currentTarget.style.borderColor='var(--rule-strong)'; } }}
-              onMouseLeave={e=>{ if(!isSelected && !isBroadcast) { e.currentTarget.style.background='var(--card)'; e.currentTarget.style.borderColor='var(--rule)'; } }}>
+              onMouseEnter={e=>{ if(!isSelected && !isBroadcast) { e.currentTarget.style.background='rgba(61,138,92,.08)'; } }}
+              onMouseLeave={e=>{ if(!isSelected && !isBroadcast) { e.currentTarget.style.background='var(--hover)'; } }}>
               <input type="checkbox"
                 checked={isBroadcast}
                 onClick={e => toggleBroadcastSelect(c.phone, e)}
                 onChange={()=>{}}
-                style={{ accentColor:'var(--accent)', cursor:'pointer', width:13, height:13, flexShrink:0 }}
+                style={{ accentColor:'var(--accent)', cursor:'pointer', width:14, height:14, flexShrink:0 }}
               />
-              <Av name={c.name} size={38} />
+              <Av name={c.name} size={36} />
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:5, minWidth:0 }}>
-                    <span style={{ fontSize:13, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:130 }}>{c.name}</span>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:2 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:4, minWidth:0 }}>
+                    <span style={{ fontSize:13, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</span>
                     <LangChip name={c.name} />
                   </div>
-                  <span style={{ fontSize:10.5, color:'var(--faint)', fontFamily:'Inter', flexShrink:0, marginLeft:4 }}>{timeStr(c.lastMessageAt)}</span>
+                  <span style={{ fontSize:10, color:'var(--faint)', fontFamily:'Inter', flexShrink:0, marginLeft:4, whiteSpace:'nowrap' }}>{timeStr(c.lastMessageAt)}</span>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-                  {c.paymentClaimed && (
-                    <span style={{ fontSize:9, fontWeight:700, padding:'1px 6px', borderRadius:999, background:'#fef08a', color:'#854d0e', flexShrink:0, whiteSpace:'nowrap' }}>💰 Payment</span>
-                  )}
-                  <span style={{ fontSize:12, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic' }}>
-                    {c.lastMessage?.replace(/\s*\[img:[^\]]+\]/g,'') || 'No messages yet'}
-                  </span>
+                <div style={{ fontSize:12, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic', lineHeight:1.3 }}>
+                  {c.paymentClaimed && <span style={{ marginRight:4 }}>💰</span>}
+                  {c.lastMessage?.replace(/\s*\[img:[^\]]+\]/g,'') || '—'}
                 </div>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
                 {unread > 0 && (
-                  <div style={{ minWidth:20, height:20, padding:'0 6px', borderRadius:999, background:'#25d366', color:'#fff', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, boxShadow:'0 1px 6px rgba(37,211,102,.5)' }}>
+                  <div style={{ minWidth:22, height:22, padding:'0 6px', borderRadius:999, background:'#25d366', color:'#fff', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10.5, fontWeight:700 }}>
                     {unread > 99 ? '99+' : unread}
                   </div>
                 )}
@@ -448,11 +448,11 @@ export default function WhatsApp() {
                 type="button"
                 title="Delete conversation"
                 onClick={(e) => requestDeleteConv(c, e)}
-                style={{ width:26, height:26, display:'grid', placeItems:'center', border:'none', borderRadius:7, background:'transparent', color:'var(--faint)', cursor:'pointer' }}
+                style={{ width:24, height:24, display:'grid', placeItems:'center', border:'none', borderRadius:6, background:'transparent', color:'var(--faint)', cursor:'pointer', transition:'all 0.12s' }}
                 onMouseEnter={e=>{ e.currentTarget.style.background='var(--danger-bg)'; e.currentTarget.style.color='var(--danger)'; }}
                 onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--faint)'; }}
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                 </svg>
               </button>
