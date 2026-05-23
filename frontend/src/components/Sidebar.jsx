@@ -145,7 +145,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         transition: 'padding 0.22s cubic-bezier(0.4,0,0.2,1)',
       }}>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: c ? 0 : 10, padding: c ? '4px 0 18px' : '4px 8px 18px', justifyContent: c ? 'center' : 'flex-start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: c ? 8 : 10, padding: c ? '4px 0 18px' : '4px 8px 18px', justifyContent: c ? 'center' : 'flex-start' }}>
           <div
             onClick={c ? toggleCollapse : undefined}
             title={c ? 'Expand sidebar' : undefined}
@@ -158,13 +158,24 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
                 <div style={{ fontSize: 10.5, color: 'var(--faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
               </div>
-              <button onClick={onQuickAdd}
-                title="Quick add (N)"
-                style={{ marginLeft:'auto', width:26, height:26, borderRadius:8, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.9, transition:'opacity 0.15s, transform 0.12s' }}
-                onMouseEnter={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1.08)'; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity='0.9'; e.currentTarget.style.transform='scale(1)'; }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              </button>
+              <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+                <button onClick={onQuickAdd}
+                  title="Quick add (N)"
+                  style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.9, transition:'opacity 0.15s, transform 0.12s' }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1.08)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity='0.9'; e.currentTarget.style.transform='scale(1)'; }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <button onClick={toggleCollapse}
+                  title="Collapse sidebar"
+                  style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--hover)', color:'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.8, transition:'opacity 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity='1'; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity='0.8'; }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -298,19 +309,6 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
             </>
           )}
 
-          {/* Collapse toggle — desktop only, not in mobile overlay */}
-          {!forceExpanded && (
-            <button onClick={toggleCollapse}
-              title={c ? 'Expand sidebar' : 'Collapse sidebar'}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', padding: '7px 0', marginTop: 6, borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--faint)', cursor: 'pointer', fontSize: 11.5, fontFamily: 'inherit', transition: 'background 0.15s, color 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--muted)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--faint)'; }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.22s', transform: c ? 'rotate(180deg)' : 'none' }}>
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-              {!c && <span>Collapse</span>}
-            </button>
-          )}
         </div>
       </aside>
     );
