@@ -650,11 +650,10 @@ export default function Leads() {
                           onMouseEnter={e => { if (draggedId !== lead._id) e.currentTarget.style.boxShadow='0 4px 16px rgba(37,35,32,.12)'; }}
                           onMouseLeave={e => { e.currentTarget.style.boxShadow = draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)'; }}>
                           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-                            <div style={{ width:14, height:14, display:'flex', flexDirection:'column', justifyContent:'center', gap:1.5, flexShrink:0, opacity:0.6 }}>
-                              <div style={{ width:'100%', height:'2px', background:'var(--muted)', lineHeight:1 }} />
-                              <div style={{ width:'100%', height:'2px', background:'var(--muted)', lineHeight:1 }} />
-                              <div style={{ width:'100%', height:'2px', background:'var(--muted)', lineHeight:1 }} />
-                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ opacity:0.5, color:'var(--muted)', flexShrink:0 }}>
+                              <circle cx="6" cy="6" r="2" /><circle cx="12" cy="6" r="2" /><circle cx="18" cy="6" r="2" />
+                              <circle cx="6" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="18" cy="12" r="2" />
+                            </svg>
                             <div style={{ flex:1, minWidth:0 }}>
                               <div style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)' }}>{lead.name}</div>
                             </div>
