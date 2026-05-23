@@ -289,6 +289,13 @@ export default function Leads() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Load board data on mount if board view is active
+  useEffect(() => {
+    if (viewMode === 'board' && boardLeads.length === 0) {
+      loadBoard();
+    }
+  }, [viewMode, boardLeads.length, loadBoard]);
+
   // Auto-refresh every 8s — picks up WhatsApp bot status changes
   useEffect(() => {
     const t = setInterval(() => {
