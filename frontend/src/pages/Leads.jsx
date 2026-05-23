@@ -14,6 +14,10 @@ import { saveAs } from 'file-saver';
 const SOURCES  = ['Ads', 'WhatsApp', 'Website', 'Referral', 'Direct'];
 const STATUSES = ['Interested', 'Not Interested', 'Converted', 'Follow Up'];
 
+// Black cursor SVGs (base64 encoded)
+const BLACK_GRAB = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNiAxMFY2QzYgNC44OTU0MyA2Ljg5NTQzIDQgOCA0QzEwLjIwOTEgNCAxMiA1Ljc5MDg2IDEyIDhWMTBNMTIgMTBWNkMxMiA0Ljg5NTQzIDEyLjg5NTQgNCAxNCA0QzE2LjIwOTEgNCAxOCA1Ljc5MDg2IDE4IDhWMTBNMTggMTBWNkMxOCA0Ljg5NTQzIDE4Ljg5NTQgNCAxNyA0QzI0LjIwOTEgNCAyNiA1Ljc5MDg2IDI2IDhWMTBNMTAgMjBWMTBINjYwTTEwIDE0SDE2TTEwIDE4SDE2TTIwIDE0SDI2TTIwIDE4SDI2IiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==";
+const BLACK_GRABBING = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSI2IiB5PSI2IiB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHJ4PSIyIiBmaWxsPSJibGFjayIgb3BhY2l0eT0iMC4yIi8+PHBhdGggZD0iTTYgMTBWNkM2IDQuODk1NDMgNi44OTU0MyA0IDggNEM5LjEwNDU3IDQgMTAgNC44OTU0MyAxMCA2VjEwTTEwIDEwVjZDMTAgNC44OTU0MyAxMC44OTU0IDQgMTIgNEMxMy4xMDQ2IDQgMTQgNC44OTU0MyAxNCA2VjEwTTE0IDEwVjZDMTQgNC44OTU0MyAxNC44OTU0IDQgMTYgNEMxNy4xMDQ2IDQgMTggNC44OTU0MyAxOCA2VjEwTTEwIDIwVjEwSDZWMjBNMTQgMjBWMTBIMjBWMjBNMTggMjBWMTBIMjRWMjAiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+";
+
 const PRODUCTS = [
   'Muejaza For Men (300g)', 'Shahi Kalp For Men & Women (300g)',
   'Testo – Vardhak For Men (300g)', 'Kashmiri Shilajit 25g',
@@ -635,7 +639,7 @@ export default function Leads() {
                             background: draggedId === lead._id ? 'var(--accent)' : 'var(--card)',
                             border: `1px solid ${draggedId === lead._id ? 'var(--accent)' : 'var(--rule)'}`,
                             borderRadius: 10, padding: '10px 12px',
-                            cursor: draggedId === lead._id ? 'grabbing' : 'grab',
+                            cursor: `url('${draggedId === lead._id ? BLACK_GRABBING : BLACK_GRAB}') 10 3, auto`,
                             userSelect: 'none', WebkitUserSelect: 'none',
                             opacity: 1,
                             boxShadow: draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)',
