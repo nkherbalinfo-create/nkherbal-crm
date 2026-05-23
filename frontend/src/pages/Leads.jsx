@@ -281,6 +281,25 @@ export default function Leads() {
     finally { setBoardLoading(false); }
   }, []);
 
+  const loadSilent = useCallback(async () => {
+    try {
+      const params = { page, limit:8, ...Object.fromEntries(Object.entries(filters).filter(([,v])=>v)) };
+      const { data } = await api.get('/leads', { params });
+      const sorted = [...(data.leads||[])].sort((a,b) => calcScore(b) - calcScore(a));
+      setLeads(sorted);
+      setMeta({ total:data.total, page:data.page, pages:data.pages });
+      if (data.statusCounts) setStatusCounts(data.statusCounts);
+    } catch {}
+  }, [page, filters]);
+
+  const loadBoardSilent = useCallback(async () => {
+    try {
+      const { data } = await api.get('/leads', { params: { limit: 200 } });
+      const scored = (data.leads || []).map(l => ({ ...l, _score: calcScore(l) }));
+      setBoardLeads(scored);
+    } catch {}
+  }, []);
+
   const switchView = (mode) => {
     setViewMode(mode);
     localStorage.setItem('leads_view', mode);
@@ -296,14 +315,14 @@ export default function Leads() {
     }
   }, [viewMode, boardLeads.length, loadBoard]);
 
-  // Auto-refresh every 8s — picks up WhatsApp bot status changes
+  // Auto-refresh every 8s (silent) — picks up WhatsApp bot status changes
   useEffect(() => {
     const t = setInterval(() => {
-      if (viewMode === 'table') load();
-      else loadBoard();
+      if (viewMode === 'table') loadSilent();
+      else loadBoardSilent();
     }, 8000);
     return () => clearInterval(t);
-  }, [load, loadBoard, viewMode]);
+  }, [loadSilent, loadBoardSilent, viewMode]);
 
   const updateStatus = async (id, newStatus) => {
     setUpdatingId(id);
