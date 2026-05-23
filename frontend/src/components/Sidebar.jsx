@@ -196,13 +196,12 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
 
         {/* Navigation */}
         {NAV_SECTIONS.map(({ label, items }, si) => (
-          <div key={si}>
+          <div key={si} style={{ marginTop: label ? 14 : 0, transition: 'margin-top 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
             {label && !c && (
-              <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '14px 11px 4px', userSelect: 'none' }}>
+              <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none' }}>
                 {label}
               </div>
             )}
-            {label && c && <div style={{ height: 8 }} />}
             {items.map(({ to, label: navLabel, icon, badge }) => (
               <NavLink key={to} to={to} end={to === '/'} onClick={onClose}
                 className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
