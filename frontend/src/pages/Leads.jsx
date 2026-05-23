@@ -593,7 +593,7 @@ export default function Leads() {
           {boardLoading ? (
             <div style={{ textAlign:'center', padding:'48px 0', color:'var(--faint)', fontSize:13 }}>Loading board…</div>
           ) : (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:12 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:12, height:'calc(100vh - 280px)', overflow:'hidden' }}>
               {[
                 { status:'Interested',     cls:'chip-info'   },
                 { status:'Follow Up',      cls:'chip-warn'   },
@@ -612,9 +612,10 @@ export default function Leads() {
                     style={{
                       background: isTarget ? 'var(--accent-bg)' : 'var(--card)',
                       border: `2px dashed ${isTarget ? 'var(--accent)' : 'var(--rule)'}`,
-                      borderRadius: 12, padding: 12, minHeight: 400,
+                      borderRadius: 12, padding: 12,
                       transition: 'border-color 0.15s, background 0.15s',
                       display: 'flex', flexDirection: 'column',
+                      minHeight: 0, // Important for flex shrinking
                     }}>
                     {/* Column header */}
                     <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, padding:'2px 2px 8px', borderBottom:'1px solid var(--rule)' }}>
@@ -716,7 +717,7 @@ export default function Leads() {
       )}
 
       {/* Table (desktop only) */}
-      {!isMobile && (
+      {!isMobile && viewMode === 'table' && (
       <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
