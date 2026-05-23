@@ -634,7 +634,7 @@ export default function Leads() {
                             background: draggedId === lead._id ? 'var(--accent)' : 'var(--card)',
                             border: `1px solid ${draggedId === lead._id ? 'var(--accent)' : 'var(--rule)'}`,
                             borderRadius: 10, padding: '10px 12px',
-                            cursor: draggedId === lead._id ? 'grabbing' : 'grab',
+                            cursor: draggedId === lead._id ? 'move' : 'move',
                             userSelect: 'none', WebkitUserSelect: 'none',
                             opacity: 1,
                             boxShadow: draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)',
