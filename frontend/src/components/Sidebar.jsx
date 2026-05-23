@@ -149,7 +149,9 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
           <div
             onClick={c ? toggleCollapse : undefined}
             title={c ? 'Expand sidebar' : undefined}
-            style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(61,138,92,.35)', cursor: c ? 'pointer' : 'default' }}>
+            style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(61,138,92,.35)', cursor: c ? 'pointer' : 'default', transition: 'transform 0.15s' }}
+            onMouseEnter={e => { if (c) e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => { if (c) e.currentTarget.style.transform = 'scale(1)'; }}>
             <Icon name="leaf" size={18} stroke={2} color="white" />
           </div>
           {!c && (
