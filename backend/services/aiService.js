@@ -357,12 +357,15 @@ function cleanResponse(text) {
     .trim();
 }
 
-async function getAIReply(conversationMessages, customerName = '') {
+async function getAIReply(conversationMessages, customerName = '', contextSummary = '') {
   const nameContext = customerName && customerName !== 'Aap'
     ? `\n\nCUSTOMER NAME: ${customerName} (always address them as "${customerName} Ji" — never just "Ji" without their name)`
     : '';
+  const memoryContext = contextSummary
+    ? `\n\n━━━━━━━━━━━━━━━━━━━━━━━━\nCUSTOMER MEMORY (from previous messages)\n━━━━━━━━━━━━━━━━━━━━━━━━\n${contextSummary}\n\nUse this to continue naturally. Don't repeat info the customer already knows. If they raised a concern before (price, delivery, etc.), acknowledge it without making them repeat themselves.`
+    : '';
   const messages = [
-    { role: 'system', content: NK_HERBAL_SYSTEM_PROMPT + nameContext },
+    { role: 'system', content: NK_HERBAL_SYSTEM_PROMPT + nameContext + memoryContext },
     ...conversationMessages.slice(-20)
   ];
 
@@ -454,4 +457,64 @@ Definitions:
   }
 }
 
-module.exports = { getAIReply, classifyIntent };
+// Build a short memory summary from conversation history — called every ~10 messages
+async function buildContextSummary(messages, customerName) {
+  if (!messages || messages.length < 4) return '';
+  const recent = messages.slice(-40).map(m =>
+    `${m.role === 'user' ? 'Customer' : 'Bot'}: ${(m.content || '').slice(0, 150)}`
+  ).join('\n');
+
+  const prompt = [
+    {
+      role: 'system',
+      content: `You extract key customer facts from a WhatsApp sales conversation for NK Herbal (Ayurvedic products, India). Write 2–4 sentences in English covering ONLY what is factually present:
+- Which product(s) the customer asked about
+- Main concern or objection (price, delivery, COD, side effects, etc.) if any
+- Buying intent (interested, skeptical, ready to buy, said will think, ordered already, etc.)
+- Any personal context (for gym, for wife, health issue mentioned, city, etc.)
+- Language preference (Hinglish, Hindi-Devanagari, English, etc.)
+Return empty string if there is nothing notable yet.`
+    },
+    {
+      role: 'user',
+      content: `Customer: ${customerName || 'Unknown'}\n\n${recent}`
+    }
+  ];
+
+  const body = JSON.stringify({
+    model: 'anthropic/claude-3.5-haiku',
+    messages: prompt,
+    max_tokens: 150,
+    temperature: 0
+  });
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'openrouter.ai',
+      path: '/api/v1/chat/completions',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://nkherbal.com',
+        'X-Title': 'NK Herbal Bot',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          resolve(parsed.choices?.[0]?.message?.content?.trim() || '');
+        } catch { resolve(''); }
+      });
+    });
+    req.on('error', () => resolve(''));
+    req.setTimeout(10000, () => { req.destroy(); resolve(''); });
+    req.write(body);
+    req.end();
+  });
+}
+
+module.exports = { getAIReply, classifyIntent, buildContextSummary };

@@ -3,7 +3,7 @@ const https    = require('https');
 const http     = require('http');
 const Lead     = require('../models/Lead');
 const WaConversation = require('../models/WaConversation');
-const { getAIReply, classifyIntent } = require('../services/aiService');
+const { getAIReply, classifyIntent, buildContextSummary } = require('../services/aiService');
 const sse = require('../services/sseBroadcaster');
 const router   = express.Router();
 
@@ -519,11 +519,33 @@ router.post('/webhook', async (req, res) => {
             continue;
           }
 
+          // ── Refresh context summary every 10 messages (fire-and-forget) ──
+          const msgCount = conv.messages.length;
+          const needsSummary = msgCount >= 4 && (
+            !conv.contextUpdatedAt ||
+            msgCount % 10 === 0
+          );
+          if (needsSummary) {
+            buildContextSummary(conv.messages, firstName).then(summary => {
+              if (summary) {
+                WaConversation.findOneAndUpdate(
+                  { phone },
+                  { contextSummary: summary, contextUpdatedAt: new Date() }
+                ).catch(() => {});
+                console.log(`[WhatsApp] 🧠 Memory updated for ${phone}`);
+              }
+            }).catch(() => {});
+          }
+
           // ── Run AI reply + intent classification in parallel ──
           let aiReply, detectedIntent;
           try {
             [aiReply, detectedIntent] = await Promise.all([
-              getAIReply(conv.messages.slice(-6).map(m => ({ role: m.role, content: m.content })), firstName),
+              getAIReply(
+                conv.messages.slice(-20).map(m => ({ role: m.role, content: m.content })),
+                firstName,
+                conv.contextSummary || ''
+              ),
               classifyIntent(text)
             ]);
           } catch (aiErr) {

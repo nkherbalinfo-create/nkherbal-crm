@@ -266,7 +266,7 @@ function Layout() {
                   onMouseEnter={e => { e.currentTarget.style.borderColor='var(--accent)'; e.currentTarget.style.background='var(--accent-bg)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor='var(--rule)'; e.currentTarget.style.background='var(--bg)'; }}>
                   <div style={{ width:36, height:36, borderRadius:10, background:'var(--accent-bg)', display:'grid', placeItems:'center', flexShrink:0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={icon}/></svg>
+                    <svg width="16" height="16" viewBox="0 -2 24 26" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={icon}/></svg>
                   </div>
                   <div>
                     <div style={{ fontSize:13, fontWeight:600, color:'var(--fg)' }}>{title}</div>

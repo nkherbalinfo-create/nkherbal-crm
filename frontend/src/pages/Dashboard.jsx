@@ -297,53 +297,58 @@ export default function Dashboard() {
 
       {/* ── KPI strip ─────────────────────────────────── */}
       {isMobile ? (
-        /* Mobile: 4 individual cards in 2×2 grid */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        /* Mobile: 4 individual cards */
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {loading ? [0,1,2,3].map(i => (
-            <div key={i} className="card" style={{ padding: '14px' }}>
+            <div key={i} className="card" style={{ padding: '16px' }}>
               <Skel w="55%" h={10} />
-              <Skel w="70%" h={22} style={{ margin: '8px 0 6px' }} />
+              <Skel w="70%" h={26} style={{ margin: '10px 0 8px' }} />
               <Skel w="60%" h={10} />
             </div>
           )) : KPIs.map((m, i) => (
-            <div key={i} className="card" style={{ padding: '16px 18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: m.up ? 'var(--accent)' : 'var(--danger)', background: m.up ? 'var(--accent-bg)' : 'var(--danger-bg)', padding: '2px 8px', borderRadius: 999 }}>
-                  {m.up ? '↑' : '↓'} {m.sub}
+            <div key={i} className="card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8, background: m.up ? 'linear-gradient(135deg, var(--card) 0%, rgba(61,138,92,.03) 100%)' : 'var(--card)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 500, flex: 1 }}>{m.l}</div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: m.up ? 'var(--accent)' : 'var(--danger)', background: m.up ? 'var(--accent-bg)' : 'var(--danger-bg)', padding: '2px 6px', borderRadius: 5, whiteSpace: 'nowrap' }}>
+                  {m.up ? '↑' : '↓'}
                 </span>
               </div>
-              <div className="num" style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
+              <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
                 {m.v}
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--faint)' }}>
+                {m.sub.includes('%') ? m.sub : <span style={{ color: 'var(--muted)' }}>{m.sub}</span>}
               </div>
             </div>
           ))}
         </div>
       ) : (
-        /* Desktop: one wide surface with 4 columns */
-        <div className="surface metric-grid" style={{ padding: '22px 24px', overflow: 'visible' }}>
+        /* Desktop: 4 individual KPI cards with better design */
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
           {loading ? [0,1,2,3].map(i => (
-            <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <Skel w="50%" h={11} />
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                <Skel w="60%" h={28} />
-                <Skel w={88} h={44} />
-              </div>
-              <Skel w="65%" h={11} />
+            <div key={i} className="card" style={{ padding: '18px 20px' }}>
+              <Skel w="50%" h={10} />
+              <Skel w="60%" h={28} style={{ margin: '12px 0 10px' }} />
+              <Skel w="70%" h={10} />
             </div>
           )) : KPIs.map((m, i) => (
-            <div key={i} style={{ borderLeft: i ? '1px solid var(--rule)' : 'none', paddingLeft: i ? 22 : 0, paddingRight: i < 3 ? 22 : 0 }}>
-              <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400 }}>{m.l}</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, marginBottom: 4 }}>
-                <div className="num" style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
-                  {m.v}
-                </div>
-                <div style={{ color: 'var(--accent)', flexShrink: 0, opacity: 0.85 }}>
-                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={84} h={40} id={m.l} />
+            <div key={i} className="card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12, background: m.up ? 'linear-gradient(135deg, var(--card) 0%, rgba(61,138,92,.03) 100%)' : 'var(--card)', borderColor: m.up ? 'rgba(61,138,92,.15)' : 'var(--rule)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{m.l}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: m.up ? 'var(--accent)' : 'var(--danger)', padding: '3px 8px', borderRadius: 6, background: m.up ? 'var(--accent-bg)' : 'var(--danger-bg)' }}>
+                  {m.up ? '↑' : '↓'} {Math.abs(m.sub.split('%')[0]) || 'N/A'}%
                 </div>
               </div>
-              <div className="num" style={{ fontSize: 11, color: m.up ? 'var(--accent)' : 'var(--danger)', marginTop: 4 }}>
-                {m.up ? '↑' : '↓'} {m.sub}
+              <div className="num" style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
+                {m.v}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--faint)', flex: 1 }}>
+                  {m.sub.includes('%') ? m.sub : <span style={{ color: 'var(--muted)' }}>{m.sub}</span>}
+                </div>
+                <div style={{ color: m.up ? 'var(--accent)' : 'var(--danger)', flexShrink: 0, opacity: 0.7 }}>
+                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={72} h={32} id={m.l} />
+                </div>
               </div>
             </div>
           ))}
