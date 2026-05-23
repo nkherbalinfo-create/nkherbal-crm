@@ -141,7 +141,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
         width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
         background: 'var(--sidebar-bg)', borderRight: '1px solid var(--rule)',
         padding: '16px 8px 12px',
-        overflowY: 'auto', overflowX: 'hidden',
+        overflowY: 'hidden', overflowX: 'hidden',
         transition: 'padding 0.35s cubic-bezier(0.4,0,0.2,1)',
       }}>
         {/* Brand */}
@@ -204,13 +204,14 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                 title={c ? navLabel : undefined}
                 style={({ isActive }) => ({
                   display: 'flex', alignItems: 'center', justifyContent: c ? 'center' : 'flex-start', gap: c ? 0 : 10,
-                  width: c ? 40 : 'auto', height: c ? 40 : 'auto', minHeight: 40,
+                  width: c ? 40 : 'auto', height: 40, maxHeight: 40,
                   padding: c ? 0 : '9px 11px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none',
                   color: isActive ? 'var(--accent-ink)' : 'var(--muted)',
                   fontSize: 13, fontWeight: isActive ? 600 : 400,
                   marginBottom: 1,
                   marginLeft: c ? 'auto' : 'unset', marginRight: c ? 'auto' : 'unset',
-                  transition: 'gap 0.35s, padding 0.35s, width 0.35s cubic-bezier(0.4,0,0.2,1)',
+                  flexShrink: 0,
+                  transition: 'gap 0.35s, padding 0.35s, width 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)',
                 })}>
                 {({ isActive }) => (
                   <>
