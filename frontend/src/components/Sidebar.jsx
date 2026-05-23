@@ -192,7 +192,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
 
         {/* Navigation */}
         {NAV_SECTIONS.map(({ label, items }, si) => (
-          <div key={si} style={{ marginTop: label ? 14 : 0, transition: 'margin-top 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
+          <div key={si} style={{ marginTop: label && !c ? 14 : 0, transition: 'margin-top 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
             {label && (
               <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', display: c ? 'none' : 'block', opacity: 1, transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
                 {label}
