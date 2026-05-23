@@ -510,7 +510,13 @@ export default function WhatsApp() {
                 </div>
                 <div style={{ fontSize:12, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic', lineHeight:1.3 }}>
                   {c.paymentClaimed && <span style={{ marginRight:4 }}>💰</span>}
-                  {c.lastMessage?.replace(/\s*\[img:[^\]]+\]/g,'') || '—'}
+                  {c.lastMessage
+                    ?.replace(/\s*\[img:[^\]]+\]/g, '')
+                    ?.replace(/\s*\[media-img:data:[^\]]{0,9999999}\]/g, '📷 Image')
+                    ?.replace(/\s*\[media-doc:[^:]+:data:[^\]]{0,9999999}\]/g, '📄 Document')
+                    ?.replace(/\s*\[media-img:[^\]]+\]/g, '📷 Image')
+                    ?.replace(/\s*\[media-doc:[^\]]+\]/g, '📄 Document')
+                    || '—'}
                 </div>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
