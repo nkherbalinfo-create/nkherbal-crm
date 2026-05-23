@@ -140,12 +140,12 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
       <aside style={{
         width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
         background: 'var(--sidebar-bg)', borderRight: '1px solid var(--rule)',
-        padding: c ? '16px 0 12px' : '16px 12px 12px',
+        padding: '16px 8px 12px',
         overflowY: 'auto', overflowX: 'hidden',
         transition: 'padding 0.35s cubic-bezier(0.4,0,0.2,1)',
       }}>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: c ? 8 : 10, padding: c ? '4px 0 18px' : '4px 8px 18px', justifyContent: c ? 'center' : 'flex-start', transition: 'gap 0.35s, padding 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: c ? 0 : 10, padding: '4px 0 18px', justifyContent: c ? 'center' : 'flex-start', transition: 'gap 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
           <div
             onClick={c ? toggleCollapse : undefined}
             title={c ? 'Expand sidebar' : undefined}
@@ -213,8 +213,8 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                   color: isActive ? 'var(--accent-ink)' : 'var(--muted)',
                   fontSize: 13, fontWeight: isActive ? 600 : 400,
                   marginBottom: 1,
-                  marginLeft: c ? 'auto' : 0, marginRight: c ? 'auto' : 0,
-                  transition: 'gap 0.35s, padding 0.35s, width 0.35s, height 0.35s, justify-content 0.35s, margin 0.35s cubic-bezier(0.4,0,0.2,1)',
+                  marginLeft: c ? 'auto' : 'unset', marginRight: c ? 'auto' : 'unset',
+                  transition: 'gap 0.35s, padding 0.35s, width 0.35s, height 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)',
                 })}>
                 {({ isActive }) => (
                   <>
