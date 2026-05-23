@@ -613,9 +613,10 @@ export default function Leads() {
                       background: isTarget ? 'var(--accent-bg)' : 'var(--card)',
                       border: `2px dashed ${isTarget ? 'var(--accent)' : 'var(--rule)'}`,
                       borderRadius: 12, padding: 12,
-                      transition: 'border-color 0.15s, background 0.15s',
+                      transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s',
                       display: 'flex', flexDirection: 'column',
-                      minHeight: 0, // Important for flex shrinking
+                      minHeight: 0,
+                      boxShadow: isTarget ? '0 0 12px rgba(61,138,92,.2) inset' : 'none',
                     }}>
                     {/* Column header */}
                     <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, padding:'2px 2px 8px', borderBottom:'1px solid var(--rule)' }}>
@@ -627,19 +628,21 @@ export default function Leads() {
                       {colLeads.map(lead => (
                         <div key={lead._id}
                           draggable
-                          onDragStart={e => handleDragStart(e, lead._id)}
+                          onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; handleDragStart(e, lead._id); }}
                           onDragEnd={handleDragEnd}
                           style={{
-                            background: draggedId === lead._id ? 'var(--accent-bg)' : 'var(--card)',
-                            border: '1px solid var(--rule)',
+                            background: draggedId === lead._id ? 'var(--accent)' : 'var(--card)',
+                            border: `1px solid ${draggedId === lead._id ? 'var(--accent)' : 'var(--rule)'}`,
                             borderRadius: 10, padding: '10px 12px',
-                            cursor: 'grab', userSelect: 'none', WebkitUserSelect: 'none',
-                            opacity: draggedId === lead._id ? 0.45 : 1,
-                            boxShadow: draggedId === lead._id ? '0 4px 14px rgba(61,138,92,.2)' : 'var(--shadow-card)',
-                            transition: 'opacity 0.15s, box-shadow 0.15s',
+                            cursor: draggedId === lead._id ? 'grabbing' : 'grab',
+                            userSelect: 'none', WebkitUserSelect: 'none',
+                            opacity: 1,
+                            boxShadow: draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)',
+                            transition: 'box-shadow 0.15s, background 0.15s, border-color 0.15s',
+                            transform: draggedId === lead._id ? 'scale(1.02)' : 'scale(1)',
                           }}
                           onMouseEnter={e => { if (draggedId !== lead._id) e.currentTarget.style.boxShadow='0 4px 16px rgba(37,35,32,.12)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.boxShadow = draggedId === lead._id ? '0 4px 14px rgba(61,138,92,.2)' : 'var(--shadow-card)'; }}>
+                          onMouseLeave={e => { e.currentTarget.style.boxShadow = draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)'; }}>
                           <div style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)', marginBottom:3 }}>{lead.name}</div>
                           <div style={{ fontSize:11.5, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:7 }}>
                             {lead.interestedProduct}
