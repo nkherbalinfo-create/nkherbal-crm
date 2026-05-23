@@ -632,14 +632,14 @@ export default function Leads() {
                           onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; handleDragStart(e, lead._id); }}
                           onDragEnd={handleDragEnd}
                           style={{
-                            background: draggedId === lead._id ? 'var(--accent)' : 'var(--card)',
+                            background: draggedId === lead._id ? 'var(--accent-bg)' : 'var(--card)',
                             border: `1px solid ${draggedId === lead._id ? 'var(--accent)' : 'var(--rule)'}`,
                             borderRadius: 10, padding: '10px 12px',
                             cursor: 'all-scroll',
                             userSelect: 'none', WebkitUserSelect: 'none',
-                            opacity: 1,
-                            boxShadow: draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)',
-                            transition: 'box-shadow 0.15s, background 0.15s, border-color 0.15s',
+                            boxShadow: draggedId === lead._id ? '0 4px 12px rgba(61,138,92,.15)' : 'var(--shadow-card)',
+                            transition: 'all 0.2s ease',
+                            transform: draggedId === lead._id ? 'translateY(-2px)' : 'translateY(0)',
                           }}
                           onMouseEnter={e => { if (draggedId !== lead._id) e.currentTarget.style.boxShadow='0 4px 16px rgba(37,35,32,.12)'; }}
                           onMouseLeave={e => { e.currentTarget.style.boxShadow = draggedId === lead._id ? '0 8px 20px rgba(61,138,92,.3)' : 'var(--shadow-card)'; }}>
