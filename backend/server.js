@@ -68,12 +68,14 @@ app.use(cors({
 }));
 
 // Capture raw body for WooCommerce webhook signature verification
+// Uses Buffer chunks to support large payloads (e.g. base64 image uploads up to 20MB)
 app.use((req, res, next) => {
-  let data = '';
-  req.on('data', chunk => { data += chunk; });
+  const chunks = [];
+  req.on('data', chunk => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
   req.on('end', () => {
-    req.rawBody = data;
-    try { req.body = data ? JSON.parse(data) : {}; } catch { req.body = {}; }
+    const raw = Buffer.concat(chunks);
+    req.rawBody = raw.toString('utf8');
+    try { req.body = raw.length ? JSON.parse(req.rawBody) : {}; } catch { req.body = {}; }
     next();
   });
 });

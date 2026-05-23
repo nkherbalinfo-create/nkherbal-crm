@@ -550,23 +550,35 @@ router.post('/webhook', async (req, res) => {
           }
 
           // ── Run AI reply + intent classification in parallel ──
+          const cleanMsg = m => ({
+            role: m.role,
+            content: (m.content || '')
+              .replace(/\[media-img:data:[^\]]{0,2000000}\]/g, '[image sent]')
+              .replace(/\[media-doc:[^:]+:data:[^\]]{0,2000000}\]/g, '[document sent]')
+              .replace(/\[img:([^\]]+)\]/g, '[product image: $1]')
+          });
           let aiReply, detectedIntent;
           try {
-            // Strip base64 data URLs before sending to AI (they're huge and cause token errors)
-            const msgsForAI = conv.messages.slice(-20).map(m => ({
-              role: m.role,
-              content: (m.content || '')
-                .replace(/\[media-img:data:[^\]]+\]/g, '[image sent]')
-                .replace(/\[media-doc:[^:]+:data:[^\]]+\]/g, '[document sent]')
-                .replace(/\[img:([^\]]+)\]/g, '[product image: $1]')
-            }));
+            const msgsForAI = conv.messages.slice(-20).map(cleanMsg);
             [aiReply, detectedIntent] = await Promise.all([
               getAIReply(msgsForAI, firstName, conv.contextSummary || ''),
               classifyIntent(text)
             ]);
           } catch (aiErr) {
-            console.error(`[WhatsApp] ❌ AI call failed for ${phone}:`, aiErr.message);
-            continue; // user message already saved — just skip the bot reply
+            // If still too long, retry with fewer messages
+            if (aiErr.message?.includes('too long') || aiErr.message?.includes('400')) {
+              try {
+                console.log(`[WhatsApp] ⚠️ AI context too long — retrying with last 5 messages`);
+                const shortMsgs = conv.messages.slice(-5).map(cleanMsg);
+                aiReply = await getAIReply(shortMsgs, firstName, conv.contextSummary || '');
+              } catch (retryErr) {
+                console.error(`[WhatsApp] ❌ AI retry also failed for ${phone}:`, retryErr.message);
+                continue;
+              }
+            } else {
+              console.error(`[WhatsApp] ❌ AI call failed for ${phone}:`, aiErr.message);
+              continue;
+            }
           }
 
           // ── Auto-update lead status from AI-detected intent ─

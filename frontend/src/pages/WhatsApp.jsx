@@ -338,6 +338,7 @@ export default function WhatsApp() {
   const onFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { addToast('File too large — max 10MB', 'error'); e.target.value = ''; return; }
     const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
     setPendingFile({ file, previewUrl, type: file.type.startsWith('image/') ? 'image' : 'document' });
     e.target.value = '';
