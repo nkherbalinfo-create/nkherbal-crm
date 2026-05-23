@@ -211,7 +211,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                   marginBottom: 1,
                   marginLeft: c ? 'auto' : 'unset', marginRight: c ? 'auto' : 'unset',
                   flexShrink: 0,
-                  transition: 'gap 0.35s, padding 0.35s, width 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)',
+                  transition: 'gap 0.35s, padding 0.35s, width 0.35s cubic-bezier(0.4,0,0.2,1)',
                 })}>
                 {({ isActive }) => (
                   <>
