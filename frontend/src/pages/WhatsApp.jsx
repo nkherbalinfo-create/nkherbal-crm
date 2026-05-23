@@ -81,8 +81,29 @@ const PRODUCT_IMG_MAP = {
   'Muejaza & Shahi Kalp Combo (300g)':{ url: `${BACKEND_URL}/images/products/muejaza-shahikalp-combo.png`, caption: '🎁 *Muejaza + Shahi Kalp Combo* — ₹8,999\n🔗 https://nkherbal.com/product/nk-herbal-muejaza-shahi-kalp-combo/' },
 };
 
-// Extract [img:ProductName] tag from message content
+// Extract image/media tags from message content
 function parseImgTag(content) {
+  // Manually uploaded image: [media-img:URL]
+  const uploadedImg = content?.match(/\[media-img:([^\]]+)\]/);
+  if (uploadedImg) {
+    return {
+      text: content.replace(/\s*\[media-img:[^\]]+\]/, '').trim(),
+      product: null, imgUrl: null, allImages: null,
+      uploadedImg: uploadedImg[1],
+      uploadedDoc: null,
+    };
+  }
+  // Manually uploaded document: [media-doc:FILENAME:URL]
+  const uploadedDoc = content?.match(/\[media-doc:([^:]+):([^\]]+)\]/);
+  if (uploadedDoc) {
+    return {
+      text: content.replace(/\s*\[media-doc:[^\]]+\]/, '').trim(),
+      product: null, imgUrl: null, allImages: null,
+      uploadedImg: null,
+      uploadedDoc: { name: uploadedDoc[1], url: uploadedDoc[2] },
+    };
+  }
+  // Product image: [img:ProductName]
   const match = content?.match(/\[img:([^\]]+)\]/);
   const product = match ? match[1] : null;
   const isAll = product === 'all-products';
@@ -91,6 +112,8 @@ function parseImgTag(content) {
     product: isAll ? null : product,
     imgUrl: (product && !isAll) ? PRODUCT_IMG_MAP[product] : null,
     allImages: isAll ? Object.entries(PRODUCT_IMG_MAP) : null,
+    uploadedImg: null,
+    uploadedDoc: null,
   };
 }
 
@@ -148,6 +171,8 @@ export default function WhatsApp() {
   const [broadcastProgress, setBroadcastProgress] = useState(null); // { sent, failed, total } | null
   const [broadcastDone, setBroadcastDone] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+  const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, type }
+  const fileInputRef = useRef(null);
   // seenCounts: { [phone]: lastSeenCustomerMsgCount } — persisted in localStorage
   const [seenCounts, setSeenCounts] = useState(() => {
     try {
@@ -308,6 +333,40 @@ export default function WhatsApp() {
       addToast(`Lead marked as "${newStatus}"`,'success');
     } catch { addToast('Failed to update status','error'); }
     finally { setUpdatingStatus(false); }
+  };
+
+  const onFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+    setPendingFile({ file, previewUrl, type: file.type.startsWith('image/') ? 'image' : 'document' });
+    e.target.value = '';
+  };
+
+  const sendMedia = async () => {
+    if (!pendingFile || !selected) return;
+    setSending(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target.result.split(',')[1];
+        await api.post('/wa/send-media', {
+          phone: selected.phone,
+          fileBase64: base64,
+          fileName: pendingFile.file.name,
+          mimeType: pendingFile.file.type,
+          caption: manualMsg.trim() || undefined,
+        });
+        setPendingFile(null);
+        setManualMsg('');
+        addToast('Media sent');
+        loadConversation(selected.phone);
+      };
+      reader.readAsDataURL(pendingFile.file);
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to send media', 'error');
+      setSending(false);
+    }
   };
 
   const sendManual = async () => {
@@ -524,7 +583,7 @@ export default function WhatsApp() {
               )}
 
               {messages.map((m,i)=>{
-                const { text, product, imgUrl, allImages } = parseImgTag(m.content);
+                const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc } = parseImgTag(m.content);
                 const isUser = m.role === 'user';
                 return (
                   <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}>
@@ -552,6 +611,22 @@ export default function WhatsApp() {
                           </div>
                         )}
                       </div>
+                    )}
+                    {/* Manually uploaded image */}
+                    {uploadedImg && (
+                      <div style={{ maxWidth:'78%', borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,.15)' }}>
+                        <img src={uploadedImg} alt="sent" style={{ width:'100%', height:'auto', display:'block', objectFit:'contain', background:'#fff' }} />
+                      </div>
+                    )}
+                    {/* Manually uploaded document */}
+                    {uploadedDoc && (
+                      <a href={uploadedDoc.url} target="_blank" rel="noreferrer" style={{ maxWidth:'78%', display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:12, textDecoration:'none', boxShadow:'0 1px 3px rgba(0,0,0,.08)' }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <div>
+                          <div style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)' }}>{uploadedDoc.name}</div>
+                          <div style={{ fontSize:11, color:'var(--muted)' }}>Tap to open</div>
+                        </div>
+                      </a>
                     )}
                     {/* All product images */}
                     {allImages && allImages.map(([name, img]) => (
@@ -611,18 +686,46 @@ export default function WhatsApp() {
                   </div>
                 );
               })()}
-              <div style={{ padding:'10px 14px', display:'flex', gap:8 }}>
+              <div style={{ padding:'10px 14px', display:'flex', flexDirection:'column', gap:8 }}>
               {botPaused ? (
                 <>
-                  <button onClick={() => setShowTemplates(s => !s)} title="Quick replies"
-                    style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background: showTemplates?'var(--accent-bg)':'var(--card)', color: showTemplates?'var(--accent)':'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                  </button>
-                  <input className="input" style={{ flex:1, fontSize:13 }} placeholder="Type a reply…" value={manualMsg} onChange={e=>setManualMsg(e.target.value)}
-                    onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendManual();}}} />
-                  <button className="btn-primary" onClick={sendManual} disabled={sending||!manualMsg.trim()} style={{ fontSize:12 }}>
-                    {sending?'…':'Send'}
-                  </button>
+                  {/* File preview */}
+                  {pendingFile && (
+                    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', background:'var(--accent-bg)', border:'1px solid var(--accent)', borderRadius:9 }}>
+                      {pendingFile.previewUrl
+                        ? <img src={pendingFile.previewUrl} alt="preview" style={{ width:44, height:44, objectFit:'cover', borderRadius:6, flexShrink:0 }} />
+                        : <div style={{ width:44, height:44, background:'var(--hover)', borderRadius:6, display:'grid', placeItems:'center', flexShrink:0 }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          </div>
+                      }
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{pendingFile.file.name}</div>
+                        <div style={{ fontSize:11, color:'var(--muted)' }}>{(pendingFile.file.size/1024).toFixed(0)} KB · {pendingFile.type}</div>
+                      </div>
+                      <button onClick={() => setPendingFile(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--faint)', padding:4, borderRadius:4, flexShrink:0 }}>✕</button>
+                    </div>
+                  )}
+                  <div style={{ display:'flex', gap:8 }}>
+                    {/* Hidden file input */}
+                    <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" style={{ display:'none' }} onChange={onFileChange} />
+                    <button onClick={() => setShowTemplates(s => !s)} title="Quick replies"
+                      style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background: showTemplates?'var(--accent-bg)':'var(--card)', color: showTemplates?'var(--accent)':'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </button>
+                    {/* Attachment button */}
+                    <button onClick={() => fileInputRef.current?.click()} title="Attach image or document"
+                      style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background: pendingFile?'var(--accent-bg)':'var(--card)', color: pendingFile?'var(--accent)':'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    </button>
+                    <input className="input" style={{ flex:1, fontSize:13 }} placeholder={pendingFile ? 'Add caption (optional)…' : 'Type a reply…'} value={manualMsg} onChange={e=>setManualMsg(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); pendingFile ? sendMedia() : sendManual();}}} />
+                    <button className="btn-primary"
+                      onClick={pendingFile ? sendMedia : sendManual}
+                      disabled={sending || (!manualMsg.trim() && !pendingFile)}
+                      style={{ fontSize:12 }}>
+                      {sending?'…':'Send'}
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div style={{ flex:1, padding:'9px 12px', background:'var(--bg)', border:'1px solid var(--rule)', borderRadius:9, fontSize:13, color:'var(--faint)', fontStyle:'italic' }}>

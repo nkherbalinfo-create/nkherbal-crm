@@ -80,6 +80,8 @@ app.use((req, res, next) => {
 
 // Serve product images statically — accessible at /images/products/filename.jpg
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
+// Serve manually uploaded media — accessible at /uploads/filename
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/orders', require('./routes/orders'));
