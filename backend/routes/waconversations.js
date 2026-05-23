@@ -1,15 +1,8 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
 const WaConversation = require('../models/WaConversation');
 const { protect } = require('../middleware/auth');
 const { sendWhatsAppMessageDirect, uploadBufferToWhatsApp, sendWhatsAppMedia } = require('../services/waSender');
 const router = express.Router();
-
-// Ensure uploads directory exists
-const UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const sse = require('../services/sseBroadcaster');
 const jwt = require('jsonwebtoken');
@@ -135,21 +128,15 @@ router.post('/send-media', protect, async (req, res) => {
     const isVideo = /^video\//.test(mimeType);
     const waType = isImage ? 'image' : isVideo ? 'video' : 'document';
 
-    // Save file locally so CRM can display it
-    const ext = (fileName || '').split('.').pop() || (isImage ? 'jpg' : 'pdf');
-    const uniqueName = `${crypto.randomBytes(8).toString('hex')}.${ext}`;
-    const filePath = path.join(UPLOADS_DIR, uniqueName);
-    fs.writeFileSync(filePath, buffer);
-    const fileUrl = `${process.env.BACKEND_URL}/uploads/${uniqueName}`;
-
     // Upload to WhatsApp & send
-    const mediaId = await uploadBufferToWhatsApp(buffer, mimeType, fileName || uniqueName);
-    await sendWhatsAppMedia(phone, mediaId, waType, caption || '', fileName || uniqueName);
+    const mediaId = await uploadBufferToWhatsApp(buffer, mimeType, fileName || 'upload');
+    await sendWhatsAppMedia(phone, mediaId, waType, caption || '', fileName || 'upload');
 
-    // Build CRM message marker
+    // Store data URL in marker so image persists in CRM without file system dependency
+    const dataUrl = `data:${mimeType};base64,${fileBase64}`;
     const marker = isImage
-      ? `[media-img:${fileUrl}]`
-      : `[media-doc:${fileName || uniqueName}:${fileUrl}]`;
+      ? `[media-img:${dataUrl}]`
+      : `[media-doc:${fileName || 'document'}:${dataUrl}]`;
     const msgContent = caption ? `${caption} ${marker}` : marker;
 
     // Save to conversation
@@ -159,7 +146,7 @@ router.post('/send-media', protect, async (req, res) => {
       { upsert: true }
     );
 
-    res.json({ success: true, fileUrl });
+    res.json({ success: true });
   } catch (err) {
     console.error('[WA Media Send]', err.message);
     res.status(500).json({ message: err.message });

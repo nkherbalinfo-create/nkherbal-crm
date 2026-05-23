@@ -347,24 +347,37 @@ export default function WhatsApp() {
     if (!pendingFile || !selected) return;
     setSending(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target.result.split(',')[1];
-        await api.post('/wa/send-media', {
-          phone: selected.phone,
-          fileBase64: base64,
-          fileName: pendingFile.file.name,
-          mimeType: pendingFile.file.type,
-          caption: manualMsg.trim() || undefined,
-        });
-        setPendingFile(null);
-        setManualMsg('');
-        addToast('Media sent');
-        loadConversation(selected.phone);
-      };
-      reader.readAsDataURL(pendingFile.file);
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(pendingFile.file);
+      });
+      const base64 = dataUrl.split(',')[1];
+      const caption = manualMsg.trim();
+
+      await api.post('/wa/send-media', {
+        phone: selected.phone,
+        fileBase64: base64,
+        fileName: pendingFile.file.name,
+        mimeType: pendingFile.file.type,
+        caption: caption || undefined,
+      });
+
+      // Add immediately to local chat using the data URL so image shows right away
+      const isImg = pendingFile.file.type.startsWith('image/');
+      const marker = isImg
+        ? `[media-img:${dataUrl}]`
+        : `[media-doc:${pendingFile.file.name}:${dataUrl}]`;
+      const msgContent = caption ? `${caption} ${marker}` : marker;
+      setMessages(prev => [...prev, { role: 'assistant', content: msgContent, timestamp: new Date().toISOString() }]);
+
+      setPendingFile(null);
+      setManualMsg('');
+      addToast('Media sent');
     } catch (err) {
       addToast(err.response?.data?.message || 'Failed to send media', 'error');
+    } finally {
       setSending(false);
     }
   };
