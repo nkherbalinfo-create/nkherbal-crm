@@ -154,8 +154,8 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
             onMouseLeave={e => { if (c) e.currentTarget.style.transform = 'scale(1)'; }}>
             <Icon name="leaf" size={18} stroke={2} color="white" />
           </div>
-          <div style={{ display: c ? 'none' : 'flex', flex: 1, gap: 10, alignItems: 'center' }}>
-            <div>
+          <div style={{ display: c ? 'none' : 'flex', flex: 1, gap: 10, alignItems: 'center', minWidth: 0 }}>
+            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
               <div style={{ fontSize: 10.5, color: 'var(--faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
             </div>
@@ -215,7 +215,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
                 {({ isActive }) => (
                   <>
                     <Icon name={icon} size={16} stroke={isActive ? 2 : 1.6} color={isActive ? 'var(--accent-ink)' : 'var(--faint)'} />
-                    <span style={{ flex: 1, display: c ? 'none' : 'block', opacity: 1, transition: `opacity 0.35s ${100 + itemIdx * 25}ms cubic-bezier(0.4,0,0.2,1)` }}>{navLabel}</span>
+                    <span style={{ flex: 1, minWidth: 0, display: c ? 'none' : 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', opacity: 1, transition: `opacity 0.35s ${100 + itemIdx * 25}ms cubic-bezier(0.4,0,0.2,1)` }}>{navLabel}</span>
                     {badge && badges[badge] > 0 && (
                       <span style={{
                         fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999,
