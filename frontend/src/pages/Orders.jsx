@@ -31,7 +31,7 @@ const PAY_CHIP    = { Paid:'chip-ok', COD:'chip-warn', Pending:'chip-danger' };
 const CHAN_CHIP   = { Website:'chip-info', WhatsApp:'chip-ok' };
 const TYPE_CHIP   = { New:'chip-info', Repeat:'chip-ok' };
 
-const COLS = ['','ORDER ID','DATE','CUSTOMER','MOBILE','PRODUCT','QTY','VALUE','CHANNEL','PAYMENT','STATUS','TYPE',''];
+const COLS = ['','ORDER ID','DATE','CUSTOMER','MOBILE','PRODUCT','QTY','VALUE','CHANNEL','PAYMENT','STATUS',''];
 const ITEM_GRID = 'minmax(170px,1fr) 62px 48px 76px 56px 68px 82px 20px';
 
 const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -604,7 +604,6 @@ export default function Orders() {
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`}>{o.salesChannel}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`}>{o.paymentStatus}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`}>{o.orderStatus}</span></td>
-                  <td style={{ padding:'10px 16px' }}><span className={`chip ${TYPE_CHIP[o.customerType]||'chip-muted'}`}>{o.customerType}</span></td>
                   <td style={{ padding:'10px 20px 10px 8px', whiteSpace:'nowrap' }}>
                     <div style={{ display:'flex', gap:4 }}>
                       <IconBtn onClick={()=>openView(o)} title="View" bg="var(--accent-bg)" color="var(--accent)"><SVG d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></IconBtn>
