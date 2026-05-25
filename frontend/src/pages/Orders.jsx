@@ -116,6 +116,9 @@ export default function Orders() {
   const [selected, setSelected] = useState(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [panelMobile, setPanelMobile] = useState(null);
+  const [editSearch, setEditSearch] = useState('');
+  const [editResults, setEditResults] = useState([]);
+  const [editSearchOpen, setEditSearchOpen] = useState(false);
   const pressTimer = useRef(null);
   const { addToast } = useToast();
 
@@ -283,6 +286,16 @@ export default function Orders() {
     finally { setSyncing(false); }
   };
 
+  const searchEditOrders = async (q) => {
+    setEditSearch(q);
+    if (!q.trim()) { setEditResults([]); return; }
+    try {
+      const { data } = await api.get('/orders', { params: { search: q, limit: 6 } });
+      setEditResults(data.orders || []);
+      setEditSearchOpen(true);
+    } catch {}
+  };
+
   const set = (field, value) => setForm(f=>({...f,[field]:value}));
   const onProductChange = (name) => { const price=PRODUCT_PRICE_MAP[name]||0; setForm(f=>({...f,productName:name,orderValue:price*(f.quantity||1)})); };
   const onQtyChange = (qty) => { const price=PRODUCT_PRICE_MAP[form.productName]||0; setForm(f=>({...f,quantity:Number(qty),orderValue:price*Number(qty)})); };
@@ -330,6 +343,34 @@ export default function Orders() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ animation:syncing?'spin 0.7s linear infinite':'' }}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                 {syncing ? 'Syncing…' : 'Sync WooCommerce'}
               </button>
+              {/* Edit Order searchable dropdown */}
+              <div style={{ position:'relative' }}>
+                <div style={{ display:'flex', alignItems:'center', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:9, overflow:'hidden', height:36 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ marginLeft:10, color:'var(--muted)', flexShrink:0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input className="input" placeholder="Edit order…" value={editSearch}
+                    onChange={e => searchEditOrders(e.target.value)}
+                    onFocus={() => editResults.length && setEditSearchOpen(true)}
+                    onBlur={() => setTimeout(() => setEditSearchOpen(false), 150)}
+                    style={{ border:'none', background:'transparent', width:140, fontSize:12.5, padding:'0 10px', height:'100%', outline:'none' }} />
+                </div>
+                {editSearchOpen && editResults.length > 0 && (
+                  <div style={{ position:'absolute', top:'calc(100% + 6px)', right:0, zIndex:400, width:300, background:'var(--card)', border:'1px solid var(--rule)', borderRadius:10, overflow:'hidden', boxShadow:'0 8px 24px rgba(0,0,0,.2)' }}>
+                    {editResults.map(o => (
+                      <button key={o._id} type="button" onMouseDown={() => { setEditSearchOpen(false); setEditSearch(''); setEditResults([]); openEdit(o); }}
+                        style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 14px', border:'none', background:'transparent', cursor:'pointer', fontSize:12, textAlign:'left' }}
+                        onMouseEnter={e=>e.currentTarget.style.background='var(--hover)'}
+                        onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                        <div>
+                          <div style={{ fontWeight:500, color:'var(--fg)' }}>{o.customerName}</div>
+                          <div style={{ fontSize:11, color:'var(--faint)', marginTop:1 }}>{o.orderId} · {o.productName?.slice(0,28)}</div>
+                        </div>
+                        <span style={{ fontSize:11, color:'var(--accent)', fontWeight:600 }}>₹{o.orderValue?.toLocaleString('en-IN')}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 New order
@@ -518,9 +559,9 @@ export default function Orders() {
       {/* Table (desktop only) */}
       {!isMobile && (
       <div key={listKey} className="fade-in">
-      <div className="card" style={{ padding:0, overflow:'hidden' }}>
+      <div className="card" style={{ padding:0 }}>
         <div className="tbl-scroll">
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1200 }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
                 <th style={{ padding:'11px 14px', width:36, background:'var(--card)' }}>
@@ -567,7 +608,6 @@ export default function Orders() {
                   <td style={{ padding:'10px 16px' }}>
                     <div style={{ display:'flex', gap:4 }}>
                       <IconBtn onClick={()=>openView(o)} title="View" bg="var(--accent-bg)" color="var(--accent)"><SVG d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></IconBtn>
-                      <IconBtn onClick={()=>openEdit(o)} title="Edit" bg="var(--chip)" color="var(--muted)"><SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconBtn>
                       <IconBtn onClick={()=>setConfirmId(o._id)} title="Delete" bg="var(--danger-bg)" color="var(--danger)"><SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></IconBtn>
                     </div>
                   </td>
