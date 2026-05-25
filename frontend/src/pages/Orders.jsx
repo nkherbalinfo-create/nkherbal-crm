@@ -573,15 +573,16 @@ export default function Orders() {
       {!isMobile && (
       <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
-        <div className="tbl-scroll" style={{ paddingRight:8 }}>
+        <div className="tbl-scroll">
           <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1250 }}>
+
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
                 <th style={{ padding:'11px 14px', width:36, background:'var(--card)' }}>
                   <input type="checkbox" checked={orders.length > 0 && selected.size === orders.length} onChange={toggleAll} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
                 </th>
-                {COLS.slice(1).map(h=>(
-                  <th key={h} style={{ textAlign:'left', padding:'11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)' }}>{h}</th>
+                {COLS.slice(1).map((h, i)=>(
+                  <th key={h} style={{ textAlign:'left', padding: i === COLS.length - 2 ? '11px 18px 11px 12px' : '11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -618,7 +619,7 @@ export default function Orders() {
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`}>{o.paymentStatus}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`}>{o.orderStatus}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${TYPE_CHIP[o.customerType]||'chip-muted'}`}>{o.customerType}</span></td>
-                  <td style={{ padding:'10px 16px', whiteSpace:'nowrap', width:1 }}>
+                  <td style={{ padding:'10px 18px 10px 12px', whiteSpace:'nowrap' }}>
                     <div style={{ display:'flex', gap:4 }}>
                       <IconBtn onClick={()=>openView(o)} title="View" bg="var(--accent-bg)" color="var(--accent)"><SVG d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></IconBtn>
                       <IconBtn onClick={()=>setConfirmId(o._id)} title="Delete" bg="var(--danger-bg)" color="var(--danger)"><SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></IconBtn>
