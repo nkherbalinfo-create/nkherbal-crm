@@ -74,10 +74,10 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
     }}>
 
       {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: cl ? 0 : 10, padding: '4px 0 18px', justifyContent: cl ? 'center' : 'flex-start', transition: 'gap 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: c ? 0 : 10, padding: '4px 0 18px', justifyContent: c ? 'center' : 'flex-start', transition: 'gap 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
         <div
-          onClick={cl ? toggleCollapse : undefined}
-          title={cl ? 'Expand sidebar' : undefined}
+          onClick={c ? toggleCollapse : undefined}
+          title={c ? 'Expand sidebar' : undefined}
           style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(61,138,92,.35)', cursor: c ? 'pointer' : 'default', transition: 'transform 0.15s' }}
           onMouseEnter={e => { if (c) e.currentTarget.style.transform = 'scale(1.05)'; }}
           onMouseLeave={e => { if (c) e.currentTarget.style.transform = 'scale(1)'; }}>
@@ -127,15 +127,15 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
           {items.map(({ to, label: navLabel, icon, badge }) => (
             <NavLink key={to} to={to} end={to === '/'} onClick={onClose}
               className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-              title={cl ? navLabel : undefined}
+              title={c ? navLabel : undefined}
               style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', justifyContent: cl ? 'center' : 'flex-start', gap: cl ? 0 : 10,
-                width: cl ? 40 : 'auto', height: 40, maxHeight: 40,
-                padding: cl ? 0 : '9px 11px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: c ? 'center' : 'flex-start', gap: cl ? 0 : 10,
+                width: c ? 40 : 'auto', height: 40, maxHeight: 40,
+                padding: c ? 0 : '9px 11px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none',
                 color: isActive ? 'var(--accent-ink)' : 'var(--muted)',
                 fontSize: 13, fontWeight: isActive ? 600 : 400,
                 marginBottom: 1,
-                marginLeft: cl ? 'auto' : 'unset', marginRight: cl ? 'auto' : 'unset',
+                marginLeft: c ? 'auto' : 'unset', marginRight: c ? 'auto' : 'unset',
                 flexShrink: 0,
                 transition: 'gap 0.35s, padding 0.35s, width 0.35s cubic-bezier(0.4,0,0.2,1)',
               })}>
