@@ -55,21 +55,16 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
   const c = collapsed && !forceExpanded;
   const hide = c || expanding;
 
-  // Stagger only on desktop page load. Mobile drawer slides in as a panel —
-  // items must be visible immediately inside the sliding container.
-  let si = 0;
-  const next = () => forceExpanded
-    ? {}
-    : { animation: 'sbItem 0.4s cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${(si++) * 0.04}s` };
-
-  const brandAnim  = next();
-  const searchAnim = next();
+  // No per-item animation — items are always visible. The container itself
+  // slides in (desktop: .lg-sidebar CSS animation, mobile: sbPanel keyframe).
+  const brandAnim  = {};
+  const searchAnim = {};
   const sectionAnims = NAV_SECTIONS.map(({ label, items }) => ({
-    labelAnim: label ? next() : null,
-    itemAnims: items.map(() => next()),
+    labelAnim: null,
+    itemAnims: items.map(() => ({})),
   }));
-  const targetAnim = next(); // always reserve a slot so bottom delay stays fixed
-  const bottomAnim = next();
+  const targetAnim = {};
+  const bottomAnim = {};
 
   return (
     <aside style={{
@@ -382,6 +377,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
           width: 248px;
           z-index: 30;
           transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+          animation: sbPanel 0.38s cubic-bezier(0.16,1,0.3,1) both;
         }
         .lg-sidebar--collapsed { width: 88px; }
         @media (min-width: 1024px) { .lg-sidebar { display: flex; flex-direction: column; } }
