@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
@@ -51,9 +51,9 @@ const NAV_SECTIONS = [
 ];
 
 // ── Module-level component — stable reference, no remount on badge polls ──────
-function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, theme, toggle, user, initials, handleLogout, onSearchOpen, onClose, onQuickAdd, forceExpanded }) {
+function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, toggle, user, initials, handleLogout, onSearchOpen, onClose, onQuickAdd, forceExpanded }) {
   const c = collapsed && !forceExpanded;
-  const hide = c || expanding;
+  const hide = c;
 
   // No per-item animation — items are always visible. The container itself
   // slides in (desktop: .lg-sidebar CSS animation, mobile: sbPanel keyframe).
@@ -251,18 +251,10 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
   });
-  const [expanding, setExpanding] = useState(false);
-  const expandTimer = useRef(null);
-
   const toggleCollapse = () => {
     setCollapsed(c => {
       const n = !c;
       try { localStorage.setItem('sidebar_collapsed', String(n)); } catch {}
-      if (!n) {
-        setExpanding(true);
-        clearTimeout(expandTimer.current);
-        expandTimer.current = setTimeout(() => setExpanding(false), 360);
-      }
       return n;
     });
   };
@@ -333,7 +325,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   const initials = (user?.name || user?.email || 'U').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
   const contentProps = {
-    collapsed, expanding, toggleCollapse,
+    collapsed, toggleCollapse,
     badges, target, theme, toggle,
     user, initials, handleLogout,
     onSearchOpen, onClose, onQuickAdd,
