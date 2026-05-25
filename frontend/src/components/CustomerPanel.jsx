@@ -137,8 +137,19 @@ export default function CustomerPanel({ mobile, onClose }) {
                     <div key={o._id} style={{ background:'var(--bg)', borderRadius:11, padding:'11px 13px' }}>
                       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8, marginBottom:6 }}>
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:12.5, fontWeight:500, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.productName}</div>
-                          <div style={{ fontSize:11, color:'var(--faint)', marginTop:2, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
+                          {o.lineItems?.length > 0 ? (
+                            <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
+                              {o.lineItems.map((item, idx) => (
+                                <div key={idx} style={{ display:'flex', gap:6, alignItems:'baseline' }}>
+                                  <span style={{ fontSize:12, fontWeight:500, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1, minWidth:0 }}>{item.name}</span>
+                                  <span style={{ fontSize:11, color:'var(--faint)', flexShrink:0, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>×{item.quantity}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize:12.5, fontWeight:500, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o.productName}</div>
+                          )}
+                          <div style={{ fontSize:11, color:'var(--faint)', marginTop:3, fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>
                             {o.orderId} · {o.orderDate ? fmtDate(o.orderDate) : '—'}
                           </div>
                         </div>
