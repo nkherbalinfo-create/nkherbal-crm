@@ -561,7 +561,7 @@ export default function Orders() {
       <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0 }}>
         <div className="tbl-scroll">
-          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1200 }}>
+          <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
                 <th style={{ padding:'11px 14px', width:36, background:'var(--card)' }}>
@@ -605,7 +605,7 @@ export default function Orders() {
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`}>{o.paymentStatus}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`}>{o.orderStatus}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${TYPE_CHIP[o.customerType]||'chip-muted'}`}>{o.customerType}</span></td>
-                  <td style={{ padding:'10px 16px' }}>
+                  <td style={{ padding:'10px 20px 10px 8px', whiteSpace:'nowrap' }}>
                     <div style={{ display:'flex', gap:4 }}>
                       <IconBtn onClick={()=>openView(o)} title="View" bg="var(--accent-bg)" color="var(--accent)"><SVG d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></IconBtn>
                       <IconBtn onClick={()=>setConfirmId(o._id)} title="Delete" bg="var(--danger-bg)" color="var(--danger)"><SVG d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></IconBtn>
