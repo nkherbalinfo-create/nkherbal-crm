@@ -55,10 +55,12 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
   const c = collapsed && !forceExpanded;
   const hide = c || expanding;
 
-  // Pre-compute all stagger delays deterministically before JSX so delays are
-  // always the same every render (browser won't restart completed animations).
+  // Stagger only on desktop page load. Mobile drawer slides in as a panel —
+  // items must be visible immediately inside the sliding container.
   let si = 0;
-  const next = () => ({ animation: 'sbItem 0.4s cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${(si++) * 0.04}s` });
+  const next = () => forceExpanded
+    ? {}
+    : { animation: 'sbItem 0.4s cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${(si++) * 0.04}s` };
 
   const brandAnim  = next();
   const searchAnim = next();
