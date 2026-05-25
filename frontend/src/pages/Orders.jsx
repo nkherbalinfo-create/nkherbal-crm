@@ -518,16 +518,16 @@ export default function Orders() {
       {/* Table (desktop only) */}
       {!isMobile && (
       <div key={listKey} className="fade-in">
-      <div className="card" style={{ padding:0, overflow:'clip' }}>
+      <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
-          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1100 }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1250 }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
                 <th style={{ padding:'11px 14px', width:36, background:'var(--card)' }}>
                   <input type="checkbox" checked={orders.length > 0 && selected.size === orders.length} onChange={toggleAll} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
                 </th>
-                {COLS.slice(1).map((h, i)=>(
-                  <th key={h} style={{ textAlign:'left', padding:'11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)', ...(i === COLS.length - 2 ? { position:'sticky', right:0, zIndex:2, boxShadow:'-4px 0 8px rgba(0,0,0,0.15)' } : {}) }}>{h}</th>
+                {COLS.slice(1).map(h=>(
+                  <th key={h} style={{ textAlign:'left', padding:'11px 16px', fontSize:11, fontWeight:500, letterSpacing:'0.04em', textTransform:'uppercase', color:'var(--muted)', whiteSpace:'nowrap', background:'var(--card)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -535,8 +535,8 @@ export default function Orders() {
               {orders.map(o=>(
                 <tr key={o._id} data-row-id={o._id} className={`tr-hover${exitId===o._id?' row-deleting':''}`}
                   style={{ borderBottom:'1px solid var(--rule)', background: selected.has(o._id) ? 'var(--accent-bg)' : '' }}
-                  onMouseEnter={e=>{ if (!selected.has(o._id)) { e.currentTarget.style.background='var(--hover)'; e.currentTarget.querySelector('td[data-sticky]').style.background='var(--hover)'; } }}
-                  onMouseLeave={e=>{ const bg = selected.has(o._id) ? 'var(--accent-bg)' : 'var(--card)'; e.currentTarget.style.background = selected.has(o._id) ? 'var(--accent-bg)' : 'transparent'; e.currentTarget.querySelector('td[data-sticky]').style.background=bg; }}>
+                  onMouseEnter={e=>{ if (!selected.has(o._id)) e.currentTarget.style.background='var(--hover)'; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background = selected.has(o._id) ? 'var(--accent-bg)' : 'transparent'; }}>
                   <td style={{ padding:'11px 14px', width:36 }} onClick={e=>e.stopPropagation()}>
                     <input type="checkbox" checked={selected.has(o._id)} onChange={()=>toggleSelect(o._id)} style={{ accentColor:'var(--accent)', cursor:'pointer' }} />
                   </td>
@@ -564,7 +564,7 @@ export default function Orders() {
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`}>{o.paymentStatus}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`}>{o.orderStatus}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${TYPE_CHIP[o.customerType]||'chip-muted'}`}>{o.customerType}</span></td>
-                  <td data-sticky style={{ padding:'10px 16px', whiteSpace:'nowrap', width:1, position:'sticky', right:0, background: selected.has(o._id) ? 'var(--accent-bg)' : 'var(--card)', boxShadow:'-4px 0 8px rgba(0,0,0,0.15)', zIndex:1 }}>
+                  <td style={{ padding:'10px 16px', whiteSpace:'nowrap', width:1 }}>
                     <div style={{ display:'flex', gap:4 }}>
                       <IconBtn onClick={()=>openView(o)} title="View" bg="var(--accent-bg)" color="var(--accent)"><SVG d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></IconBtn>
                       <IconBtn onClick={()=>openEdit(o)} title="Edit" bg="var(--chip)" color="var(--muted)"><SVG d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconBtn>
