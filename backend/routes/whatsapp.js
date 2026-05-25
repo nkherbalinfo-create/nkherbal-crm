@@ -502,9 +502,8 @@ router.post('/webhook', async (req, res) => {
             }
           }
 
-          // ── Send welcome on first contact ONLY if it's a plain greeting (no question asked)
-          // If customer already asked something, let the AI greet + answer in one message
-          if (isFirstMessage && isGreeting(text)) {
+          // ── Send welcome on first contact — always, regardless of what they said
+          if (isFirstMessage) {
             const welcome = `Namaste *${firstName} Ji*! 🙏 *NK Herbal* mein aapka swagat hai!`;
             await sendWhatsAppMessage(phone, welcome);
           }
@@ -590,6 +589,9 @@ router.post('/webhook', async (req, res) => {
           // ── Save AI reply ─────────────────────────────────
           conv.messages.push({ role: 'assistant', content: aiReply });
           await conv.save();
+
+          // ── Strip internal image markers the AI may have echoed from history ──
+          aiReply = aiReply.replace(/\[product image:[^\]]*\]/gi, '').replace(/\[img:[^\]]*\]/gi, '').trim();
 
           // ── Send AI text reply ────────────────────────────
           await sendWhatsAppMessage(phone, aiReply, false);
