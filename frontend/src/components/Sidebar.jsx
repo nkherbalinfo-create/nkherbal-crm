@@ -7,7 +7,7 @@ import NotificationCenter from './NotificationCenter';
 import {
   LayoutDashboard, Package, Crosshair, Users, Bell,
   MessageCircle, BarChart2, Settings2, Search,
-  Sun, Moon, Leaf, LogOut, Plus, Zap
+  Sun, Moon, Leaf, LogOut,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -34,14 +34,14 @@ const Icon = ({ name, size = 16, color = 'currentColor' }) => {
 };
 
 const NAV = [
-  { to: '/',           id:'dashboard',  label: 'Dashboard',  icon: 'grid'    },
-  { to: '/orders',     id:'orders',     label: 'Orders',     icon: 'box',     badge: 'orders' },
-  { to: '/leads',      id:'leads',      label: 'Leads',      icon: 'target',  badge: 'leads'  },
-  { to: '/customers',  id:'customers',  label: 'Customers',  icon: 'users'   },
-  { to: '/followups',  id:'followups',  label: 'Follow-ups', icon: 'bell',    badge: 'followups' },
-  { to: '/whatsapp',   id:'whatsapp',   label: 'WhatsApp',   icon: 'whatsapp', badge: 'whatsapp' },
-  { to: '/reports',    id:'reports',    label: 'Reports',    icon: 'chart'   },
-  { to: '/settings',   id:'settings',   label: 'Settings',   icon: 'gear'    },
+  { to: '/',           label: 'Dashboard',  icon: 'grid'                        },
+  { to: '/orders',     label: 'Orders',     icon: 'box',     badge: 'orders'    },
+  { to: '/leads',      label: 'Leads',      icon: 'target',  badge: 'leads'     },
+  { to: '/customers',  label: 'Customers',  icon: 'users'                       },
+  { to: '/followups',  label: 'Follow-ups', icon: 'bell',    badge: 'followups' },
+  { to: '/whatsapp',   label: 'WhatsApp',   icon: 'whatsapp', badge: 'whatsapp' },
+  { to: '/reports',    label: 'Reports',    icon: 'chart'                       },
+  { to: '/settings',   label: 'Settings',   icon: 'gear'                        },
 ];
 
 const NAV_SECTIONS = [
@@ -50,18 +50,16 @@ const NAV_SECTIONS = [
   { label: 'TOOLS',  items: NAV.slice(6, 8) },
 ];
 
-// Stable module-level component — never remounts on badge polls
-function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, theme, toggle, user, initials, handleLogout, onSearchOpen, onClose, onQuickAdd, forceExpanded }) {
+// ── Stable module-level component — no remount on badge polls ─────────────────
+function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, theme, toggle, user, initials, handleLogout, onSearchOpen, onClose, onQuickAdd, forceExpanded }) {
   const c = collapsed && !forceExpanded;
-  // During the width animation (expanding), keep icon layout in collapsed mode
-  // so they don't jump to left-aligned while text is still invisible.
-  const cl = c || expanding;
 
-  // Text fades in only after the sidebar has reached full width.
+  // Text is rendered in DOM when expanded (c=false), but opacity waits for
+  // textReady so the CSS transition plays (0 → 1) instead of jumping.
   const textStyle = {
-    opacity: cl ? 0 : 1,
-    transition: cl ? 'none' : 'opacity 0.2s ease',
-    pointerEvents: cl ? 'none' : 'auto',
+    opacity: textReady ? 1 : 0,
+    transition: textReady ? 'opacity 0.22s ease' : 'none',
+    pointerEvents: textReady ? 'auto' : 'none',
   };
 
   return (
@@ -69,58 +67,60 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
       width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
       background: 'var(--sidebar-bg)', borderRight: '1px solid var(--rule)',
       padding: '16px 8px 12px',
-      overflowY: 'hidden', overflowX: 'hidden',
-      transition: 'padding 0.35s cubic-bezier(0.4,0,0.2,1)',
+      overflowY: 'auto', overflowX: 'hidden',
     }}>
 
       {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: c ? 0 : 10, padding: '4px 0 18px', justifyContent: c ? 'center' : 'flex-start', transition: 'gap 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: c ? 0 : 10, padding: '4px 0 18px', justifyContent: c ? 'center' : 'flex-start' }}>
         <div
           onClick={c ? toggleCollapse : undefined}
           title={c ? 'Expand sidebar' : undefined}
-          style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(61,138,92,.35)', cursor: c ? 'pointer' : 'default', transition: 'transform 0.15s' }}
+          style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(61,138,92,.35)', cursor: c ? 'pointer' : 'default' }}
           onMouseEnter={e => { if (c) e.currentTarget.style.transform = 'scale(1.05)'; }}
-          onMouseLeave={e => { if (c) e.currentTarget.style.transform = 'scale(1)'; }}>
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}>
           <Icon name="leaf" size={18} color="white" />
         </div>
-        {/* Text content — hidden when collapsed, fades in after expand animation */}
-        <div style={{ display: c ? 'none' : 'flex', flex: 1, gap: 10, alignItems: 'center', minWidth: 0, ...textStyle }}>
-          <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
-            <div style={{ fontSize: 10.5, color: 'var(--faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
+        {!c && (
+          <div style={{ display: 'flex', flex: 1, gap: 10, alignItems: 'center', minWidth: 0, ...textStyle }}>
+            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
+              <div style={{ fontSize: 10.5, color: 'var(--faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+              <button onClick={onQuickAdd} title="Quick add"
+                style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.9 }}
+                onMouseEnter={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1.08)'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity='0.9'; e.currentTarget.style.transform='scale(1)'; }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <button onClick={toggleCollapse} title="Collapse sidebar"
+                style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--hover)', color:'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.8 }}
+                onMouseEnter={e => { e.currentTarget.style.opacity='1'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity='0.8'; }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+              </button>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-            <button onClick={onQuickAdd} title="Quick add (N)"
-              style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.9, transition:'opacity 0.15s, transform 0.12s' }}
-              onMouseEnter={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity='0.9'; e.currentTarget.style.transform='scale(1)'; }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-            <button onClick={toggleCollapse} title="Collapse sidebar"
-              style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--hover)', color:'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.8, transition:'opacity 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.opacity='1'; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity='0.8'; }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Search — only in expanded state */}
-      <div onClick={() => { onSearchOpen?.(); onClose?.(); }}
-        style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: c ? 'none' : 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', pointerEvents: cl ? 'none' : 'auto', ...textStyle }}
-        onMouseEnter={e => { if (!c) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(61,138,92,.1)'; } }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(37,35,32,.05)'; }}>
-        <Icon name="search" size={13} />
-        <span style={{ fontSize: 12, flex: 1, color: 'var(--faint)' }}>Search…</span>
-        <kbd style={{ fontFamily: 'Inter', fontSize: 9.5, color: 'var(--faint)', background: 'var(--chip)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--rule)' }}>⌘K</kbd>
-      </div>
+      {/* Search */}
+      {!c && (
+        <div onClick={() => { onSearchOpen?.(); onClose?.(); }}
+          style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', ...textStyle }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(61,138,92,.1)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(37,35,32,.05)'; }}>
+          <Icon name="search" size={13} />
+          <span style={{ fontSize: 12, flex: 1, color: 'var(--faint)' }}>Search…</span>
+          <kbd style={{ fontFamily: 'Inter', fontSize: 9.5, color: 'var(--faint)', background: 'var(--chip)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--rule)' }}>⌘K</kbd>
+        </div>
+      )}
 
       {/* Navigation */}
-      {NAV_SECTIONS.map(({ label, items }, si_outer) => (
-        <div key={si_outer} style={{ display: 'flex', flexDirection: 'column', marginTop: label && !cl ? 14 : 0, transition: 'margin-top 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
-          {label && (
-            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', display: c ? 'none' : 'block', ...textStyle }}>
+      {NAV_SECTIONS.map(({ label, items }, si) => (
+        <div key={si} style={{ display: 'flex', flexDirection: 'column', marginTop: label && !c ? 14 : 0 }}>
+          {label && !c && (
+            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', ...textStyle }}>
               {label}
             </div>
           )}
@@ -129,28 +129,24 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
               className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
               title={c ? navLabel : undefined}
               style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', justifyContent: c ? 'center' : 'flex-start', gap: cl ? 0 : 10,
-                width: c ? 40 : 'auto', height: 40, maxHeight: 40,
-                padding: c ? 0 : '9px 11px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none',
+                display: 'flex', alignItems: 'center',
+                justifyContent: c ? 'center' : 'flex-start',
+                gap: c ? 0 : 10,
+                width: c ? 40 : 'auto', height: 40,
+                padding: c ? 0 : '9px 11px',
+                borderRadius: 10, cursor: 'pointer', textDecoration: 'none',
                 color: isActive ? 'var(--accent-ink)' : 'var(--muted)',
                 fontSize: 13, fontWeight: isActive ? 600 : 400,
                 marginBottom: 1,
                 marginLeft: c ? 'auto' : 'unset', marginRight: c ? 'auto' : 'unset',
                 flexShrink: 0,
-                transition: 'gap 0.35s, padding 0.35s, width 0.35s cubic-bezier(0.4,0,0.2,1)',
               })}>
               {({ isActive }) => (
                 <>
                   <Icon name={icon} size={16} color={isActive ? 'var(--accent-ink)' : 'var(--faint)'} />
-                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: c ? 'none' : 'block', ...textStyle }}>{navLabel}</span>
-                  {badge && badges[badge] > 0 && (
-                    <span style={{
-                      fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999,
-                      background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--accent-bg)',
-                      color: 'var(--accent)', fontWeight: 700,
-                      minWidth: 18, textAlign: 'center',
-                      display: c ? 'none' : 'block', ...textStyle,
-                    }}>
+                  {!c && <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...textStyle }}>{navLabel}</span>}
+                  {!c && badge && badges[badge] > 0 && (
+                    <span style={{ fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999, background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--accent-bg)', color: 'var(--accent)', fontWeight: 700, minWidth: 18, textAlign: 'center', ...textStyle }}>
                       {badges[badge] > 50 ? '50+' : badges[badge]}
                     </span>
                   )}
@@ -162,8 +158,8 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
       ))}
 
       {/* Monthly target */}
-      {target && (
-        <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)', display: c ? 'none' : 'block', ...textStyle }}>
+      {target && !c && (
+        <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)', ...textStyle }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
             <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}>Monthly target</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.pct}%</div>
@@ -171,14 +167,12 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
           <div style={{ width: '100%', height: 5, background: 'var(--rule)', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
             <div style={{ width: `${target.pct}%`, height: '100%', background: `linear-gradient(90deg, var(--accent), ${target.pct > 80 ? '#2ecc71' : 'var(--accent)'})`, borderRadius: 3, transition: 'width .4s cubic-bezier(.16,1,.3,1)' }} />
           </div>
-          <div style={{ fontSize: 10.5, color: 'var(--faint)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>
-            {target.current} of {target.max}
-          </div>
+          <div style={{ fontSize: 10.5, color: 'var(--faint)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.current} of {target.max}</div>
         </div>
       )}
 
-      {/* Bottom: theme + notifications + user */}
-      <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: target ? 10 : 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {/* Bottom */}
+      <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: (target && !c) ? 10 : 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
         {c ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '4px 0' }}>
             <button onClick={toggle} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
@@ -187,13 +181,8 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}>
               <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <NotificationCenter />
-            </div>
-            <div title={user?.name || 'User'}
-              style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(61,138,92,.3)', cursor: 'default' }}>
-              {initials}
-            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><NotificationCenter /></div>
+            <div title={user?.name || 'User'} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(61,138,92,.3)', cursor: 'default' }}>{initials}</div>
             <button onClick={handleLogout} title="Sign out"
               style={{ width: 34, height: 34, borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--faint)', cursor: 'pointer', display: 'grid', placeItems: 'center', transition: 'background 0.15s, color 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; }}
@@ -211,14 +200,10 @@ function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, 
                 <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
                 {theme === 'dark' ? 'Light mode' : 'Dark mode'}
               </button>
-              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                <NotificationCenter />
-              </div>
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}><NotificationCenter /></div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 4px', borderRadius: 9, marginTop: 2 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(61,138,92,.3)' }}>
-                {initials}
-              </div>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(61,138,92,.3)' }}>{initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'User'}</div>
                 <div style={{ fontSize: 10.5, color: 'var(--faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
@@ -246,21 +231,28 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
   });
-  const [expanding, setExpanding] = useState(false);
-  const expandTimer = useRef(null);
+  // textReady: false right after expanding (opacity 0), set to true via rAF to trigger fade-in
+  const [textReady, setTextReady] = useState(!collapsed);
+  const rafRef = useRef(null);
 
   const toggleCollapse = () => {
-    setCollapsed(prev => {
-      const next = !prev;
-      try { localStorage.setItem('sidebar_collapsed', String(next)); } catch {}
-      if (!next) {
-        // Expanding: icons show during width animation, text fades in after
-        setExpanding(true);
-        clearTimeout(expandTimer.current);
-        expandTimer.current = setTimeout(() => setExpanding(false), 360);
-      }
-      return next;
-    });
+    const next = !collapsed;
+    try { localStorage.setItem('sidebar_collapsed', String(next)); } catch {}
+    if (next) {
+      // Collapsing: hide text immediately, then snap width
+      setTextReady(false);
+      setCollapsed(true);
+    } else {
+      // Expanding: snap width instantly, then fade text in
+      setCollapsed(false);
+      setTextReady(false);
+      cancelAnimationFrame(rafRef.current);
+      // Two rAFs: first lets React flush the collapsed=false render,
+      // second triggers the CSS opacity transition
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = requestAnimationFrame(() => setTextReady(true));
+      });
+    }
   };
 
   useEffect(() => {
@@ -329,7 +321,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   const initials = (user?.name || user?.email || 'U').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
   const contentProps = {
-    collapsed, expanding, toggleCollapse,
+    collapsed, textReady, toggleCollapse,
     badges, target, theme, toggle,
     user, initials, handleLogout,
     onSearchOpen, onClose, onQuickAdd,
@@ -343,10 +335,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
 
       {open && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 40, display: 'flex' }}>
-          <div
-            style={{ position: 'absolute', inset: 0, background: 'rgba(37,35,32,.4)', animation: 'sbBackdrop 0.28s ease both' }}
-            onClick={onClose}
-          />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(37,35,32,.4)', animation: 'sbBackdrop 0.28s ease both' }} onClick={onClose} />
           <div style={{ position: 'relative', zIndex: 50, animation: 'sbPanel 0.36s cubic-bezier(0.16,1,0.3,1) both' }}>
             <SidebarContent {...contentProps} forceExpanded={true} />
           </div>
@@ -356,7 +345,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
       <style>{`
         @keyframes sbPanel {
           from { opacity: 0; transform: translateX(-22px); }
-          to   { opacity: 1; transform: translateX(0);     }
+          to   { opacity: 1; transform: translateX(0); }
         }
         @keyframes sbBackdrop {
           from { opacity: 0; }
@@ -368,7 +357,6 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
           inset: 0 auto 0 0;
           width: 248px;
           z-index: 30;
-          transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
           animation: sbPanel 0.38s cubic-bezier(0.16,1,0.3,1) both;
         }
         .lg-sidebar--collapsed { width: 88px; }
