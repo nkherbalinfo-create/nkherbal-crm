@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
@@ -50,21 +50,16 @@ const NAV_SECTIONS = [
   { label: 'TOOLS',  items: NAV.slice(6, 8) },
 ];
 
-// ── Module-level component — stable reference, no remount on badge polls ──────
-function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, toggle, user, initials, handleLogout, onSearchOpen, onClose, onQuickAdd, forceExpanded }) {
+// Stable module-level component — never remounts on badge polls
+function SidebarContent({ collapsed, expanding, toggleCollapse, badges, target, theme, toggle, user, initials, handleLogout, onSearchOpen, onClose, onQuickAdd, forceExpanded }) {
   const c = collapsed && !forceExpanded;
-  const hide = c;
 
-  // No per-item animation — items are always visible. The container itself
-  // slides in (desktop: .lg-sidebar CSS animation, mobile: sbPanel keyframe).
-  const brandAnim  = {};
-  const searchAnim = {};
-  const sectionAnims = NAV_SECTIONS.map(({ label, items }) => ({
-    labelAnim: null,
-    itemAnims: items.map(() => ({})),
-  }));
-  const targetAnim = {};
-  const bottomAnim = {};
+  // Icons are always visible. Text fades in AFTER the width animation finishes.
+  const textStyle = {
+    opacity: (c || expanding) ? 0 : 1,
+    transition: (c || expanding) ? 'none' : 'opacity 0.2s ease',
+    pointerEvents: (c || expanding) ? 'none' : 'auto',
+  };
 
   return (
     <aside style={{
@@ -76,7 +71,7 @@ function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, togg
     }}>
 
       {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: c ? 0 : 10, padding: '4px 0 18px', justifyContent: c ? 'center' : 'flex-start', transition: 'gap 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)', ...brandAnim }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: c ? 0 : 10, padding: '4px 0 18px', justifyContent: c ? 'center' : 'flex-start', transition: 'gap 0.35s, justify-content 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
         <div
           onClick={c ? toggleCollapse : undefined}
           title={c ? 'Expand sidebar' : undefined}
@@ -85,7 +80,8 @@ function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, togg
           onMouseLeave={e => { if (c) e.currentTarget.style.transform = 'scale(1)'; }}>
           <Icon name="leaf" size={18} color="white" />
         </div>
-        <div style={{ display: hide ? 'none' : 'flex', flex: 1, gap: 10, alignItems: 'center', minWidth: 0 }}>
+        {/* Text content — hidden when collapsed, fades in after expand animation */}
+        <div style={{ display: c ? 'none' : 'flex', flex: 1, gap: 10, alignItems: 'center', minWidth: 0, ...textStyle }}>
           <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
             <div style={{ fontSize: 10.5, color: 'var(--faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
@@ -107,9 +103,9 @@ function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, togg
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search — only in expanded state */}
       <div onClick={() => { onSearchOpen?.(); onClose?.(); }}
-        style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: hide ? 'none' : 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)', ...searchAnim }}
+        style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: c ? 'none' : 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', ...textStyle }}
         onMouseEnter={e => { if (!c) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(61,138,92,.1)'; } }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(37,35,32,.05)'; }}>
         <Icon name="search" size={13} />
@@ -121,54 +117,50 @@ function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, togg
       {NAV_SECTIONS.map(({ label, items }, si_outer) => (
         <div key={si_outer} style={{ display: 'flex', flexDirection: 'column', marginTop: label && !c ? 14 : 0, transition: 'margin-top 0.35s cubic-bezier(0.4,0,0.2,1)' }}>
           {label && (
-            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', display: hide ? 'none' : 'block', transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)', ...sectionAnims[si_outer].labelAnim }}>
+            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', display: c ? 'none' : 'block', ...textStyle }}>
               {label}
             </div>
           )}
-          {items.map(({ to, label: navLabel, icon, badge }, item_idx) => {
-            const itemA = sectionAnims[si_outer].itemAnims[item_idx];
-            return (
-              <NavLink key={to} to={to} end={to === '/'} onClick={onClose}
-                className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-                title={c ? navLabel : undefined}
-                style={({ isActive }) => ({
-                  display: 'flex', alignItems: 'center', justifyContent: c ? 'center' : 'flex-start', gap: c ? 0 : 10,
-                  width: c ? 40 : 'auto', height: 40, maxHeight: 40,
-                  padding: c ? 0 : '9px 11px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none',
-                  color: isActive ? 'var(--accent-ink)' : 'var(--muted)',
-                  fontSize: 13, fontWeight: isActive ? 600 : 400,
-                  marginBottom: 1,
-                  marginLeft: c ? 'auto' : 'unset', marginRight: c ? 'auto' : 'unset',
-                  flexShrink: 0,
-                  transition: 'gap 0.35s, padding 0.35s, width 0.35s cubic-bezier(0.4,0,0.2,1)',
-                  ...itemA,
-                })}>
-                {({ isActive }) => (
-                  <>
-                    <Icon name={icon} size={16} color={isActive ? 'var(--accent-ink)' : 'var(--faint)'} />
-                    <span style={{ flex: 1, minWidth: 0, display: hide ? 'none' : 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', opacity: 1, transition: 'opacity 0.35s cubic-bezier(0.4,0,0.2,1)' }}>{navLabel}</span>
-                    {badge && badges[badge] > 0 && (
-                      <span style={{
-                        fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999,
-                        background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--accent-bg)',
-                        color: 'var(--accent)', fontWeight: 700,
-                        minWidth: 18, textAlign: 'center',
-                        display: hide ? 'none' : 'block',
-                      }}>
-                        {badges[badge] > 50 ? '50+' : badges[badge]}
-                      </span>
-                    )}
-                  </>
-                )}
-              </NavLink>
-            );
-          })}
+          {items.map(({ to, label: navLabel, icon, badge }) => (
+            <NavLink key={to} to={to} end={to === '/'} onClick={onClose}
+              className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
+              title={c ? navLabel : undefined}
+              style={({ isActive }) => ({
+                display: 'flex', alignItems: 'center', justifyContent: c ? 'center' : 'flex-start', gap: c ? 0 : 10,
+                width: c ? 40 : 'auto', height: 40, maxHeight: 40,
+                padding: c ? 0 : '9px 11px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none',
+                color: isActive ? 'var(--accent-ink)' : 'var(--muted)',
+                fontSize: 13, fontWeight: isActive ? 600 : 400,
+                marginBottom: 1,
+                marginLeft: c ? 'auto' : 'unset', marginRight: c ? 'auto' : 'unset',
+                flexShrink: 0,
+                transition: 'gap 0.35s, padding 0.35s, width 0.35s cubic-bezier(0.4,0,0.2,1)',
+              })}>
+              {({ isActive }) => (
+                <>
+                  <Icon name={icon} size={16} color={isActive ? 'var(--accent-ink)' : 'var(--faint)'} />
+                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: c ? 'none' : 'block', ...textStyle }}>{navLabel}</span>
+                  {badge && badges[badge] > 0 && (
+                    <span style={{
+                      fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999,
+                      background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--accent-bg)',
+                      color: 'var(--accent)', fontWeight: 700,
+                      minWidth: 18, textAlign: 'center',
+                      display: c ? 'none' : 'block', ...textStyle,
+                    }}>
+                      {badges[badge] > 50 ? '50+' : badges[badge]}
+                    </span>
+                  )}
+                </>
+              )}
+            </NavLink>
+          ))}
         </div>
       ))}
 
       {/* Monthly target */}
       {target && (
-        <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)', display: hide ? 'none' : 'block', ...targetAnim }}>
+        <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)', display: c ? 'none' : 'block', ...textStyle }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
             <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}>Monthly target</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.pct}%</div>
@@ -183,7 +175,7 @@ function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, togg
       )}
 
       {/* Bottom: theme + notifications + user */}
-      <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: target ? 10 : 'auto', display: 'flex', flexDirection: 'column', gap: 1, ...bottomAnim }}>
+      <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: target ? 10 : 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
         {c ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '4px 0' }}>
             <button onClick={toggle} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
@@ -207,7 +199,7 @@ function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, togg
             </button>
           </div>
         ) : (
-          <>
+          <div style={{ ...textStyle }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 4px', height: 38 }}>
               <button onClick={toggle}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', flex: 1, fontFamily: 'inherit', transition: 'background 0.15s ease, color 0.15s ease', lineHeight: 1, height: 38, whiteSpace: 'nowrap' }}
@@ -235,7 +227,7 @@ function SidebarContent({ collapsed, toggleCollapse, badges, target, theme, togg
                 <Icon name="logout" size={14} />
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </aside>
@@ -251,11 +243,20 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
   });
+  const [expanding, setExpanding] = useState(false);
+  const expandTimer = useRef(null);
+
   const toggleCollapse = () => {
-    setCollapsed(c => {
-      const n = !c;
-      try { localStorage.setItem('sidebar_collapsed', String(n)); } catch {}
-      return n;
+    setCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('sidebar_collapsed', String(next)); } catch {}
+      if (!next) {
+        // Expanding: icons show during width animation, text fades in after
+        setExpanding(true);
+        clearTimeout(expandTimer.current);
+        expandTimer.current = setTimeout(() => setExpanding(false), 360);
+      }
+      return next;
     });
   };
 
@@ -325,7 +326,7 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
   const initials = (user?.name || user?.email || 'U').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
   const contentProps = {
-    collapsed, toggleCollapse,
+    collapsed, expanding, toggleCollapse,
     badges, target, theme, toggle,
     user, initials, handleLogout,
     onSearchOpen, onClose, onQuickAdd,
@@ -350,10 +351,6 @@ export default function Sidebar({ open, onClose, onSearchOpen, onQuickAdd }) {
       )}
 
       <style>{`
-        @keyframes sbItem {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0);   }
-        }
         @keyframes sbPanel {
           from { opacity: 0; transform: translateX(-22px); }
           to   { opacity: 1; transform: translateX(0);     }
