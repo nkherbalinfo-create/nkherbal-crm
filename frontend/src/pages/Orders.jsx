@@ -520,7 +520,7 @@ export default function Orders() {
       <div key={listKey} className="fade-in">
       <div className="card" style={{ padding:0, overflow:'hidden' }}>
         <div className="tbl-scroll">
-          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:960 }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:1100 }}>
             <thead>
               <tr style={{ borderBottom:'1px solid var(--rule)' }}>
                 <th style={{ padding:'11px 14px', width:36, background:'var(--card)' }}>
