@@ -351,7 +351,7 @@ export default function Orders() {
                     onChange={e => searchEditOrders(e.target.value)}
                     onFocus={() => editResults.length && setEditSearchOpen(true)}
                     onBlur={() => setTimeout(() => setEditSearchOpen(false), 150)}
-                    style={{ border:'none', background:'transparent', width:140, fontSize:12.5, padding:'0 10px', height:'100%', outline:'none' }} />
+                    style={{ border:'none', background:'transparent', width:140, fontSize:12.5, padding:'0 10px', height:'100%', outline:'none', boxShadow:'none' }} />
                 </div>
                 {editSearchOpen && editResults.length > 0 && (
                   <div style={{ position:'absolute', top:'calc(100% + 6px)', right:0, zIndex:400, width:300, background:'var(--card)', border:'1px solid var(--rule)', borderRadius:10, overflow:'hidden', boxShadow:'0 8px 24px rgba(0,0,0,.2)' }}>
