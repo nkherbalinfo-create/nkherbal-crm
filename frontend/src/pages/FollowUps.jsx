@@ -58,10 +58,14 @@ export default function FollowUps() {
   const sendEmail = async () => {
     setSending(true);
     try {
-      const { data } = await api.post(`/followups/${selected._id}/send`, emailData);
+      const { data } = await api.post(`/followups/${selected._id}/send`, emailData, { timeout: 30000 });
       addToast(data.message,'success'); setEmailModal(false); load();
-    } catch (err) { addToast(err.response?.data?.message||'Failed to send','error'); }
-    finally { setSending(false); }
+    } catch (err) {
+      const msg = err.code === 'ECONNABORTED'
+        ? 'Request timed out — check email credentials in server settings'
+        : err.response?.data?.message || 'Failed to send';
+      addToast(msg, 'error');
+    } finally { setSending(false); }
   };
 
   const skip = async (id) => {

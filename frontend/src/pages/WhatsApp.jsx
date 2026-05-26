@@ -83,6 +83,16 @@ const PRODUCT_IMG_MAP = {
 
 // Extract image/media tags from message content
 function parseImgTag(content) {
+  // Customer voice note: [media-audio:data:audio/ogg;base64,...]
+  if (content?.startsWith('[media-audio:')) {
+    const closeIdx = content.indexOf(']');
+    const audioSrc = closeIdx > -1 ? content.slice('[media-audio:'.length, closeIdx) : null;
+    return {
+      text: closeIdx > -1 ? content.slice(closeIdx + 1).trim() : '',
+      product: null, imgUrl: null, allImages: null,
+      uploadedImg: null, uploadedDoc: null, audioSrc,
+    };
+  }
   // Manually uploaded image: [media-img:URL]
   const uploadedImg = content?.match(/\[media-img:([^\]]+)\]/);
   if (uploadedImg) {
@@ -90,7 +100,7 @@ function parseImgTag(content) {
       text: content.replace(/\s*\[media-img:[^\]]+\]/, '').trim(),
       product: null, imgUrl: null, allImages: null,
       uploadedImg: uploadedImg[1],
-      uploadedDoc: null,
+      uploadedDoc: null, audioSrc: null,
     };
   }
   // Manually uploaded document: [media-doc:FILENAME:URL]
@@ -101,6 +111,7 @@ function parseImgTag(content) {
       product: null, imgUrl: null, allImages: null,
       uploadedImg: null,
       uploadedDoc: { name: uploadedDoc[1], url: uploadedDoc[2] },
+      audioSrc: null,
     };
   }
   // Product image: [img:ProductName]
@@ -112,8 +123,7 @@ function parseImgTag(content) {
     product: isAll ? null : product,
     imgUrl: (product && !isAll) ? PRODUCT_IMG_MAP[product] : null,
     allImages: isAll ? Object.entries(PRODUCT_IMG_MAP) : null,
-    uploadedImg: null,
-    uploadedDoc: null,
+    uploadedImg: null, uploadedDoc: null, audioSrc: null,
   };
 }
 
@@ -603,10 +613,31 @@ export default function WhatsApp() {
               )}
 
               {messages.map((m,i)=>{
-                const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc } = parseImgTag(m.content);
+                const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc, audioSrc } = parseImgTag(m.content);
                 const isUser = m.role === 'user';
                 return (
                   <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}>
+                    {/* Voice note player */}
+                    {audioSrc && (
+                      <div style={{
+                        maxWidth:'78%', padding:'10px 12px',
+                        background: isUser ? 'var(--card)' : 'var(--accent)',
+                        border: isUser ? '1px solid var(--rule)' : 'none',
+                        borderRadius: isUser ? '2px 14px 14px 14px' : '14px 2px 14px 14px',
+                        boxShadow: isUser ? 'none' : '0 1px 2px rgba(61,138,92,.15)',
+                        display:'flex', alignItems:'center', gap:8,
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: isUser ? 'var(--accent)' : 'white', flexShrink:0 }}>
+                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                          <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                          <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                        <audio controls style={{ height:32, maxWidth:220, outline:'none', filter: isUser ? 'none' : 'invert(1) brightness(2)' }}>
+                          <source src={audioSrc} />
+                        </audio>
+                      </div>
+                    )}
                     {/* Text bubble */}
                     {text && (
                       <div style={{

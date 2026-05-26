@@ -31,16 +31,22 @@ router.get('/', protect, async (req, res) => {
       .limit(50)
       .lean();
 
-    const result = convs.map(c => ({
+    const result = convs.map(c => {
+      const rawLast = c.messages.filter(m => m.content).slice(-1)[0]?.content || '';
+      const lastMessage = rawLast.startsWith('[media-audio:') ? '🎤 Voice note'
+        : rawLast.startsWith('[media-img:')   ? '📷 Image'
+        : rawLast.startsWith('[media-doc:')   ? '📄 Document'
+        : rawLast.replace(/\[img:[^\]]+\]/g, '').trim().slice(0, 80);
+      return ({
       phone: c.phone,
       name:  c.name || `+${c.phone}`,
-      lastMessage: c.messages.filter(m => m.content).slice(-1)[0]?.content?.slice(0, 80) || '',
+      lastMessage,
       lastMessageAt: c.lastMessageAt,
       messageCount: c.messages.filter(m => m.role === 'user').length,
       botPaused: c.botPaused || false,
       paymentClaimed: c.paymentClaimed || false,
       leadId: c.leadId,
-    }));
+    });});
 
     res.json(result);
   } catch (err) {

@@ -83,6 +83,50 @@ async function uploadToWhatsApp(imageUrl) {
   });
 }
 
+// Download audio/media sent by a customer from WhatsApp's CDN (requires auth header)
+async function downloadWhatsAppMedia(mediaId) {
+  // Step 1: get the temporary download URL from Graph API
+  const info = await new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'graph.facebook.com',
+      path:     `/v25.0/${mediaId}`,
+      method:   'GET',
+      headers:  { 'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}` }
+    }, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch(e) { reject(new Error('Media info parse error: ' + data.slice(0, 100))); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('Media info timeout')); });
+    req.end();
+  });
+  if (!info.url) throw new Error('No download URL in WhatsApp media response');
+
+  // Step 2: download the actual bytes (auth required)
+  const parsed = new URL(info.url);
+  const buffer = await new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: parsed.hostname,
+      path:     parsed.pathname + parsed.search,
+      method:   'GET',
+      headers:  { 'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}` }
+    }, (res) => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+    req.on('error', reject);
+    req.setTimeout(25000, () => { req.destroy(); reject(new Error('Media download timeout')); });
+    req.end();
+  });
+  const mimeType = (info.mime_type || 'audio/ogg').split(';')[0].trim();
+  return { buffer, mimeType };
+}
+
 // Get cached media_id or upload fresh
 async function getMediaId(productKey, imageUrl) {
   const cached = mediaCache[productKey];
@@ -430,8 +474,25 @@ router.post('/webhook', async (req, res) => {
             text = msg.interactive?.button_reply?.title?.trim()
                 || msg.interactive?.list_reply?.title?.trim()
                 || '';
+          } else if (msg.type === 'audio' || msg.type === 'voice') {
+            // Download voice note from WhatsApp so CRM can play it
+            const mediaId = msg.audio?.id || msg.voice?.id;
+            text = '[audio message]'; // fallback if download fails
+            if (mediaId) {
+              try {
+                const { buffer, mimeType } = await downloadWhatsAppMedia(mediaId);
+                if (buffer.length <= 3 * 1024 * 1024) { // 3MB limit
+                  text = `[media-audio:data:${mimeType};base64,${buffer.toString('base64')}]`;
+                  console.log(`[WhatsApp] 🎤 Voice note stored: ${(buffer.length/1024).toFixed(0)}KB from ${phone}`);
+                } else {
+                  console.log(`[WhatsApp] ⚠️ Voice note too large (${(buffer.length/1024).toFixed(0)}KB), using placeholder`);
+                }
+              } catch(e) {
+                console.error('[WhatsApp] ⚠️ Voice note download failed:', e.message);
+              }
+            }
           } else {
-            // Images, stickers, audio, etc. — record as placeholder so conversation is visible
+            // Images, stickers, etc. — record as placeholder so conversation is visible
             text = `[${msg.type || 'media'} message]`;
           }
           if (!text) continue;
@@ -521,6 +582,16 @@ router.post('/webhook', async (req, res) => {
           // ── Skip AI if bot is paused ──────────────────────
           if (conv.botPaused) {
             console.log(`[WhatsApp] ⏸️ Bot paused for ${phone}, skipping AI reply`);
+            continue;
+          }
+
+          // ── Audio/voice messages — skip AI, send friendly prompt ──
+          if (msg.type === 'audio' || msg.type === 'voice') {
+            const audioReply = 'Voice note mili! 🎤 Main audio sunne mein unable hoon — text mein likhein apna sawaal? 🙏';
+            conv.messages.push({ role: 'assistant', content: audioReply });
+            await conv.save();
+            await sendWhatsAppMessage(phone, audioReply);
+            sse.broadcast({ type: 'message', phone });
             continue;
           }
 
