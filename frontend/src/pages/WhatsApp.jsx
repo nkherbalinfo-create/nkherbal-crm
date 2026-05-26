@@ -56,13 +56,13 @@ function Av({ name, size = 32 }) {
 }
 
 function VoiceNote({ src, isUser }) {
-  const [playing, setPlaying]       = useState(false);
-  const [progress, setProgress]     = useState(0);
-  const [duration, setDuration]     = useState(0);
-  const [currentTime, setCurrent]   = useState(0);
+  const [playing, setPlaying]   = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [current,  setCurrent]  = useState(0);
   const audioRef = useRef(null);
 
-  const fmt = (s) => { const m = Math.floor(s/60), sec = Math.floor(s%60); return `${m}:${sec.toString().padStart(2,'0')}`; };
+  const fmt = (s) => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
 
   const toggle = () => {
     if (!audioRef.current) return;
@@ -70,65 +70,89 @@ function VoiceNote({ src, isUser }) {
     else { audioRef.current.play(); setPlaying(true); }
   };
   const onTimeUpdate = () => {
-    const ct = audioRef.current?.currentTime || 0;
-    const dur = audioRef.current?.duration || 0;
+    const ct = audioRef.current?.currentTime || 0, dur = audioRef.current?.duration || 0;
     setCurrent(ct); setProgress(dur > 0 ? (ct/dur)*100 : 0);
   };
-  const onEnded = () => { setPlaying(false); setProgress(0); setCurrent(0); if (audioRef.current) audioRef.current.currentTime = 0; };
+  const onEnded = () => {
+    setPlaying(false); setProgress(0); setCurrent(0);
+    if (audioRef.current) audioRef.current.currentTime = 0;
+  };
   const onSeek = (e) => {
     if (!audioRef.current || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audioRef.current.currentTime = pct * duration;
+    audioRef.current.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * duration;
   };
 
-  const BARS = [3,5,8,6,11,8,13,9,7,5,9,6,11,8,5,7,10,6,8,4,6,9,7,11,5,8,6,10,7,4];
-  const col  = isUser ? 'var(--accent)' : 'white';
-  const dim  = isUser ? 'var(--rule)'   : 'rgba(255,255,255,0.3)';
+  const BARS = [3,5,9,6,12,8,14,10,7,5,10,6,12,9,5,8,11,6,9,4,7,10,7,12,5,9,6,11,7,4];
+  const onCol  = isUser ? 'var(--accent)'              : 'rgba(255,255,255,0.95)';
+  const offCol = isUser ? 'var(--rule)'                : 'rgba(255,255,255,0.35)';
+  const timeCol= isUser ? 'var(--faint)'               : 'rgba(255,255,255,0.75)';
+  const btnBg  = isUser ? 'var(--accent)'              : 'rgba(255,255,255,0.22)';
 
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px',
+    <div style={{
+      display:'flex', alignItems:'center', gap:10,
+      padding:'10px 13px 10px 11px',
       background: isUser ? 'var(--card)' : 'var(--accent)',
       border: isUser ? '1px solid var(--rule)' : 'none',
       borderRadius: isUser ? '2px 14px 14px 14px' : '14px 2px 14px 14px',
-      boxShadow: isUser ? 'none' : '0 1px 2px rgba(61,138,92,.15)',
-      maxWidth: 280, minWidth: 210,
+      boxShadow: isUser ? 'none' : '0 1px 3px rgba(61,138,92,.18)',
+      minWidth: 220, maxWidth: 270,
     }}>
-      <audio ref={audioRef} src={src} onTimeUpdate={onTimeUpdate}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)} onEnded={onEnded} />
+      <audio ref={audioRef} src={src}
+        onTimeUpdate={onTimeUpdate}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+        onEnded={onEnded}
+      />
 
-      {/* Play / Pause button */}
-      <button onClick={toggle} style={{ width:36, height:36, borderRadius:'50%', flexShrink:0, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-        background: isUser ? 'var(--accent)' : 'rgba(255,255,255,0.22)', transition:'background 0.15s' }}
-        onMouseEnter={e => e.currentTarget.style.background = isUser ? 'var(--accent-dark,#2d6a4f)' : 'rgba(255,255,255,0.35)'}
-        onMouseLeave={e => e.currentTarget.style.background = isUser ? 'var(--accent)' : 'rgba(255,255,255,0.22)'}>
+      {/* Play / Pause */}
+      <button onClick={toggle} style={{
+        width:38, height:38, borderRadius:'50%', flexShrink:0,
+        border:'none', cursor:'pointer',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        background: btnBg, transition:'opacity 0.15s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
         {playing
-          ? <svg width="10" height="12" viewBox="0 0 10 12" fill="white"><rect x="0" y="0" width="3.5" height="12" rx="1"/><rect x="6.5" y="0" width="3.5" height="12" rx="1"/></svg>
-          : <svg width="11" height="13" viewBox="0 0 11 13" fill="white"><polygon points="0,0 11,6.5 0,13"/></svg>
+          ? <svg width="11" height="13" viewBox="0 0 11 13" fill="white"><rect x="0" y="0" width="3.5" height="13" rx="1.2"/><rect x="7.5" y="0" width="3.5" height="13" rx="1.2"/></svg>
+          : <svg width="12" height="13" viewBox="0 0 12 13" fill="white" style={{ marginLeft:2 }}><polygon points="0,0 12,6.5 0,13"/></svg>
         }
       </button>
 
-      {/* Waveform + time */}
-      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:4 }}>
-        <div onClick={onSeek} style={{ display:'flex', alignItems:'center', gap:1.5, height:26, cursor:'pointer' }}>
+      {/* Waveform + time stacked */}
+      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:5 }}>
+
+        {/* Bars */}
+        <div onClick={onSeek} style={{
+          display:'flex', alignItems:'center', gap:2,
+          height:30, cursor:'pointer', paddingTop:2,
+        }}>
           {BARS.map((h, i) => (
-            <div key={i} style={{ flex:1, height:`${h}px`, borderRadius:2, transition:'background 0.08s',
-              background: (i / BARS.length * 100) < progress ? col : dim }} />
+            <div key={i} style={{
+              flex:1, height:`${h}px`, borderRadius:3,
+              background: (i / BARS.length * 100) < progress ? onCol : offCol,
+              transition:'background 0.07s',
+            }} />
           ))}
         </div>
-        <div style={{ fontSize:10, fontFamily:'Inter', fontVariantNumeric:'tabular-nums',
-          color: isUser ? 'var(--faint)' : 'rgba(255,255,255,0.7)' }}>
-          {playing || currentTime > 0 ? fmt(currentTime) : fmt(duration)}
+
+        {/* Time */}
+        <div style={{
+          fontSize:11, fontFamily:'Inter', fontVariantNumeric:'tabular-nums',
+          color: timeCol, lineHeight:1,
+        }}>
+          {playing || current > 0 ? fmt(current) : fmt(duration)}
         </div>
       </div>
 
       {/* Mic icon */}
-      <svg width="13" height="13" viewBox="0 0 24 24" style={{ flexShrink:0, opacity:0.55 }}
-        fill={isUser ? 'var(--muted)' : 'white'}>
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2.2" strokeLinecap="round"/>
-        <line x1="12" y1="19" x2="12" y2="23" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2.2" strokeLinecap="round"/>
-        <line x1="8" y1="23" x2="16" y2="23" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2.2" strokeLinecap="round"/>
+      <svg width="15" height="15" viewBox="0 0 24 24" style={{ flexShrink:0, alignSelf:'flex-end', marginBottom:2, opacity:0.5 }}
+        fill="none" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="2" width="6" height="12" rx="3"/>
+        <path d="M5 10a7 7 0 0 0 14 0"/>
+        <line x1="12" y1="20" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
       </svg>
     </div>
   );
