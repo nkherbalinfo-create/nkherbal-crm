@@ -55,6 +55,85 @@ function Av({ name, size = 32 }) {
   );
 }
 
+function VoiceNote({ src, isUser }) {
+  const [playing, setPlaying]       = useState(false);
+  const [progress, setProgress]     = useState(0);
+  const [duration, setDuration]     = useState(0);
+  const [currentTime, setCurrent]   = useState(0);
+  const audioRef = useRef(null);
+
+  const fmt = (s) => { const m = Math.floor(s/60), sec = Math.floor(s%60); return `${m}:${sec.toString().padStart(2,'0')}`; };
+
+  const toggle = () => {
+    if (!audioRef.current) return;
+    if (playing) { audioRef.current.pause(); setPlaying(false); }
+    else { audioRef.current.play(); setPlaying(true); }
+  };
+  const onTimeUpdate = () => {
+    const ct = audioRef.current?.currentTime || 0;
+    const dur = audioRef.current?.duration || 0;
+    setCurrent(ct); setProgress(dur > 0 ? (ct/dur)*100 : 0);
+  };
+  const onEnded = () => { setPlaying(false); setProgress(0); setCurrent(0); if (audioRef.current) audioRef.current.currentTime = 0; };
+  const onSeek = (e) => {
+    if (!audioRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audioRef.current.currentTime = pct * duration;
+  };
+
+  const BARS = [3,5,8,6,11,8,13,9,7,5,9,6,11,8,5,7,10,6,8,4,6,9,7,11,5,8,6,10,7,4];
+  const col  = isUser ? 'var(--accent)' : 'white';
+  const dim  = isUser ? 'var(--rule)'   : 'rgba(255,255,255,0.3)';
+
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px',
+      background: isUser ? 'var(--card)' : 'var(--accent)',
+      border: isUser ? '1px solid var(--rule)' : 'none',
+      borderRadius: isUser ? '2px 14px 14px 14px' : '14px 2px 14px 14px',
+      boxShadow: isUser ? 'none' : '0 1px 2px rgba(61,138,92,.15)',
+      maxWidth: 280, minWidth: 210,
+    }}>
+      <audio ref={audioRef} src={src} onTimeUpdate={onTimeUpdate}
+        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)} onEnded={onEnded} />
+
+      {/* Play / Pause button */}
+      <button onClick={toggle} style={{ width:36, height:36, borderRadius:'50%', flexShrink:0, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+        background: isUser ? 'var(--accent)' : 'rgba(255,255,255,0.22)', transition:'background 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = isUser ? 'var(--accent-dark,#2d6a4f)' : 'rgba(255,255,255,0.35)'}
+        onMouseLeave={e => e.currentTarget.style.background = isUser ? 'var(--accent)' : 'rgba(255,255,255,0.22)'}>
+        {playing
+          ? <svg width="10" height="12" viewBox="0 0 10 12" fill="white"><rect x="0" y="0" width="3.5" height="12" rx="1"/><rect x="6.5" y="0" width="3.5" height="12" rx="1"/></svg>
+          : <svg width="11" height="13" viewBox="0 0 11 13" fill="white"><polygon points="0,0 11,6.5 0,13"/></svg>
+        }
+      </button>
+
+      {/* Waveform + time */}
+      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:4 }}>
+        <div onClick={onSeek} style={{ display:'flex', alignItems:'center', gap:1.5, height:26, cursor:'pointer' }}>
+          {BARS.map((h, i) => (
+            <div key={i} style={{ flex:1, height:`${h}px`, borderRadius:2, transition:'background 0.08s',
+              background: (i / BARS.length * 100) < progress ? col : dim }} />
+          ))}
+        </div>
+        <div style={{ fontSize:10, fontFamily:'Inter', fontVariantNumeric:'tabular-nums',
+          color: isUser ? 'var(--faint)' : 'rgba(255,255,255,0.7)' }}>
+          {playing || currentTime > 0 ? fmt(currentTime) : fmt(duration)}
+        </div>
+      </div>
+
+      {/* Mic icon */}
+      <svg width="13" height="13" viewBox="0 0 24 24" style={{ flexShrink:0, opacity:0.55 }}
+        fill={isUser ? 'var(--muted)' : 'white'}>
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2.2" strokeLinecap="round"/>
+        <line x1="12" y1="19" x2="12" y2="23" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2.2" strokeLinecap="round"/>
+        <line x1="8" y1="23" x2="16" y2="23" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2.2" strokeLinecap="round"/>
+      </svg>
+    </div>
+  );
+}
+
 function LangChip({ name }) {
   if (!name) return null;
   const lang = name.includes('NEGI')||name.includes('Kumar')||name.includes('Singh') ? 'HI' : 'EN';
@@ -618,26 +697,7 @@ export default function WhatsApp() {
                 return (
                   <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}>
                     {/* Voice note player */}
-                    {audioSrc && (
-                      <div style={{
-                        maxWidth:'78%', padding:'10px 12px',
-                        background: isUser ? 'var(--card)' : 'var(--accent)',
-                        border: isUser ? '1px solid var(--rule)' : 'none',
-                        borderRadius: isUser ? '2px 14px 14px 14px' : '14px 2px 14px 14px',
-                        boxShadow: isUser ? 'none' : '0 1px 2px rgba(61,138,92,.15)',
-                        display:'flex', alignItems:'center', gap:8,
-                      }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: isUser ? 'var(--accent)' : 'white', flexShrink:0 }}>
-                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                          <path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                          <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                          <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        <audio controls style={{ height:32, maxWidth:220, outline:'none', filter: isUser ? 'none' : 'invert(1) brightness(2)' }}>
-                          <source src={audioSrc} />
-                        </audio>
-                      </div>
-                    )}
+                    {audioSrc && <VoiceNote src={audioSrc} isUser={isUser} />}
                     {/* Text bubble */}
                     {text && (
                       <div style={{
