@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+const https = require('https');
 
 const PRODUCT_URLS = {
   'Muejaza For Men (300g)':                  'https://nkherbal.com/product/muejaza-ayurvedic-food-preparation/',
@@ -11,23 +11,9 @@ const PRODUCT_URLS = {
 };
 
 function getProductUrl(productName) {
-  // Exact match first, then partial match
   if (PRODUCT_URLS[productName]) return PRODUCT_URLS[productName];
   const key = Object.keys(PRODUCT_URLS).find(k => productName.toLowerCase().includes(k.toLowerCase().split(' ')[0]));
   return key ? PRODUCT_URLS[key] : 'https://nkherbal.com/shop';
-}
-
-function createTransporter() {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-  });
 }
 
 function getFollowUpTemplate(customerName, productName, monthNumber) {
@@ -124,20 +110,45 @@ function getFollowUpTemplate(customerName, productName, monthNumber) {
   return { subject: subjects[monthNumber], html };
 }
 
+function sendViaResend(to, from, subject, html) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({ from, to: [to], subject, html });
+    const req = https.request({
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(JSON.parse(data));
+        } else {
+          reject(new Error(`Resend error ${res.statusCode}: ${data}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Resend request timed out')); });
+    req.write(body);
+    req.end();
+  });
+}
+
 async function sendFollowUpEmail(to, customerName, productName, monthNumber, customSubject, customHtml) {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    throw new Error('Email credentials not configured. Add EMAIL_USER and EMAIL_PASS to .env');
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY not configured. Add it to Render environment variables.');
   }
 
-  const transporter = createTransporter();
   const template = getFollowUpTemplate(customerName, productName, monthNumber);
+  const from = 'NK Herbal <noreply@nkherbal.com>';
 
-  await transporter.sendMail({
-    from: `"NK Herbal" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: customSubject || template.subject,
-    html:    customHtml    || template.html,
-  });
+  await sendViaResend(to, from, customSubject || template.subject, customHtml || template.html);
 }
 
 module.exports = { sendFollowUpEmail, getFollowUpTemplate };
