@@ -127,6 +127,47 @@ async function downloadWhatsAppMedia(mediaId) {
   return { buffer, mimeType };
 }
 
+// Transcribe audio buffer using Groq Whisper (supports 99+ languages)
+async function transcribeAudio(buffer, mimeType) {
+  if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY not set');
+  const boundary = `GroqW${Date.now()}`;
+  const ext = mimeType.includes('mp4')||mimeType.includes('m4a') ? 'm4a'
+    : mimeType.includes('webm') ? 'webm'
+    : mimeType.includes('mp3')||mimeType.includes('mpeg') ? 'mp3'
+    : 'ogg';
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="audio.${ext}"\r\nContent-Type: ${mimeType}\r\n\r\n`),
+    buffer,
+    Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3-turbo\r\n--${boundary}\r\nContent-Disposition: form-data; name="response_format"\r\n\r\njson\r\n--${boundary}--\r\n`),
+  ]);
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.groq.com',
+      path:     '/openai/v1/audio/transcriptions',
+      method:   'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type':  `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': body.length,
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.text) resolve(parsed.text.trim());
+          else reject(new Error('Groq: ' + data.slice(0, 200)));
+        } catch(e) { reject(new Error('Groq parse error: ' + data.slice(0, 200))); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error('Groq timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
 // Get cached media_id or upload fresh
 async function getMediaId(productKey, imageUrl) {
   const cached = mediaCache[productKey];
@@ -466,6 +507,7 @@ router.post('/webhook', async (req, res) => {
 
           // Extract text from text, button (Meta Ads CTA), and interactive messages
           let text = '';
+          let audioBuffer = null, audioMime = 'audio/ogg';
           if (msg.type === 'text') {
             text = msg.text?.body?.trim() || '';
           } else if (msg.type === 'button') {
@@ -483,7 +525,9 @@ router.post('/webhook', async (req, res) => {
                 const { buffer, mimeType } = await downloadWhatsAppMedia(mediaId);
                 if (buffer.length <= 3 * 1024 * 1024) { // 3MB limit
                   text = `[media-audio:data:${mimeType};base64,${buffer.toString('base64')}]`;
-                  console.log(`[WhatsApp] 🎤 Voice note stored: ${(buffer.length/1024).toFixed(0)}KB from ${phone}`);
+                  audioBuffer = buffer;
+                  audioMime = mimeType;
+                  console.log(`[WhatsApp] 🎤 Voice note downloaded: ${(buffer.length/1024).toFixed(0)}KB from ${phone}`);
                 } else {
                   console.log(`[WhatsApp] ⚠️ Voice note too large (${(buffer.length/1024).toFixed(0)}KB), using placeholder`);
                 }
@@ -585,14 +629,37 @@ router.post('/webhook', async (req, res) => {
             continue;
           }
 
-          // ── Audio/voice messages — skip AI, send friendly prompt ──
+          // ── Audio/voice messages — transcribe then reply with AI ──
           if (msg.type === 'audio' || msg.type === 'voice') {
-            const audioReply = 'Voice note mili! 🎤 Main audio sunne mein unable hoon — text mein likhein apna sawaal? 🙏';
-            conv.messages.push({ role: 'assistant', content: audioReply });
-            await conv.save();
-            await sendWhatsAppMessage(phone, audioReply);
-            sse.broadcast({ type: 'message', phone });
-            continue;
+            if (audioBuffer && process.env.GROQ_API_KEY) {
+              try {
+                const transcript = await transcribeAudio(audioBuffer, audioMime);
+                console.log(`[WhatsApp] 🎤 Transcript (${phone}): "${transcript.slice(0, 120)}"`);
+                // Append transcript to the saved audio message so CRM shows it
+                const lastMsg = conv.messages[conv.messages.length - 1];
+                lastMsg.content += `[audio-transcript:${transcript}]`;
+                await conv.save();
+                // Let AI reply to what the customer actually said
+                text = transcript;
+                // fall through to normal AI processing below
+              } catch(e) {
+                console.error('[WhatsApp] ⚠️ Transcription failed:', e.message);
+                const audioReply = 'Voice note mili! 🎤 Thoda technical issue aa gaya — text mein likhein apna sawaal? 🙏';
+                conv.messages.push({ role: 'assistant', content: audioReply });
+                await conv.save();
+                await sendWhatsAppMessage(phone, audioReply);
+                sse.broadcast({ type: 'message', phone });
+                continue;
+              }
+            } else {
+              // No Groq key — ask to type
+              const audioReply = 'Voice note mili! 🎤 Text mein likhein apna sawaal? 🙏';
+              conv.messages.push({ role: 'assistant', content: audioReply });
+              await conv.save();
+              await sendWhatsAppMessage(phone, audioReply);
+              sse.broadcast({ type: 'message', phone });
+              continue;
+            }
           }
 
           // ── Refresh context summary every 10 messages (fire-and-forget) ──
@@ -623,6 +690,8 @@ router.post('/webhook', async (req, res) => {
           const cleanMsg = m => ({
             role: m.role,
             content: (m.content || '')
+              .replace(/\[media-audio:data:[^\]]{0,5000000}\]\[audio-transcript:([^\]]+)\]/g, '🎤 Voice message: "$1"')
+              .replace(/\[media-audio:[^\]]{0,5000000}\]/g, '[voice note]')
               .replace(/\[media-img:data:[^\]]{0,2000000}\]/g, '[image sent]')
               .replace(/\[media-doc:[^:]+:data:[^\]]{0,2000000}\]/g, '[document sent]')
               .replace(/\[img:([^\]]+)\]/g, '[product image: $1]')

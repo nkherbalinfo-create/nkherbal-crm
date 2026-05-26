@@ -55,7 +55,7 @@ function Av({ name, size = 32 }) {
   );
 }
 
-function VoiceNote({ src, isUser }) {
+function VoiceNote({ src, isUser, transcript }) {
   const [playing, setPlaying]   = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -91,7 +91,7 @@ function VoiceNote({ src, isUser }) {
 
   return (
     <div style={{
-      display:'flex', alignItems:'center', gap:10,
+      display:'flex', flexDirection:'column', gap:0,
       padding:'10px 13px 10px 11px',
       background: isUser ? 'var(--card)' : 'var(--accent)',
       border: isUser ? '1px solid var(--rule)' : 'none',
@@ -105,55 +105,60 @@ function VoiceNote({ src, isUser }) {
         onEnded={onEnded}
       />
 
-      {/* Play / Pause */}
-      <button onClick={toggle} style={{
-        width:38, height:38, borderRadius:'50%', flexShrink:0,
-        border:'none', cursor:'pointer',
-        display:'flex', alignItems:'center', justifyContent:'center',
-        background: btnBg, transition:'opacity 0.15s',
-      }}
-        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-        onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-        {playing
-          ? <svg width="11" height="13" viewBox="0 0 11 13" fill="white"><rect x="0" y="0" width="3.5" height="13" rx="1.2"/><rect x="7.5" y="0" width="3.5" height="13" rx="1.2"/></svg>
-          : <svg width="12" height="13" viewBox="0 0 12 13" fill="white" style={{ marginLeft:2 }}><polygon points="0,0 12,6.5 0,13"/></svg>
-        }
-      </button>
+      {/* Main row: play + waveform + mic */}
+      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+        {/* Play / Pause */}
+        <button onClick={toggle} style={{
+          width:38, height:38, borderRadius:'50%', flexShrink:0,
+          border:'none', cursor:'pointer',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          background: btnBg, transition:'opacity 0.15s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+          {playing
+            ? <svg width="11" height="13" viewBox="0 0 11 13" fill="white"><rect x="0" y="0" width="3.5" height="13" rx="1.2"/><rect x="7.5" y="0" width="3.5" height="13" rx="1.2"/></svg>
+            : <svg width="12" height="13" viewBox="0 0 12 13" fill="white" style={{ marginLeft:2 }}><polygon points="0,0 12,6.5 0,13"/></svg>
+          }
+        </button>
 
-      {/* Waveform + time stacked */}
-      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:5 }}>
-
-        {/* Bars */}
-        <div onClick={onSeek} style={{
-          display:'flex', alignItems:'center', gap:2,
-          height:30, cursor:'pointer', paddingTop:2,
-        }}>
-          {BARS.map((h, i) => (
-            <div key={i} style={{
-              flex:1, height:`${h}px`, borderRadius:3,
-              background: (i / BARS.length * 100) < progress ? onCol : offCol,
-              transition:'background 0.07s',
-            }} />
-          ))}
+        {/* Waveform + time */}
+        <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:5 }}>
+          <div onClick={onSeek} style={{ display:'flex', alignItems:'center', gap:2, height:30, cursor:'pointer', paddingTop:2 }}>
+            {BARS.map((h, i) => (
+              <div key={i} style={{
+                flex:1, height:`${h}px`, borderRadius:3,
+                background: (i / BARS.length * 100) < progress ? onCol : offCol,
+                transition:'background 0.07s',
+              }} />
+            ))}
+          </div>
+          <div style={{ fontSize:11, fontFamily:'Inter', fontVariantNumeric:'tabular-nums', color: timeCol, lineHeight:1 }}>
+            {playing || current > 0 ? fmt(current) : fmt(duration)}
+          </div>
         </div>
 
-        {/* Time */}
-        <div style={{
-          fontSize:11, fontFamily:'Inter', fontVariantNumeric:'tabular-nums',
-          color: timeCol, lineHeight:1,
-        }}>
-          {playing || current > 0 ? fmt(current) : fmt(duration)}
-        </div>
+        {/* Mic icon */}
+        <svg width="15" height="15" viewBox="0 0 24 24" style={{ flexShrink:0, alignSelf:'flex-end', marginBottom:2, opacity:0.5 }}
+          fill="none" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 10a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="20" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
       </div>
 
-      {/* Mic icon */}
-      <svg width="15" height="15" viewBox="0 0 24 24" style={{ flexShrink:0, alignSelf:'flex-end', marginBottom:2, opacity:0.5 }}
-        fill="none" stroke={isUser ? 'var(--muted)' : 'white'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="9" y="2" width="6" height="12" rx="3"/>
-        <path d="M5 10a7 7 0 0 0 14 0"/>
-        <line x1="12" y1="20" x2="12" y2="23"/>
-        <line x1="8" y1="23" x2="16" y2="23"/>
-      </svg>
+      {/* Transcript below player */}
+      {transcript && (
+        <div style={{
+          marginTop:7, paddingTop:7,
+          borderTop: `1px solid ${isUser ? 'var(--rule)' : 'rgba(255,255,255,0.2)'}`,
+          fontSize:11.5, lineHeight:1.45, fontStyle:'italic',
+          color: isUser ? 'var(--muted)' : 'rgba(255,255,255,0.85)',
+        }}>
+          "{transcript}"
+        </div>
+      )}
     </div>
   );
 }
@@ -186,14 +191,17 @@ const PRODUCT_IMG_MAP = {
 
 // Extract image/media tags from message content
 function parseImgTag(content) {
-  // Customer voice note: [media-audio:data:audio/ogg;base64,...]
+  // Customer voice note: [media-audio:data:audio/ogg;base64,...][audio-transcript:text]
   if (content?.startsWith('[media-audio:')) {
     const closeIdx = content.indexOf(']');
     const audioSrc = closeIdx > -1 ? content.slice('[media-audio:'.length, closeIdx) : null;
+    const afterAudio = closeIdx > -1 ? content.slice(closeIdx + 1) : '';
+    const transcriptMatch = afterAudio.match(/\[audio-transcript:([^\]]+)\]/);
+    const audioTranscript = transcriptMatch ? transcriptMatch[1] : null;
     return {
-      text: closeIdx > -1 ? content.slice(closeIdx + 1).trim() : '',
+      text: afterAudio.replace(/\[audio-transcript:[^\]]+\]/, '').trim(),
       product: null, imgUrl: null, allImages: null,
-      uploadedImg: null, uploadedDoc: null, audioSrc,
+      uploadedImg: null, uploadedDoc: null, audioSrc, audioTranscript,
     };
   }
   // Manually uploaded image: [media-img:URL]
@@ -203,7 +211,7 @@ function parseImgTag(content) {
       text: content.replace(/\s*\[media-img:[^\]]+\]/, '').trim(),
       product: null, imgUrl: null, allImages: null,
       uploadedImg: uploadedImg[1],
-      uploadedDoc: null, audioSrc: null,
+      uploadedDoc: null, audioSrc: null, audioTranscript: null,
     };
   }
   // Manually uploaded document: [media-doc:FILENAME:URL]
@@ -214,7 +222,7 @@ function parseImgTag(content) {
       product: null, imgUrl: null, allImages: null,
       uploadedImg: null,
       uploadedDoc: { name: uploadedDoc[1], url: uploadedDoc[2] },
-      audioSrc: null,
+      audioSrc: null, audioTranscript: null,
     };
   }
   // Product image: [img:ProductName]
@@ -226,7 +234,7 @@ function parseImgTag(content) {
     product: isAll ? null : product,
     imgUrl: (product && !isAll) ? PRODUCT_IMG_MAP[product] : null,
     allImages: isAll ? Object.entries(PRODUCT_IMG_MAP) : null,
-    uploadedImg: null, uploadedDoc: null, audioSrc: null,
+    uploadedImg: null, uploadedDoc: null, audioSrc: null, audioTranscript: null,
   };
 }
 
@@ -716,12 +724,12 @@ export default function WhatsApp() {
               )}
 
               {messages.map((m,i)=>{
-                const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc, audioSrc } = parseImgTag(m.content);
+                const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc, audioSrc, audioTranscript } = parseImgTag(m.content);
                 const isUser = m.role === 'user';
                 return (
                   <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}>
                     {/* Voice note player */}
-                    {audioSrc && <VoiceNote src={audioSrc} isUser={isUser} />}
+                    {audioSrc && <VoiceNote src={audioSrc} isUser={isUser} transcript={audioTranscript} />}
                     {/* Text bubble */}
                     {text && (
                       <div style={{
