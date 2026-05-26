@@ -28,7 +28,7 @@ router.get('/', protect, async (req, res) => {
   try {
     const convs = await WaConversation.find()
       .sort({ lastMessageAt: -1 })
-      .limit(50)
+      .limit(500)
       .lean();
 
     const result = convs.map(c => {
