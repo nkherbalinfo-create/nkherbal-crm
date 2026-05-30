@@ -165,11 +165,11 @@ router.post('/ai-summary', protect, async (req, res) => {
   try {
     if (!process.env.OPENROUTER_API_KEY) return res.status(500).json({ message: 'OPENROUTER_API_KEY not configured' });
 
-    const convs = await WaConversation.find().sort({ lastMessageAt: -1 }).limit(200).lean();
+    const convs = await WaConversation.find().sort({ lastMessageAt: -1 }).lean();
 
-    // Build compact snapshot of each conversation (last 8 messages, strip base64)
+    // Build compact snapshot of each conversation (all messages, strip base64 blobs)
     const snapshots = convs.map(c => {
-      const msgs = c.messages.slice(-8).map(m => {
+      const msgs = c.messages.map(m => {
         const role = m.role === 'user' ? 'Customer' : 'Bot';
         let content = (m.content || '')
           .replace(/\[media-audio:data:[^\]]{0,9999999}\]\[audio-transcript:([^\]]+)\]/g, '[Voice: "$1"]')
@@ -207,7 +207,7 @@ Return ONLY a valid JSON array, no extra text.`;
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Analyze these ${convs.length} conversations:\n\n${snapshots}` }
       ],
-      max_tokens: 4000,
+      max_tokens: 8000,
       temperature: 0.1,
     });
 
