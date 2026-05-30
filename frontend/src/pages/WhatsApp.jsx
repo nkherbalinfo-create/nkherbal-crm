@@ -294,6 +294,10 @@ export default function WhatsApp() {
   const [searchFilter, setSearchFilter] = useState('');
   const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, type }
   const fileInputRef = useRef(null);
+  const [aiSummaryModal, setAiSummaryModal] = useState(false);
+  const [aiSummaryData, setAiSummaryData] = useState(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiSummaryFilter, setAiSummaryFilter] = useState('all');
   // seenCounts: { [phone]: lastSeenCustomerMsgCount } — persisted in localStorage
   const [seenCounts, setSeenCounts] = useState(() => {
     try {
@@ -554,6 +558,22 @@ export default function WhatsApp() {
     setBroadcastMsg('');
   };
 
+  const fetchAiSummary = async () => {
+    setAiSummaryLoading(true);
+    setAiSummaryData(null);
+    setAiSummaryModal(true);
+    setAiSummaryFilter('all');
+    try {
+      const { data } = await api.post('/wa/ai-summary', {}, { timeout: 60000 });
+      setAiSummaryData(data);
+    } catch (err) {
+      addToast(err.response?.data?.message || 'AI summary failed', 'error');
+      setAiSummaryModal(false);
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
+
   const timeStr = (ts) => {
     if (!ts) return '';
     const d = new Date(ts);
@@ -564,9 +584,18 @@ export default function WhatsApp() {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-      <div>
-        <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>WhatsApp</div>
-        <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Customer conversations via WhatsApp Business API</div>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:10 }}>
+        <div>
+          <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>WhatsApp</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Customer conversations via WhatsApp Business API</div>
+        </div>
+        <button onClick={fetchAiSummary}
+          style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 14px', borderRadius:9, border:'1px solid var(--accent)', background:'var(--accent-bg)', color:'var(--accent)', cursor:'pointer', fontSize:12.5, fontWeight:600, transition:'all 0.15s', flexShrink:0 }}
+          onMouseEnter={e => { e.currentTarget.style.background='var(--accent)'; e.currentTarget.style.color='#fff'; }}
+          onMouseLeave={e => { e.currentTarget.style.background='var(--accent-bg)'; e.currentTarget.style.color='var(--accent)'; }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          AI Lead Summary
+        </button>
       </div>
 
       <div className="card" style={{ padding:0, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '300px minmax(0,1fr) 280px', height: isMobile ? 'calc(100vh - 140px)' : 'calc(100vh - 200px)', minHeight: isMobile ? 'unset' : 560, overflow:'hidden' }}>
@@ -957,6 +986,89 @@ export default function WhatsApp() {
           )}
         </div>}
       </div>
+
+      {/* AI Lead Summary Modal */}
+      <Modal open={aiSummaryModal} onClose={() => !aiSummaryLoading && setAiSummaryModal(false)} title="AI Lead Summary" size="lg">
+        {aiSummaryLoading ? (
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16, padding:'32px 0' }}>
+            <div style={{ width:44, height:44, border:'3px solid var(--rule)', borderTopColor:'var(--accent)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+            <div style={{ fontSize:14, fontWeight:500, color:'var(--fg)' }}>Analysing conversations…</div>
+            <div style={{ fontSize:12, color:'var(--muted)' }}>AI is reading all chats and classifying leads. This takes 10–30 seconds.</div>
+          </div>
+        ) : aiSummaryData && (() => {
+          const CATS = [
+            { key:'all',          label:'All',           color:'var(--fg)',     bg:'var(--hover)' },
+            { key:'hot',          label:'🔥 Hot',         color:'#b45309',       bg:'#fef3c7' },
+            { key:'interested',   label:'✅ Interested',  color:'var(--accent)', bg:'var(--accent-bg)' },
+            { key:'followup',     label:'📞 Follow up',   color:'#1d4ed8',       bg:'#eff6ff' },
+            { key:'not_interested',label:'❌ Not interested', color:'var(--danger)', bg:'var(--danger-bg)' },
+            { key:'undecided',    label:'🤔 Undecided',   color:'var(--muted)',  bg:'var(--bg)' },
+          ];
+          const leads = aiSummaryData.leads || [];
+          const counts = leads.reduce((acc, l) => { acc[l.category] = (acc[l.category]||0)+1; return acc; }, {});
+          const filtered = aiSummaryFilter === 'all' ? leads : leads.filter(l => l.category === aiSummaryFilter);
+          return (
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {/* Stats row */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8 }}>
+                {CATS.slice(1).map(c => (
+                  <div key={c.key} onClick={() => setAiSummaryFilter(c.key === aiSummaryFilter ? 'all' : c.key)}
+                    style={{ padding:'10px 8px', borderRadius:10, textAlign:'center', cursor:'pointer', background:c.bg, border:`1.5px solid ${aiSummaryFilter===c.key ? c.color : 'transparent'}`, transition:'all 0.15s' }}>
+                    <div style={{ fontSize:18, fontWeight:700, color:c.color }}>{counts[c.key] || 0}</div>
+                    <div style={{ fontSize:10.5, color:c.color, fontWeight:500, marginTop:2 }}>{c.label}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Filter tabs */}
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {CATS.map(c => (
+                  <button key={c.key} onClick={() => setAiSummaryFilter(c.key)}
+                    style={{ padding:'4px 10px', borderRadius:999, fontSize:11.5, fontWeight:500, cursor:'pointer', border:`1px solid ${aiSummaryFilter===c.key ? c.color : 'var(--rule)'}`, background: aiSummaryFilter===c.key ? c.bg : 'transparent', color: aiSummaryFilter===c.key ? c.color : 'var(--muted)', transition:'all 0.12s' }}>
+                    {c.label} {c.key !== 'all' && counts[c.key] ? `(${counts[c.key]})` : c.key === 'all' ? `(${leads.length})` : '(0)'}
+                  </button>
+                ))}
+              </div>
+              {/* Lead list */}
+              <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:400, overflowY:'auto' }}>
+                {filtered.length === 0 && (
+                  <div style={{ padding:'24px', textAlign:'center', color:'var(--faint)', fontSize:13 }}>No leads in this category</div>
+                )}
+                {filtered.map((l, i) => {
+                  const cat = CATS.find(c => c.key === l.category) || CATS[0];
+                  return (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 14px', borderRadius:10, border:'1px solid var(--rule)', background:'var(--card)' }}>
+                      <div style={{ width:40, height:40, borderRadius:'50%', background:cat.bg, display:'grid', placeItems:'center', flexShrink:0 }}>
+                        <span style={{ fontSize:18 }}>{cat.label.split(' ')[0]}</span>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+                          <span style={{ fontSize:13, fontWeight:600, color:'var(--fg)' }}>{l.name}</span>
+                          <span style={{ fontSize:10, color:'var(--faint)', fontFamily:'Inter' }}>+{l.phone}</span>
+                        </div>
+                        <div style={{ fontSize:12, color:'var(--muted)', marginBottom:3 }}>{l.reason}</div>
+                        <div style={{ fontSize:11, fontWeight:600, color:cat.color, background:cat.bg, display:'inline-block', padding:'2px 8px', borderRadius:999 }}>→ {l.action}</div>
+                      </div>
+                      <button onClick={() => { const conv = convs.find(c => c.phone === l.phone || ('+'+c.phone) === l.phone || c.phone === l.phone.replace(/^\+/,'')); if(conv) { selectConv(conv); setAiSummaryModal(false); } }}
+                        style={{ padding:'5px 10px', borderRadius:7, border:'1px solid var(--rule)', background:'var(--bg)', color:'var(--fg)', cursor:'pointer', fontSize:11.5, fontWeight:500, flexShrink:0, transition:'all 0.12s' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor='var(--accent)'; e.currentTarget.style.color='var(--accent)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor='var(--rule)'; e.currentTarget.style.color='var(--fg)'; }}>
+                        Open chat
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:'1px solid var(--rule)', paddingTop:12 }}>
+                <div style={{ fontSize:11.5, color:'var(--faint)' }}>Analysed {aiSummaryData.total} conversations</div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button className="btn-secondary" onClick={fetchAiSummary} style={{ fontSize:12 }}>Refresh</button>
+                  <button className="btn-secondary" onClick={() => setAiSummaryModal(false)} style={{ fontSize:12 }}>Close</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       {/* Broadcast Modal */}
       <Modal open={broadcastModal} onClose={closeBroadcast} title={`Broadcast to ${broadcastSelected.size} contact${broadcastSelected.size !== 1 ? 's' : ''}`}>
