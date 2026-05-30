@@ -322,21 +322,19 @@ SMOOTH PRODUCT STEERING — do this naturally, never forcefully:
 function callAI(messages) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
-      model: 'anthropic/claude-3.5-haiku',
+      model: 'llama3-70b-8192',
       messages,
       max_tokens: 380,
       temperature: 0.15
     });
 
     const options = {
-      hostname: 'openrouter.ai',
-      path: '/api/v1/chat/completions',
+      hostname: 'api.groq.com',
+      path: '/openai/v1/chat/completions',
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://nkherbal.com',
-        'X-Title': 'NK Herbal Bot',
         'Content-Length': Buffer.byteLength(body)
       }
     };
@@ -441,7 +439,7 @@ Definitions:
     ];
 
     const body = JSON.stringify({
-      model: 'anthropic/claude-3.5-haiku',
+      model: 'llama3-70b-8192',
       messages: prompt,
       max_tokens: 8,
       temperature: 0
@@ -449,14 +447,12 @@ Definitions:
 
     const result = await new Promise((resolve, reject) => {
       const req = https.request({
-        hostname: 'openrouter.ai',
-        path: '/api/v1/chat/completions',
+        hostname: 'api.groq.com',
+        path: '/openai/v1/chat/completions',
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://nkherbal.com',
-          'X-Title': 'NK Herbal Bot',
           'Content-Length': Buffer.byteLength(body)
         }
       }, (res) => {
@@ -511,7 +507,7 @@ Return empty string if there is nothing notable yet.`
   ];
 
   const body = JSON.stringify({
-    model: 'anthropic/claude-3.5-haiku',
+    model: 'llama3-70b-8192',
     messages: prompt,
     max_tokens: 150,
     temperature: 0
@@ -519,14 +515,12 @@ Return empty string if there is nothing notable yet.`
 
   return new Promise((resolve) => {
     const req = https.request({
-      hostname: 'openrouter.ai',
-      path: '/api/v1/chat/completions',
+      hostname: 'api.groq.com',
+      path: '/openai/v1/chat/completions',
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://nkherbal.com',
-        'X-Title': 'NK Herbal Bot',
         'Content-Length': Buffer.byteLength(body)
       }
     }, (res) => {
