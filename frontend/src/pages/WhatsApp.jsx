@@ -1048,7 +1048,12 @@ export default function WhatsApp() {
                         <div style={{ fontSize:12, color:'var(--muted)', marginBottom:3 }}>{l.reason}</div>
                         <div style={{ fontSize:11, fontWeight:600, color:cat.color, background:cat.bg, display:'inline-block', padding:'2px 8px', borderRadius:999 }}>→ {l.action}</div>
                       </div>
-                      <button onClick={() => { const conv = convs.find(c => c.phone === l.phone || ('+'+c.phone) === l.phone || c.phone === l.phone.replace(/^\+/,'')); if(conv) { selectConv(conv); setAiSummaryModal(false); } }}
+                      <button onClick={() => {
+                        const normalize = p => String(p).replace(/\D/g,'').slice(-10);
+                        const conv = convs.find(c => normalize(c.phone) === normalize(l.phone));
+                        if(conv) { selectConv(conv); setAiSummaryModal(false); }
+                        else addToast('Conversation not found','error');
+                      }}
                         style={{ padding:'5px 10px', borderRadius:7, border:'1px solid var(--rule)', background:'var(--bg)', color:'var(--fg)', cursor:'pointer', fontSize:11.5, fontWeight:500, flexShrink:0, transition:'all 0.12s' }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor='var(--accent)'; e.currentTarget.style.color='var(--accent)'; }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor='var(--rule)'; e.currentTarget.style.color='var(--fg)'; }}>
