@@ -322,7 +322,7 @@ SMOOTH PRODUCT STEERING — do this naturally, never forcefully:
 function callAI(messages) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
-      model: 'llama3-70b-8192',
+      model: 'llama-3.3-70b-versatile',
       messages,
       max_tokens: 380,
       temperature: 0.15
@@ -439,7 +439,7 @@ Definitions:
     ];
 
     const body = JSON.stringify({
-      model: 'llama3-70b-8192',
+      model: 'llama-3.3-70b-versatile',
       messages: prompt,
       max_tokens: 8,
       temperature: 0
@@ -507,7 +507,7 @@ Return empty string if there is nothing notable yet.`
   ];
 
   const body = JSON.stringify({
-    model: 'llama3-70b-8192',
+    model: 'llama-3.3-70b-versatile',
     messages: prompt,
     max_tokens: 150,
     temperature: 0
