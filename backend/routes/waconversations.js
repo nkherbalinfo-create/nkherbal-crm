@@ -161,88 +161,82 @@ router.post('/send-media', protect, async (req, res) => {
 });
 
 // AI-powered lead summary across all conversations
+function buildSnapshot(c) {
+  const msgs = c.messages.slice(-15).map(m => {
+    const role = m.role === 'user' ? 'C' : 'B';
+    const content = (m.content || '')
+      .replace(/\[media-audio:data:[^\]]{0,9999999}\]\[audio-transcript:([^\]]+)\]/g, '[Voice:"$1"]')
+      .replace(/\[media-audio:[^\]]{0,9999999}\]/g, '[voice]')
+      .replace(/\[media-img:data:[^\]]{0,9999999}\]/g, '[img]')
+      .replace(/\[media-doc:[^:]+:data:[^\]]{0,9999999}\]/g, '[doc]')
+      .replace(/\[img:[^\]]+\]/g, '[img]')
+      .slice(0, 200);
+    return `${role}:${content}`;
+  }).join('|');
+  return `${c.name||c.phone}(+${c.phone}):${msgs}`;
+}
+
+const AI_SYSTEM = `You are a sales analyst for NK Herbal (Ayurvedic brand). Classify each WhatsApp lead.
+Return ONLY a JSON array. Each item: {"phone":"digits only","name":"name","category":"hot|interested|followup|not_interested|undecided","reason":"max 10 words","action":"max 7 words"}
+Categories: hot=ready to buy/asked payment; interested=engaged asking questions; followup=showed interest then silent; not_interested=rejected; undecided=neutral/just started.
+Cover EVERY conversation given. No extra text, only the JSON array.`;
+
+function callAI(batch) {
+  const snapshots = batch.map(buildSnapshot).join('\n');
+  const body = JSON.stringify({
+    model: 'anthropic/claude-3.5-haiku',
+    messages: [
+      { role: 'system', content: AI_SYSTEM },
+      { role: 'user', content: `Classify all ${batch.length} conversations:\n${snapshots}` }
+    ],
+    max_tokens: 4000,
+    temperature: 0.1,
+  });
+  return new Promise((resolve, reject) => {
+    const opts = {
+      hostname: 'openrouter.ai',
+      path: '/api/v1/chat/completions',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://nkherbal.com',
+        'X-Title': 'NK Herbal CRM',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+    const r = https.request(opts, (resp) => {
+      let data = '';
+      resp.on('data', chunk => data += chunk);
+      resp.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          const text = parsed.choices?.[0]?.message?.content || '[]';
+          const match = text.match(/\[[\s\S]*\]/);
+          resolve(match ? JSON.parse(match[0]) : []);
+        } catch { resolve([]); }
+      });
+    });
+    r.on('error', () => resolve([]));
+    r.setTimeout(45000, () => { r.destroy(); resolve([]); });
+    r.write(body);
+    r.end();
+  });
+}
+
 router.post('/ai-summary', protect, async (req, res) => {
   try {
     if (!process.env.OPENROUTER_API_KEY) return res.status(500).json({ message: 'OPENROUTER_API_KEY not configured' });
 
     const convs = await WaConversation.find().sort({ lastMessageAt: -1 }).lean();
 
-    // Build compact snapshot of each conversation (all messages, strip base64 blobs)
-    const snapshots = convs.map(c => {
-      const msgs = c.messages.map(m => {
-        const role = m.role === 'user' ? 'Customer' : 'Bot';
-        let content = (m.content || '')
-          .replace(/\[media-audio:data:[^\]]{0,9999999}\]\[audio-transcript:([^\]]+)\]/g, '[Voice: "$1"]')
-          .replace(/\[media-audio:[^\]]{0,9999999}\]/g, '[voice note]')
-          .replace(/\[media-img:data:[^\]]{0,9999999}\]/g, '[image]')
-          .replace(/\[media-doc:[^:]+:data:[^\]]{0,9999999}\]/g, '[document]')
-          .replace(/\[img:[^\]]+\]/g, '[product image]')
-          .slice(0, 300);
-        return `${role}: ${content}`;
-      }).join('\n');
-      return `--- ${c.name || c.phone} (+${c.phone}) ---\n${msgs}`;
-    }).join('\n\n');
+    // Split into batches of 40 and run in parallel
+    const BATCH = 40;
+    const batches = [];
+    for (let i = 0; i < convs.length; i += BATCH) batches.push(convs.slice(i, i + BATCH));
 
-    const systemPrompt = `You are a sales analyst for NK Herbal, an Ayurvedic brand. Analyze WhatsApp conversations and classify each lead.
-
-For each conversation, return a JSON array where each item has:
-- "phone": phone number (just digits)
-- "name": customer name
-- "category": one of "hot" | "interested" | "followup" | "not_interested" | "undecided"
-- "reason": 1 short sentence explaining why (max 12 words)
-- "action": what to do next (max 8 words)
-
-Categories:
-- hot: asked for payment/address/order, ready to buy
-- interested: asking product questions, engaged positively
-- followup: showed interest but went silent or needs nudging
-- not_interested: clearly rejected, said no, not relevant
-- undecided: just started chatting, neutral, no clear signal
-
-Return ONLY a valid JSON array, no extra text.`;
-
-    const body = JSON.stringify({
-      model: 'anthropic/claude-3.5-haiku',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Analyze these ${convs.length} conversations:\n\n${snapshots}` }
-      ],
-      max_tokens: 8000,
-      temperature: 0.1,
-    });
-
-    const aiResponse = await new Promise((resolve, reject) => {
-      const reqOpts = {
-        hostname: 'openrouter.ai',
-        path: '/api/v1/chat/completions',
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://nkherbal.com',
-          'X-Title': 'NK Herbal CRM',
-          'Content-Length': Buffer.byteLength(body),
-        },
-      };
-      const r = https.request(reqOpts, (resp) => {
-        let data = '';
-        resp.on('data', chunk => data += chunk);
-        resp.on('end', () => {
-          try {
-            const parsed = JSON.parse(data);
-            resolve(parsed.choices?.[0]?.message?.content || '[]');
-          } catch { reject(new Error('AI parse error')); }
-        });
-      });
-      r.on('error', reject);
-      r.setTimeout(40000, () => { r.destroy(); reject(new Error('AI timeout')); });
-      r.write(body);
-      r.end();
-    });
-
-    // Extract JSON array from response
-    const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
-    const leads = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+    const results = await Promise.all(batches.map(callAI));
+    const leads = results.flat();
 
     res.json({ leads, total: convs.length });
   } catch (err) {
