@@ -319,44 +319,59 @@ SMOOTH PRODUCT STEERING — do this naturally, never forcefully:
 • Trust that a good conversation leads to a sale — don't rush it
 • The goal is to make the customer feel heard and comfortable, not sold to`;
 
-function callAI(messages) {
+function callProvider(hostname, path, apiKey, model, messages, maxTokens) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages,
-      max_tokens: 380,
-      temperature: 0.15
-    });
-
-    const options = {
-      hostname: 'api.groq.com',
-      path: '/openai/v1/chat/completions',
-      method: 'POST',
+    const body = JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.15 });
+    const req = https.request({
+      hostname, path, method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body)
       }
-    };
-
-    const req = https.request(options, (res) => {
+    }, (res) => {
       let data = '';
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
+          if (res.statusCode === 429) return reject(new Error('rate_limit'));
           const text = parsed.choices?.[0]?.message?.content;
-          if (!text) return reject(new Error('No response from AI: ' + data));
+          if (!text) return reject(new Error('No response: ' + data));
           resolve(text.trim());
-        } catch (e) { reject(new Error('AI parse error: ' + e.message)); }
+        } catch (e) { reject(new Error('parse error: ' + e.message)); }
       });
     });
-
     req.on('error', reject);
-    req.setTimeout(20000, () => { req.destroy(); reject(new Error('AI timeout')); });
+    req.setTimeout(20000, () => { req.destroy(); reject(new Error('timeout')); });
     req.write(body);
     req.end();
   });
+}
+
+async function callAI(messages) {
+  // Primary: Gemini 2.0 Flash — 1,000,000 tokens/day free
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      return await callProvider(
+        'generativelanguage.googleapis.com',
+        '/v1beta/openai/chat/completions',
+        process.env.GEMINI_API_KEY,
+        'gemini-2.0-flash',
+        messages, 380
+      );
+    } catch (e) {
+      console.warn('[AI] Gemini failed, falling back to Groq:', e.message);
+    }
+  }
+  // Fallback: Groq — 100,000 tokens/day free
+  return callProvider(
+    'api.groq.com',
+    '/openai/v1/chat/completions',
+    process.env.GROQ_API_KEY,
+    'llama-3.3-70b-versatile',
+    messages, 380
+  );
 }
 
 // Detect garbled/corrupted AI output
@@ -438,38 +453,14 @@ Definitions:
       { role: 'user', content: `Customer message: "${text}"` }
     ];
 
-    const body = JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: prompt,
-      max_tokens: 8,
-      temperature: 0
-    });
-
-    const result = await new Promise((resolve, reject) => {
-      const req = https.request({
-        hostname: 'api.groq.com',
-        path: '/openai/v1/chat/completions',
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body)
-        }
-      }, (res) => {
-        let data = '';
-        res.on('data', c => { data += c; });
-        res.on('end', () => {
-          try {
-            const parsed = JSON.parse(data);
-            resolve(parsed.choices?.[0]?.message?.content?.trim() || 'None');
-          } catch { resolve('None'); }
-        });
-      });
-      req.on('error', () => resolve('None'));
-      req.setTimeout(8000, () => { req.destroy(); resolve('None'); });
-      req.write(body);
-      req.end();
-    });
+    let result = 'None';
+    try { result = await callProvider(
+      process.env.GEMINI_API_KEY ? 'generativelanguage.googleapis.com' : 'api.groq.com',
+      process.env.GEMINI_API_KEY ? '/v1beta/openai/chat/completions' : '/openai/v1/chat/completions',
+      process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY,
+      process.env.GEMINI_API_KEY ? 'gemini-2.0-flash' : 'llama-3.3-70b-versatile',
+      prompt, 8
+    ); } catch { result = 'None'; }
 
     const label = result.toLowerCase();
     if (label.includes('not interested')) return 'Not Interested';
@@ -506,38 +497,15 @@ Return empty string if there is nothing notable yet.`
     }
   ];
 
-  const body = JSON.stringify({
-    model: 'llama-3.3-70b-versatile',
-    messages: prompt,
-    max_tokens: 150,
-    temperature: 0
-  });
-
-  return new Promise((resolve) => {
-    const req = https.request({
-      hostname: 'api.groq.com',
-      path: '/openai/v1/chat/completions',
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body)
-      }
-    }, (res) => {
-      let data = '';
-      res.on('data', c => { data += c; });
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          resolve(parsed.choices?.[0]?.message?.content?.trim() || '');
-        } catch { resolve(''); }
-      });
-    });
-    req.on('error', () => resolve(''));
-    req.setTimeout(10000, () => { req.destroy(); resolve(''); });
-    req.write(body);
-    req.end();
-  });
+  try {
+    return await callProvider(
+      process.env.GEMINI_API_KEY ? 'generativelanguage.googleapis.com' : 'api.groq.com',
+      process.env.GEMINI_API_KEY ? '/v1beta/openai/chat/completions' : '/openai/v1/chat/completions',
+      process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY,
+      process.env.GEMINI_API_KEY ? 'gemini-2.0-flash' : 'llama-3.3-70b-versatile',
+      prompt, 150
+    );
+  } catch { return ''; }
 }
 
 module.exports = { getAIReply, classifyIntent, buildContextSummary };
