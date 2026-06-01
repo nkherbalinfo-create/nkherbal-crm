@@ -319,19 +319,17 @@ SMOOTH PRODUCT STEERING — do this naturally, never forcefully:
 • Trust that a good conversation leads to a sale — don't rush it
 • The goal is to make the customer feel heard and comfortable, not sold to`;
 
-function callProvider(hostname, path, apiKey, model, messages, maxTokens) {
+function callGroq(messages, maxTokens) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.15 });
+    const body = JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: maxTokens, temperature: 0.15 });
     const req = https.request({
-      hostname, path, method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body)
-      }
+      hostname: 'api.groq.com',
+      path: '/openai/v1/chat/completions',
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
     }, (res) => {
       let data = '';
-      res.on('data', chunk => { data += chunk; });
+      res.on('data', c => data += c);
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
@@ -339,7 +337,44 @@ function callProvider(hostname, path, apiKey, model, messages, maxTokens) {
           const text = parsed.choices?.[0]?.message?.content;
           if (!text) return reject(new Error('No response: ' + data));
           resolve(text.trim());
-        } catch (e) { reject(new Error('parse error: ' + e.message)); }
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(20000, () => { req.destroy(); reject(new Error('timeout')); });
+    req.write(body);
+    req.end();
+  });
+}
+
+function callGemini(messages, maxTokens) {
+  return new Promise((resolve, reject) => {
+    const systemMsg = messages.find(m => m.role === 'system');
+    const chatMsgs  = messages.filter(m => m.role !== 'system');
+    const contents  = chatMsgs.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content || '' }]
+    }));
+    const reqBody = { contents, generationConfig: { maxOutputTokens: maxTokens, temperature: 0.15 } };
+    if (systemMsg) reqBody.systemInstruction = { parts: [{ text: systemMsg.content }] };
+    const body = JSON.stringify(reqBody);
+    const req = https.request({
+      hostname: 'generativelanguage.googleapis.com',
+      path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (res.statusCode === 429) return reject(new Error('rate_limit'));
+          if (res.statusCode !== 200) return reject(new Error('Gemini ' + res.statusCode + ': ' + data.slice(0, 200)));
+          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) return reject(new Error('No text: ' + data.slice(0, 200)));
+          resolve(text.trim());
+        } catch (e) { reject(e); }
       });
     });
     req.on('error', reject);
@@ -353,25 +388,13 @@ async function callAI(messages) {
   // Primary: Gemini 2.0 Flash — 1,000,000 tokens/day free
   if (process.env.GEMINI_API_KEY) {
     try {
-      return await callProvider(
-        'generativelanguage.googleapis.com',
-        '/v1beta/openai/chat/completions',
-        process.env.GEMINI_API_KEY,
-        'gemini-2.0-flash',
-        messages, 380
-      );
+      return await callGemini(messages, 380);
     } catch (e) {
       console.warn('[AI] Gemini failed, falling back to Groq:', e.message);
     }
   }
   // Fallback: Groq — 100,000 tokens/day free
-  return callProvider(
-    'api.groq.com',
-    '/openai/v1/chat/completions',
-    process.env.GROQ_API_KEY,
-    'llama-3.3-70b-versatile',
-    messages, 380
-  );
+  return callGroq(messages, 380);
 }
 
 // Detect garbled/corrupted AI output
@@ -454,13 +477,9 @@ Definitions:
     ];
 
     let result = 'None';
-    try { result = await callProvider(
-      process.env.GEMINI_API_KEY ? 'generativelanguage.googleapis.com' : 'api.groq.com',
-      process.env.GEMINI_API_KEY ? '/v1beta/openai/chat/completions' : '/openai/v1/chat/completions',
-      process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY,
-      process.env.GEMINI_API_KEY ? 'gemini-2.0-flash' : 'llama-3.3-70b-versatile',
-      prompt, 8
-    ); } catch { result = 'None'; }
+    try {
+      result = process.env.GEMINI_API_KEY ? await callGemini(prompt, 8) : await callGroq(prompt, 8);
+    } catch { result = 'None'; }
 
     const label = result.toLowerCase();
     if (label.includes('not interested')) return 'Not Interested';
@@ -498,13 +517,7 @@ Return empty string if there is nothing notable yet.`
   ];
 
   try {
-    return await callProvider(
-      process.env.GEMINI_API_KEY ? 'generativelanguage.googleapis.com' : 'api.groq.com',
-      process.env.GEMINI_API_KEY ? '/v1beta/openai/chat/completions' : '/openai/v1/chat/completions',
-      process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY,
-      process.env.GEMINI_API_KEY ? 'gemini-2.0-flash' : 'llama-3.3-70b-versatile',
-      prompt, 150
-    );
+    return process.env.GEMINI_API_KEY ? await callGemini(prompt, 150) : await callGroq(prompt, 150);
   } catch { return ''; }
 }
 
