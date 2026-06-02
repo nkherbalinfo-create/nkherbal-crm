@@ -62,6 +62,7 @@ app.use(cors({
     'http://localhost:5173',
     /\.netlify\.app$/,
     /\.netlify\.live$/,
+    /\.vercel\.app$/,
     process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true
