@@ -937,10 +937,10 @@ export default function WhatsApp() {
                     <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums', marginTop:1 }}>
                       {timeStr(m.timestamp)}
                     </div>
-                      </div>{/* end inner bubble column */}
-                    </div>{/* end bubble-wrap */}
-                  </div>{/* end msg-row */}
-                  </div>{/* end outer wrapper */}
+                      </div>
+                    </div>
+                  </div>
+                  </div>
                 );
               });
               })()}
