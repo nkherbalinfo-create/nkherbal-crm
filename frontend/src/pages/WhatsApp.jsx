@@ -848,22 +848,22 @@ export default function WhatsApp() {
                   ? messages.filter(m => (m.content||'').toLowerCase().includes(msgSearch.toLowerCase()))
                   : messages;
                 let lastDate = '';
-                return filtered.map((m,i)=>{
+                return filtered.map((m,i) => {
                 const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc, audioSrc, audioTranscript, videoSrc } = parseImgTag(m.content);
                 const isUser = m.role === 'user';
                 const previewText = text || (uploadedImg ? '📷 Image' : videoSrc ? '🎥 Video' : uploadedDoc ? `📄 ${uploadedDoc.name}` : audioSrc ? '🎤 Voice note' : '');
                 const msgDate = m.timestamp ? format(new Date(m.timestamp), 'yyyy-MM-dd') : '';
                 const isNewDate = msgDate && msgDate !== lastDate;
                 if (isNewDate) lastDate = msgDate;
-                const datePill = isNewDate ? (() => {
+                const getDateLabel = () => {
                   const d = new Date(m.timestamp);
-                  const today = new Date(); const yesterday = new Date(); yesterday.setDate(today.getDate()-1);
-                  const label = d.toDateString()===today.toDateString() ? 'Today' : d.toDateString()===yesterday.toDateString() ? 'Yesterday' : format(d,'dd MMM yyyy');
-                  return <div key={`d-${i}`} style={{ textAlign:'center', margin:'8px 0 4px' }}><span style={{ fontSize:10.5, color:'var(--faint)', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:999, padding:'2px 10px', fontFamily:'Inter' }}>{label}</span></div>;
-                })() : null;
+                  const today = new Date(); const yest = new Date(); yest.setDate(today.getDate()-1);
+                  return d.toDateString()===today.toDateString() ? 'Today' : d.toDateString()===yest.toDateString() ? 'Yesterday' : format(d,'dd MMM yyyy');
+                };
                 return (
-                  <>{datePill}
-                  <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }} className="msg-row">
+                  <div key={i} style={{ display:'flex', flexDirection:'column', gap:0 }}>
+                  {isNewDate && <div style={{ textAlign:'center', margin:'8px 0 4px' }}><span style={{ fontSize:10.5, color:'var(--faint)', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:999, padding:'2px 10px', fontFamily:'Inter' }}>{getDateLabel()}</span></div>}
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }} className="msg-row">
                     {/* Reply button — appears on hover via CSS */}
                     {/* Bubble + inline reply button on hover */}
                     <div className="bubble-wrap" style={{ display:'flex', alignItems:'flex-end', gap:6, flexDirection: isUser ? 'row' : 'row-reverse', maxWidth:'78%' }}>
@@ -939,8 +939,8 @@ export default function WhatsApp() {
                     </div>
                       </div>{/* end inner bubble column */}
                     </div>{/* end bubble-wrap */}
-                  </div>
-                  </>{/* end fragment */}
+                  </div>{/* end msg-row */}
+                  </div>{/* end outer wrapper */}
                 );
               });
               })()}
