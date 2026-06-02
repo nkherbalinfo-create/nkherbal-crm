@@ -535,8 +535,38 @@ router.post('/webhook', async (req, res) => {
                 console.error('[WhatsApp] ⚠️ Voice note download failed:', e.message);
               }
             }
+          } else if (msg.type === 'image' || msg.type === 'video' || msg.type === 'document' || msg.type === 'sticker') {
+            const mediaId = msg.image?.id || msg.video?.id || msg.document?.id || msg.sticker?.id;
+            const caption = msg.image?.caption || msg.video?.caption || msg.document?.caption || '';
+            const fileName = msg.document?.filename || '';
+            const isImage = msg.type === 'image' || msg.type === 'sticker';
+            const isVideo = msg.type === 'video';
+            text = caption || `[${msg.type} received]`;
+            if (mediaId) {
+              try {
+                const { buffer, mimeType } = await downloadWhatsAppMedia(mediaId);
+                const sizeMB = buffer.length / (1024 * 1024);
+                if (sizeMB <= 5) {
+                  const b64 = buffer.toString('base64');
+                  const dataUrl = `data:${mimeType};base64,${b64}`;
+                  if (isImage) {
+                    text = caption ? `${caption} [media-img:${dataUrl}]` : `[media-img:${dataUrl}]`;
+                  } else if (isVideo) {
+                    text = caption ? `${caption} [media-video:${dataUrl}]` : `[media-video:${dataUrl}]`;
+                  } else {
+                    text = caption ? `${caption} [media-doc:${fileName || 'document'}:${dataUrl}]` : `[media-doc:${fileName || 'document'}:${dataUrl}]`;
+                  }
+                  console.log(`[WhatsApp] 📎 ${msg.type} downloaded: ${sizeMB.toFixed(1)}MB from ${phone}`);
+                } else {
+                  text = caption || `[${msg.type} received — too large to preview]`;
+                  console.log(`[WhatsApp] ⚠️ ${msg.type} too large: ${sizeMB.toFixed(1)}MB`);
+                }
+              } catch(e) {
+                text = caption || `[${msg.type} received]`;
+                console.error(`[WhatsApp] ⚠️ ${msg.type} download failed:`, e.message);
+              }
+            }
           } else {
-            // Images, stickers, etc. — record as placeholder so conversation is visible
             text = `[${msg.type || 'media'} message]`;
           }
           if (!text) continue;
@@ -692,8 +722,9 @@ router.post('/webhook', async (req, res) => {
             content: (m.content || '')
               .replace(/\[media-audio:data:[^\]]{0,5000000}\]\[audio-transcript:([^\]]+)\]/g, '🎤 Voice message: "$1"')
               .replace(/\[media-audio:[^\]]{0,5000000}\]/g, '[voice note]')
-              .replace(/\[media-img:data:[^\]]{0,2000000}\]/g, '[image sent]')
-              .replace(/\[media-doc:[^:]+:data:[^\]]{0,2000000}\]/g, '[document sent]')
+              .replace(/\[media-img:data:[^\]]{0,2000000}\]/g, '[customer sent an image]')
+              .replace(/\[media-video:data:[^\]]{0,5000000}\]/g, '[customer sent a video]')
+              .replace(/\[media-doc:[^:]+:data:[^\]]{0,2000000}\]/g, '[customer sent a document]')
               .replace(/\[img:([^\]]+)\]/g, '[product image: $1]')
           });
           let aiReply, detectedIntent;

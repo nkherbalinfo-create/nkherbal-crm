@@ -191,50 +191,44 @@ const PRODUCT_IMG_MAP = {
 
 // Extract image/media tags from message content
 function parseImgTag(content) {
-  // Customer voice note: [media-audio:data:audio/ogg;base64,...][audio-transcript:text]
+  const empty = { product: null, imgUrl: null, allImages: null, uploadedImg: null, uploadedDoc: null, audioSrc: null, audioTranscript: null, videoSrc: null };
+  // Customer voice note: [media-audio:data:...][audio-transcript:text]
   if (content?.startsWith('[media-audio:')) {
     const closeIdx = content.indexOf(']');
     const audioSrc = closeIdx > -1 ? content.slice('[media-audio:'.length, closeIdx) : null;
     const afterAudio = closeIdx > -1 ? content.slice(closeIdx + 1) : '';
     const transcriptMatch = afterAudio.match(/\[audio-transcript:([^\]]+)\]/);
     const audioTranscript = transcriptMatch ? transcriptMatch[1] : null;
-    return {
-      text: afterAudio.replace(/\[audio-transcript:[^\]]+\]/, '').trim(),
-      product: null, imgUrl: null, allImages: null,
-      uploadedImg: null, uploadedDoc: null, audioSrc, audioTranscript,
-    };
+    return { ...empty, text: afterAudio.replace(/\[audio-transcript:[^\]]+\]/, '').trim(), audioSrc, audioTranscript };
   }
-  // Manually uploaded image: [media-img:URL]
+  // Customer video: [media-video:data:video/...;base64,...]
+  if (content?.includes('[media-video:')) {
+    const start = content.indexOf('[media-video:') + '[media-video:'.length;
+    const end = content.indexOf(']', start);
+    const videoSrc = end > -1 ? content.slice(start, end) : null;
+    const text = content.replace(/\s*\[media-video:[^\]]+\]/, '').trim();
+    return { ...empty, text, videoSrc };
+  }
+  // Image (from CRM upload OR from customer): [media-img:URL]
   const uploadedImg = content?.match(/\[media-img:([^\]]+)\]/);
   if (uploadedImg) {
-    return {
-      text: content.replace(/\s*\[media-img:[^\]]+\]/, '').trim(),
-      product: null, imgUrl: null, allImages: null,
-      uploadedImg: uploadedImg[1],
-      uploadedDoc: null, audioSrc: null, audioTranscript: null,
-    };
+    return { ...empty, text: content.replace(/\s*\[media-img:[^\]]+\]/, '').trim(), uploadedImg: uploadedImg[1] };
   }
-  // Manually uploaded document: [media-doc:FILENAME:URL]
+  // Document: [media-doc:FILENAME:URL]
   const uploadedDoc = content?.match(/\[media-doc:([^:]+):([^\]]+)\]/);
   if (uploadedDoc) {
-    return {
-      text: content.replace(/\s*\[media-doc:[^\]]+\]/, '').trim(),
-      product: null, imgUrl: null, allImages: null,
-      uploadedImg: null,
-      uploadedDoc: { name: uploadedDoc[1], url: uploadedDoc[2] },
-      audioSrc: null, audioTranscript: null,
-    };
+    return { ...empty, text: content.replace(/\s*\[media-doc:[^\]]+\]/, '').trim(), uploadedDoc: { name: uploadedDoc[1], url: uploadedDoc[2] } };
   }
   // Product image: [img:ProductName]
   const match = content?.match(/\[img:([^\]]+)\]/);
   const product = match ? match[1] : null;
   const isAll = product === 'all-products';
   return {
+    ...empty,
     text: content?.replace(/\s*\[img:[^\]]+\]/g, '').trim() || '',
     product: isAll ? null : product,
     imgUrl: (product && !isAll) ? PRODUCT_IMG_MAP[product] : null,
     allImages: isAll ? Object.entries(PRODUCT_IMG_MAP) : null,
-    uploadedImg: null, uploadedDoc: null, audioSrc: null, audioTranscript: null,
   };
 }
 
@@ -663,8 +657,10 @@ export default function WhatsApp() {
                   {c.lastMessage
                     ?.replace(/\s*\[img:[^\]]+\]/g, '')
                     ?.replace(/\s*\[media-img:data:[^\]]{0,9999999}\]/g, '📷 Image')
+                    ?.replace(/\s*\[media-video:data:[^\]]{0,9999999}\]/g, '🎥 Video')
                     ?.replace(/\s*\[media-doc:[^:]+:data:[^\]]{0,9999999}\]/g, '📄 Document')
                     ?.replace(/\s*\[media-img:[^\]]+\]/g, '📷 Image')
+                    ?.replace(/\s*\[media-video:[^\]]+\]/g, '🎥 Video')
                     ?.replace(/\s*\[media-doc:[^\]]+\]/g, '📄 Document')
                     || '—'}
                 </div>
@@ -753,12 +749,20 @@ export default function WhatsApp() {
               )}
 
               {messages.map((m,i)=>{
-                const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc, audioSrc, audioTranscript } = parseImgTag(m.content);
+                const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc, audioSrc, audioTranscript, videoSrc } = parseImgTag(m.content);
                 const isUser = m.role === 'user';
                 return (
                   <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}>
                     {/* Voice note player */}
                     {audioSrc && <VoiceNote src={audioSrc} isUser={isUser} transcript={audioTranscript} />}
+                    {/* Customer video */}
+                    {videoSrc && (
+                      <div style={{ maxWidth:'78%', borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,.15)' }}>
+                        <video controls style={{ width:'100%', maxHeight:300, display:'block', background:'#000' }}>
+                          <source src={videoSrc} />
+                        </video>
+                      </div>
+                    )}
                     {/* Text bubble */}
                     {text && (
                       <div style={{

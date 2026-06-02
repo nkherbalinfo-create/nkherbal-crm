@@ -35,6 +35,7 @@ router.get('/', protect, async (req, res) => {
     const result = convs.map(c => {
       const rawLast = c.messages.filter(m => m.content).slice(-1)[0]?.content || '';
       const lastMessage = rawLast.startsWith('[media-audio:') ? '🎤 Voice note'
+        : rawLast.includes('[media-video:')   ? '🎥 Video'
         : rawLast.startsWith('[media-img:')   ? '📷 Image'
         : rawLast.startsWith('[media-doc:')   ? '📄 Document'
         : rawLast.replace(/\[img:[^\]]+\]/g, '').trim().slice(0, 80);
