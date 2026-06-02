@@ -232,6 +232,14 @@ function parseImgTag(content) {
   };
 }
 
+const LABEL_DEFS = [
+  { key:'hot',      label:'🔥 Hot Lead',        color:'#92400e', bg:'#fef3c7' },
+  { key:'payment',  label:'💳 Payment Pending',  color:'#1e40af', bg:'#dbeafe' },
+  { key:'cod',      label:'📦 COD Order',        color:'#065f46', bg:'#d1fae5' },
+  { key:'followup', label:'📞 Follow-up',        color:'#6d28d9', bg:'#ede9fe' },
+  { key:'vip',      label:'⭐ VIP',              color:'#92400e', bg:'#fef9c3' },
+];
+
 const DEFAULT_TEMPLATES = [
   { id:'t1', label:'Pricing',   text:'*Muejaza For Men* — ₹4,000 (after ₹499 discount)\n*Testo Vardhak* — ₹3,700\n*Shahi Kalp* — ₹4,000\n*Shilajit 25g* — ₹1,000 | 50g — ₹2,000\n\nFree delivery 🚚 | Discreet packaging 📦\nOrder karne ke liye reply karen ya website visit karen: https://nkherbal.com/shop' },
   { id:'t2', label:'Delivery',  text:'Delivery 3–5 working days mein ho jati hai 🚚\nHum discreet packing mein bhejte hain — box par koi product name nahi hota.\nTracking link ship hone ke baad share kiya jayega 📦' },
@@ -289,6 +297,15 @@ export default function WhatsApp() {
   const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, type }
   const fileInputRef = useRef(null);
   const [replyTo, setReplyTo] = useState(null); // { wamid, content, role }
+  const [convFilter, setConvFilter] = useState('all'); // all | unread | paused | payment
+  const [labelModal, setLabelModal] = useState(false);
+  const [notesText, setNotesText] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [notesTab, setNotesTab] = useState(false); // show notes tab in right panel
+  const [templateModal, setTemplateModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null); // { index, title, body } | null
+  const [msgSearch, setMsgSearch] = useState('');
+  const [msgSearchOpen, setMsgSearchOpen] = useState(false);
   const [aiSummaryModal, setAiSummaryModal] = useState(false);
   const [aiSummaryData, setAiSummaryData] = useState(null);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
@@ -378,11 +395,30 @@ export default function WhatsApp() {
     finally { if (showLoading) setLoading(false); }
   };
 
+  const saveNotes = async (phone, text) => {
+    setNotesSaving(true);
+    try { await api.patch(`/wa/${phone}/notes`, { notes: text }); }
+    catch { addToast('Failed to save notes', 'error'); }
+    finally { setNotesSaving(false); }
+  };
+
+  const saveLabels = async (phone, labels) => {
+    try {
+      await api.patch(`/wa/${phone}/labels`, { labels });
+      setConvs(prev => prev.map(c => c.phone === phone ? { ...c, labels } : c));
+      if (selected?.phone === phone) setSelected(prev => ({ ...prev, labels }));
+    } catch { addToast('Failed to save label', 'error'); }
+  };
+
   const selectConv = async (conv) => {
     selectedPhoneRef.current = conv.phone;
     msgCountRef.current = 0;
     setSelected(conv);
     setReplyTo(null);
+    setNotesText(conv.notes || '');
+    setMsgSearch('');
+    setMsgSearchOpen(false);
+    setNotesTab(false);
     // Clear badge immediately on click
     markSeen(conv.phone, conv.messageCount);
     if (isMobile) setMobileChatOpen(true);
@@ -616,14 +652,40 @@ export default function WhatsApp() {
               </button>
             )}
           </div>
-          <div style={{ padding:'10px 12px', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
+          <div style={{ padding:'8px 12px', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
             <input type="text" className="input" placeholder="Search conversations…" value={searchFilter} onChange={e => setSearchFilter(e.target.value.toLowerCase())} style={{ fontSize:12 }} />
+          </div>
+          {/* Filter tabs */}
+          <div style={{ display:'flex', gap:4, padding:'8px 12px', borderBottom:'1px solid var(--rule)', flexShrink:0, flexWrap:'wrap' }}>
+            {[
+              { key:'all', label:'All' },
+              { key:'unread', label:'Unread' },
+              { key:'paused', label:'Paused' },
+              { key:'payment', label:'💰 Payment' },
+            ].map(f => {
+              const count = f.key === 'all' ? convs.length
+                : f.key === 'unread' ? convs.filter(c => (c.messageCount||0) > (seenCounts[c.phone]||0)).length
+                : f.key === 'paused' ? convs.filter(c => c.botPaused).length
+                : convs.filter(c => c.paymentClaimed).length;
+              return (
+                <button key={f.key} onClick={() => setConvFilter(f.key)}
+                  style={{ padding:'3px 9px', borderRadius:999, fontSize:11, fontWeight:500, cursor:'pointer', border:`1px solid ${convFilter===f.key?'var(--accent)':'var(--rule)'}`, background:convFilter===f.key?'var(--accent-bg)':'transparent', color:convFilter===f.key?'var(--accent)':'var(--muted)', transition:'all 0.12s' }}>
+                  {f.label} {count > 0 && <span style={{ opacity:0.7 }}>({count})</span>}
+                </button>
+              );
+            })}
           </div>
           {convs.length===0 && (
             <div style={{ padding:24, textAlign:'center', color:'var(--faint)', fontSize:12 }}>No conversations yet</div>
           )}
           <div style={{ display:'flex', flexDirection:'column', gap:6, padding:'10px 12px', overflow:'auto', flex:1 }}>
-          {convs.filter(c => !searchFilter || c.name.toLowerCase().includes(searchFilter) || c.phone.includes(searchFilter)).map(c=>{
+          {convs.filter(c => {
+            if (searchFilter && !c.name.toLowerCase().includes(searchFilter) && !c.phone.includes(searchFilter)) return false;
+            if (convFilter === 'unread') return (c.messageCount||0) > (seenCounts[c.phone]||0);
+            if (convFilter === 'paused') return c.botPaused;
+            if (convFilter === 'payment') return c.paymentClaimed;
+            return true;
+          }).map(c=>{
             const isSelected = selected?.phone===c.phone;
             const isBroadcast = broadcastSelected.has(c.phone);
             const unread = Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0));
@@ -667,6 +729,14 @@ export default function WhatsApp() {
                     ?.replace(/\s*\[media-doc:[^\]]+\]/g, '📄 Document')
                     || '—'}
                 </div>
+                {c.labels?.length > 0 && (
+                  <div style={{ display:'flex', gap:3, flexWrap:'wrap', marginTop:3 }}>
+                    {c.labels.map(l => {
+                      const LDEF = LABEL_DEFS.find(d=>d.key===l);
+                      return <span key={l} style={{ fontSize:9.5, padding:'1px 6px', borderRadius:999, background: LDEF?.bg||'var(--hover)', color: LDEF?.color||'var(--muted)', fontWeight:600 }}>{LDEF?.label||l}</span>;
+                    })}
+                  </div>
+                )}
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0 }}>
                 {unread > 0 && (
@@ -713,13 +783,29 @@ export default function WhatsApp() {
               <Av name={selected.name} size={32} />
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:13, fontWeight:500, color:'var(--fg)' }}>{selected.name}</div>
-                <div style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>+{selected.phone}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <span style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>+{selected.phone}</span>
+                  <button title="Copy phone" onClick={() => { navigator.clipboard.writeText('+'+selected.phone); addToast('Phone copied'); }}
+                    style={{ background:'none', border:'none', cursor:'pointer', color:'var(--faint)', padding:2, display:'flex', alignItems:'center' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                </div>
               </div>
-              {/* Payment claimed — waiting for CC Avenue auto-confirm */}
+              {/* Message search */}
+              <button title="Search messages" onClick={() => { setMsgSearchOpen(o=>!o); setMsgSearch(''); }}
+                style={{ background: msgSearchOpen?'var(--accent-bg)':'none', border: msgSearchOpen?'1px solid var(--accent)':'1px solid transparent', borderRadius:7, color: msgSearchOpen?'var(--accent)':'var(--faint)', cursor:'pointer', width:28, height:28, display:'grid', placeItems:'center', flexShrink:0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
+              {/* Labels button */}
+              <button title="Add label" onClick={() => setLabelModal(true)}
+                style={{ background:'none', border:'1px solid transparent', borderRadius:7, color:'var(--faint)', cursor:'pointer', width:28, height:28, display:'grid', placeItems:'center', flexShrink:0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              </button>
+              {/* Payment confirm */}
               {convs.find(c=>c.phone===selected.phone)?.paymentClaimed && (
-                <span style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:8, background:'#fef08a', color:'#854d0e', fontSize:11.5, fontWeight:600 }}>
-                  💰 Verifying payment…
-                </span>
+                <button onClick={confirmPayment} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:8, background:'#fef08a', color:'#854d0e', fontSize:11.5, fontWeight:600, border:'none', cursor:'pointer' }}>
+                  💰 Confirm payment
+                </button>
               )}
               <span className={`chip ${botPaused?'chip-warn':'chip-ok'}`} style={{ fontSize:10 }}>
                 {botPaused?'Bot paused':'Bot active'}
@@ -728,6 +814,12 @@ export default function WhatsApp() {
                 {botPaused?'Resume bot':'Take over'}
               </button>
             </div>
+            {/* Message search bar */}
+            {msgSearchOpen && (
+              <div style={{ padding:'8px 14px', borderBottom:'1px solid var(--rule)', background:'var(--card)', flexShrink:0 }}>
+                <input autoFocus className="input" placeholder="Search in conversation…" value={msgSearch} onChange={e=>setMsgSearch(e.target.value)} style={{ fontSize:12, width:'100%' }} />
+              </div>
+            )}
 
             {/* Messages */}
             <div style={{ flex:1, minHeight:0, overflowY:'auto', padding:'16px 14px', display:'flex', flexDirection:'column', gap:8, background:'var(--card-soft)' }}>
@@ -751,11 +843,26 @@ export default function WhatsApp() {
                 </div>
               )}
 
-              {messages.map((m,i)=>{
+              {(() => {
+                const filtered = msgSearch
+                  ? messages.filter(m => (m.content||'').toLowerCase().includes(msgSearch.toLowerCase()))
+                  : messages;
+                let lastDate = '';
+                return filtered.map((m,i)=>{
                 const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc, audioSrc, audioTranscript, videoSrc } = parseImgTag(m.content);
                 const isUser = m.role === 'user';
                 const previewText = text || (uploadedImg ? '📷 Image' : videoSrc ? '🎥 Video' : uploadedDoc ? `📄 ${uploadedDoc.name}` : audioSrc ? '🎤 Voice note' : '');
+                const msgDate = m.timestamp ? format(new Date(m.timestamp), 'yyyy-MM-dd') : '';
+                const isNewDate = msgDate && msgDate !== lastDate;
+                if (isNewDate) lastDate = msgDate;
+                const datePill = isNewDate ? (() => {
+                  const d = new Date(m.timestamp);
+                  const today = new Date(); const yesterday = new Date(); yesterday.setDate(today.getDate()-1);
+                  const label = d.toDateString()===today.toDateString() ? 'Today' : d.toDateString()===yesterday.toDateString() ? 'Yesterday' : format(d,'dd MMM yyyy');
+                  return <div key={`d-${i}`} style={{ textAlign:'center', margin:'8px 0 4px' }}><span style={{ fontSize:10.5, color:'var(--faint)', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:999, padding:'2px 10px', fontFamily:'Inter' }}>{label}</span></div>;
+                })() : null;
                 return (
+                  <>{datePill}
                   <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }} className="msg-row">
                     {/* Reply button — appears on hover via CSS */}
                     {/* Bubble + inline reply button on hover */}
@@ -833,8 +940,18 @@ export default function WhatsApp() {
                       </div>{/* end inner bubble column */}
                     </div>{/* end bubble-wrap */}
                   </div>
+                  </>{/* end fragment */}
                 );
-              })}
+              });
+              })()}
+              {/* Typing indicator */}
+              {showTyping && (
+                <div style={{ display:'flex', alignItems:'flex-start', gap:3 }}>
+                  <div style={{ padding:'10px 14px', borderRadius:'2px 14px 14px 14px', background:'var(--card)', border:'1px solid var(--rule)', display:'flex', gap:4, alignItems:'center' }}>
+                    <span className="typing-dot" /><span className="typing-dot" style={{ animationDelay:'0.15s' }} /><span className="typing-dot" style={{ animationDelay:'0.3s' }} />
+                  </div>
+                </div>
+              )}
               <div ref={msgEndRef} />
             </div>
 
@@ -915,6 +1032,10 @@ export default function WhatsApp() {
                       style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background: showTemplates?'var(--accent-bg)':'var(--card)', color: showTemplates?'var(--accent)':'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     </button>
+                    <button onClick={() => setTemplateModal(true)} title="Manage templates"
+                      style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background:'var(--card)', color:'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M1 12h2M21 12h2M12 1v2M12 21v2"/></svg>
+                    </button>
                     {/* Attachment button */}
                     <button onClick={() => fileInputRef.current?.click()} title="Attach image or document"
                       style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background: pendingFile?'var(--accent-bg)':'var(--card)', color: pendingFile?'var(--accent)':'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
@@ -941,11 +1062,33 @@ export default function WhatsApp() {
         ))}
 
         {/* Right — customer details (hidden on mobile) */}
-        {!isMobile && <div style={{ borderLeft:'1px solid var(--rule)', overflowY:'auto', background:'var(--card)' }}>
+        {!isMobile && <div style={{ borderLeft:'1px solid var(--rule)', overflowY:'auto', background:'var(--card)', display:'flex', flexDirection:'column' }}>
           {!selected ? (
             <div style={{ padding:20, color:'var(--faint)', fontSize:12, textAlign:'center', marginTop:40 }}>Select a conversation to see customer details</div>
           ) : (
-            <div style={{ padding:'18px 16px', display:'flex', flexDirection:'column', gap:16 }}>
+            <>
+            {/* Tab bar */}
+            <div style={{ display:'flex', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
+              {['Details','Notes'].map(t => (
+                <button key={t} onClick={() => setNotesTab(t==='Notes')}
+                  style={{ flex:1, padding:'10px 0', fontSize:12, fontWeight:500, border:'none', borderBottom:`2px solid ${(t==='Notes')===notesTab?'var(--accent)':'transparent'}`, background:'none', color:(t==='Notes')===notesTab?'var(--accent)':'var(--muted)', cursor:'pointer', transition:'all 0.15s' }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            {notesTab ? (
+              <div style={{ padding:'14px 16px', display:'flex', flexDirection:'column', gap:10, flex:1 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)' }}>Private notes — not sent to customer</div>
+                <textarea value={notesText} onChange={e=>setNotesText(e.target.value)}
+                  placeholder="Write notes about this customer…"
+                  style={{ flex:1, minHeight:200, padding:'10px 12px', borderRadius:9, border:'1px solid var(--rule)', background:'var(--bg)', color:'var(--fg)', fontSize:12.5, lineHeight:1.6, resize:'vertical', fontFamily:'inherit' }} />
+                <button onClick={() => saveNotes(selected.phone, notesText)} disabled={notesSaving}
+                  className="btn-primary" style={{ fontSize:12, alignSelf:'flex-end' }}>
+                  {notesSaving ? 'Saving…' : 'Save notes'}
+                </button>
+              </div>
+            ) : (
+            <div style={{ padding:'18px 16px', display:'flex', flexDirection:'column', gap:16, flex:1 }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, paddingBottom:14, borderBottom:'1px solid var(--rule)' }}>
                 <Av name={selected.name} size={48} />
                 <div style={{ minWidth:0, flex:1 }}>
@@ -1014,6 +1157,8 @@ export default function WhatsApp() {
                 </a>
               )}
             </div>
+            )}
+            </>
           )}
         </div>}
       </div>
@@ -1208,7 +1353,98 @@ export default function WhatsApp() {
           </div>
         </div>
       </Modal>
-      <style>{`.bubble-wrap:hover .reply-btn { opacity: 1 !important; }`}</style>
+      {/* Label Modal */}
+      <Modal open={labelModal} onClose={() => setLabelModal(false)} title="Conversation Labels" size="sm">
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          <div style={{ fontSize:12, color:'var(--muted)' }}>Select labels for {selected?.name}</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            {LABEL_DEFS.map(l => {
+              const active = selected?.labels?.includes(l.key);
+              return (
+                <button key={l.key} onClick={async () => {
+                  const cur = selected?.labels || [];
+                  const next = active ? cur.filter(x=>x!==l.key) : [...cur, l.key];
+                  await saveLabels(selected.phone, next);
+                }}
+                  style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:9, border:`1.5px solid ${active?l.color:'var(--rule)'}`, background:active?l.bg:'var(--bg)', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}>
+                  <span style={{ fontSize:15 }}>{l.label.split(' ')[0]}</span>
+                  <span style={{ fontSize:13, fontWeight:500, color:active?l.color:'var(--fg)', flex:1 }}>{l.label.slice(l.label.indexOf(' ')+1)}</span>
+                  {active && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={l.color} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                </button>
+              );
+            })}
+          </div>
+          <button className="btn-secondary" onClick={() => setLabelModal(false)} style={{ alignSelf:'flex-end', fontSize:12 }}>Done</button>
+        </div>
+      </Modal>
+
+      {/* Template Manager Modal */}
+      <Modal open={templateModal} onClose={() => { setTemplateModal(false); setEditingTemplate(null); }} title="Quick Reply Templates" size="lg">
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {editingTemplate !== null ? (
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              <div>
+                <label className="label">Template title</label>
+                <input className="input" value={editingTemplate.title} onChange={e=>setEditingTemplate(t=>({...t,title:e.target.value}))} />
+              </div>
+              <div>
+                <label className="label">Message text</label>
+                <textarea className="input" rows={4} value={editingTemplate.body} onChange={e=>setEditingTemplate(t=>({...t,body:e.target.value}))} style={{ resize:'vertical', lineHeight:1.5 }} />
+              </div>
+              <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                <button className="btn-secondary" onClick={() => setEditingTemplate(null)} style={{ fontSize:12 }}>Cancel</button>
+                <button className="btn-primary" onClick={() => {
+                  if (!editingTemplate.title.trim() || !editingTemplate.body.trim()) return;
+                  const updated = [...templates];
+                  if (editingTemplate.index === -1) {
+                    updated.push({ id: Date.now(), title: editingTemplate.title, text: editingTemplate.body });
+                  } else {
+                    updated[editingTemplate.index] = { ...updated[editingTemplate.index], title: editingTemplate.title, text: editingTemplate.body };
+                  }
+                  setTemplates(updated);
+                  localStorage.setItem('wa_templates', JSON.stringify(updated));
+                  setEditingTemplate(null);
+                }} style={{ fontSize:12 }}>Save</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button className="btn-secondary" onClick={() => setEditingTemplate({ index:-1, title:'', body:'' })} style={{ alignSelf:'flex-start', fontSize:12, display:'flex', alignItems:'center', gap:5 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add template
+              </button>
+              <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:400, overflowY:'auto' }}>
+                {templates.map((t, idx) => (
+                  <div key={t.id} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 12px', borderRadius:9, border:'1px solid var(--rule)', background:'var(--bg)' }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)', marginBottom:3 }}>{t.title}</div>
+                      <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.45, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.text}</div>
+                    </div>
+                    <button onClick={() => setEditingTemplate({ index:idx, title:t.title, body:t.text })}
+                      style={{ background:'none', border:'none', color:'var(--muted)', cursor:'pointer', padding:4 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button onClick={() => {
+                      const updated = templates.filter((_,i)=>i!==idx);
+                      setTemplates(updated);
+                      localStorage.setItem('wa_templates', JSON.stringify(updated));
+                    }} style={{ background:'none', border:'none', color:'var(--danger)', cursor:'pointer', padding:4 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
+
+      <style>{`
+        .bubble-wrap:hover .reply-btn { opacity: 1 !important; }
+        .typing-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); display:inline-block; animation:typingPulse 1s ease-in-out infinite; }
+        @keyframes typingPulse { 0%,60%,100%{transform:translateY(0);opacity:0.4} 30%{transform:translateY(-5px);opacity:1} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

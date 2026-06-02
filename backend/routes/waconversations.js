@@ -48,6 +48,8 @@ router.get('/', protect, async (req, res) => {
       botPaused: c.botPaused || false,
       paymentClaimed: c.paymentClaimed || false,
       leadId: c.leadId,
+      labels: c.labels || [],
+      notes: c.notes || '',
     });});
 
     res.json(result);
@@ -88,6 +90,30 @@ router.patch('/:phone/pause', protect, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+});
+
+// Update labels
+router.patch('/:phone/labels', protect, async (req, res) => {
+  try {
+    const conv = await WaConversation.findOneAndUpdate(
+      { phone: req.params.phone },
+      { labels: req.body.labels || [] },
+      { new: true }
+    );
+    res.json({ labels: conv.labels });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Update internal notes
+router.patch('/:phone/notes', protect, async (req, res) => {
+  try {
+    const conv = await WaConversation.findOneAndUpdate(
+      { phone: req.params.phone },
+      { notes: req.body.notes ?? '' },
+      { new: true }
+    );
+    res.json({ notes: conv.notes });
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 // Delete a conversation from CRM

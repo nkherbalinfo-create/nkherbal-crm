@@ -16,7 +16,9 @@ const waConversationSchema = new mongoose.Schema({
   botPaused:          { type: Boolean, default: false },
   paymentClaimed:     { type: Boolean, default: false },
   contextSummary:     { type: String, default: '' },
-  contextUpdatedAt:   { type: Date }
+  contextUpdatedAt:   { type: Date },
+  labels:             { type: [String], default: [] },
+  notes:              { type: String, default: '' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('WaConversation', waConversationSchema);
