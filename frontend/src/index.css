@@ -1021,6 +1021,48 @@ h1, h2, h3, h4, h5, h6 {
 .chip-warn:hover   { box-shadow: 0 0 0 2px rgba(168,122,26,.10); }
 
 
+/* ── Icon button (small square/round action buttons) ──── */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+.icon-btn:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: rgba(61,138,92,.18);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(61,138,92,.10);
+}
+.icon-btn:active { transform: scale(0.93) translateY(0); box-shadow: none; }
+.icon-btn.active {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+.dark .icon-btn:hover {
+  box-shadow: 0 2px 8px rgba(127,191,149,.12);
+  border-color: rgba(127,191,149,.2);
+}
+
+/* ── WhatsApp conversation list item ─────────────────── */
+.wa-conv-item {
+  transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
+}
+.wa-conv-item:hover { transform: translateX(1px); }
+
+/* ── Filter pill tabs ─────────────────────────────────── */
+.wa-filter-tab {
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.wa-filter-tab:hover { transform: translateY(-1px); }
+
 /* ── Reduced motion ───────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .page-enter { animation: none !important; }

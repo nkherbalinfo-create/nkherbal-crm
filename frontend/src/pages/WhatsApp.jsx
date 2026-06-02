@@ -624,10 +624,8 @@ export default function WhatsApp() {
           <div style={{ fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>WhatsApp</div>
           <div style={{ fontSize:12, color:'var(--muted)', marginTop:3 }}>Customer conversations via WhatsApp Business API</div>
         </div>
-        <button onClick={fetchAiSummary}
-          style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 14px', borderRadius:9, border:'1px solid var(--accent)', background:'var(--accent-bg)', color:'var(--accent)', cursor:'pointer', fontSize:12.5, fontWeight:600, transition:'all 0.15s', flexShrink:0 }}
-          onMouseEnter={e => { e.currentTarget.style.background='var(--accent)'; e.currentTarget.style.color='#fff'; }}
-          onMouseLeave={e => { e.currentTarget.style.background='var(--accent-bg)'; e.currentTarget.style.color='var(--accent)'; }}>
+        <button onClick={fetchAiSummary} className="btn-secondary"
+          style={{ display:'flex', alignItems:'center', gap:7, flexShrink:0, fontSize:12.5 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
           AI Lead Summary
         </button>
@@ -671,7 +669,8 @@ export default function WhatsApp() {
                 : convs.filter(c => c.paymentClaimed).length;
               return (
                 <button key={f.key} onClick={() => setConvFilter(f.key)}
-                  style={{ padding:'3px 9px', borderRadius:999, fontSize:11, fontWeight:500, cursor:'pointer', border:`1px solid ${convFilter===f.key?'var(--accent)':'var(--rule)'}`, background:convFilter===f.key?'var(--accent-bg)':'transparent', color:convFilter===f.key?'var(--accent)':'var(--muted)', transition:'all 0.12s' }}>
+                  className="wa-filter-tab"
+                  style={{ padding:'3px 9px', borderRadius:999, fontSize:11, fontWeight:500, cursor:'pointer', border:`1px solid ${convFilter===f.key?'var(--accent)':'var(--rule)'}`, background:convFilter===f.key?'var(--accent-bg)':'transparent', color:convFilter===f.key?'var(--accent)':'var(--muted)' }}>
                   {f.label} {count > 0 && <span style={{ opacity:0.7 }}>({count})</span>}
                 </button>
               );
@@ -750,9 +749,10 @@ export default function WhatsApp() {
                 type="button"
                 title="Delete conversation"
                 onClick={(e) => requestDeleteConv(c, e)}
-                style={{ width:24, height:24, display:'grid', placeItems:'center', border:'none', borderRadius:6, background:'transparent', color:'var(--faint)', cursor:'pointer', transition:'all 0.12s' }}
-                onMouseEnter={e=>{ e.currentTarget.style.background='var(--danger-bg)'; e.currentTarget.style.color='var(--danger)'; }}
-                onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--faint)'; }}
+                className="icon-btn"
+                style={{ width:24, height:24, borderRadius:6 }}
+                onMouseEnter={e=>{ e.currentTarget.style.color='var(--danger)'; e.currentTarget.style.background='var(--danger-bg)'; e.currentTarget.style.borderColor='transparent'; }}
+                onMouseLeave={e=>{ e.currentTarget.style.color=''; e.currentTarget.style.background=''; e.currentTarget.style.borderColor=''; }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -788,19 +788,19 @@ export default function WhatsApp() {
                 <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                   <span style={{ fontSize:11, color:'var(--faint)', fontFamily:'Inter', fontVariantNumeric:'tabular-nums' }}>+{selected.phone}</span>
                   <button title="Copy phone" onClick={() => { navigator.clipboard.writeText('+'+selected.phone); addToast('Phone copied'); }}
-                    style={{ background:'none', border:'none', cursor:'pointer', color:'var(--faint)', padding:2, display:'flex', alignItems:'center' }}>
+                    className="icon-btn" style={{ width:22, height:22, borderRadius:6 }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                   </button>
                 </div>
               </div>
               {/* Message search */}
               <button title="Search messages" onClick={() => { setMsgSearchOpen(o=>!o); setMsgSearch(''); }}
-                style={{ background: msgSearchOpen?'var(--accent-bg)':'none', border: msgSearchOpen?'1px solid var(--accent)':'1px solid transparent', borderRadius:7, color: msgSearchOpen?'var(--accent)':'var(--faint)', cursor:'pointer', width:28, height:28, display:'grid', placeItems:'center', flexShrink:0 }}>
+                className={`icon-btn${msgSearchOpen?' active':''}`} style={{ width:30, height:30 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               </button>
               {/* Labels button */}
               <button title="Add label" onClick={() => setLabelModal(true)}
-                style={{ background:'none', border:'1px solid transparent', borderRadius:7, color:'var(--faint)', cursor:'pointer', width:28, height:28, display:'grid', placeItems:'center', flexShrink:0 }}>
+                className={`icon-btn${selected?.labels?.length?'  active':''}`} style={{ width:30, height:30 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
               </button>
               {/* Payment confirm */}
@@ -1031,12 +1031,12 @@ export default function WhatsApp() {
                     {/* Hidden file input */}
                     <input ref={fileInputRef} type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" style={{ display:'none' }} onChange={onFileChange} />
                     <button onClick={() => setShowTemplates(s => !s)} title="Quick replies"
-                      style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background: showTemplates?'var(--accent-bg)':'var(--card)', color: showTemplates?'var(--accent)':'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
+                      className={`icon-btn${showTemplates?' active':''}`} style={{ width:34, height:34 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                     </button>
                     <button onClick={() => setTemplateModal(true)} title="Manage templates"
-                      style={{ width:34, height:34, border:'1px solid var(--rule)', borderRadius:8, background:'var(--card)', color:'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, transition:'all 0.15s' }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M1 12h2M21 12h2M12 1v2M12 21v2"/></svg>
+                      className="icon-btn" style={{ width:34, height:34 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
                     {/* Attachment button */}
                     <button onClick={() => fileInputRef.current?.click()} title="Attach image or document"
