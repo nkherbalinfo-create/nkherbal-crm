@@ -317,6 +317,8 @@ export default function WhatsApp() {
       return JSON.parse(localStorage.getItem('wa_seen_v2') || '{}');
     } catch { return {}; }
   });
+  const [showTyping, setShowTyping] = useState(false);
+  const typingTimerRef = useRef(null);
   const isMobile = useIsMobile(767);
   const msgEndRef = useRef(null);
   const selectedPhoneRef = useRef(null);
