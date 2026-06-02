@@ -343,7 +343,7 @@ export default function WhatsApp() {
         const active = data.find(c => c.phone === selectedPhoneRef.current);
         if (active) markSeen(active.phone, active.messageCount);
       }
-    } catch {}
+    } catch (e) { console.error('[loadConvs]', e?.response?.status, e?.response?.data || e?.message); }
   };
 
   useEffect(() => { loadConvs(); const t = setInterval(loadConvs, 6000); return ()=>clearInterval(t); }, []);
