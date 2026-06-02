@@ -187,55 +187,6 @@ router.post('/send-media', protect, async (req, res) => {
   }
 });
 
-// Magic Reply — AI generates the perfect reply for this conversation
-router.post('/:phone/magic-reply', protect, async (req, res) => {
-  try {
-    if (!process.env.OPENROUTER_API_KEY) return res.status(500).json({ message: 'OPENROUTER_API_KEY not configured' });
-    const conv = await WaConversation.findOne({ phone: req.params.phone }).lean();
-    if (!conv) return res.status(404).json({ message: 'Conversation not found' });
-
-    const recent = conv.messages.slice(-12).map(m => {
-      const role = m.role === 'user' ? 'Customer' : 'You (Agent)';
-      const content = (m.content || '')
-        .replace(/\[media-audio:data:[^\]]{0,9999}\]\[audio-transcript:([^\]]+)\]/g, '[Voice: "$1"]')
-        .replace(/\[media-[^\]]+\]/g, '[media]')
-        .slice(0, 250);
-      return `${role}: ${content}`;
-    }).join('\n');
-
-    const body = JSON.stringify({
-      model: 'google/gemini-flash-1.5',
-      messages: [
-        { role: 'system', content: `You are a WhatsApp sales agent for NK Herbal, an Ayurvedic brand. Write ONE perfect reply to the customer's last message. Rules: short (max 4 lines), warm and conversational Hinglish or English (match the customer's language), never mention per-day pricing, always mention SAVE499 coupon if discussing price. Return ONLY the reply text, nothing else.` },
-        { role: 'user', content: `Conversation:\n${recent}\n\nWrite the perfect next reply:` }
-      ],
-      max_tokens: 200,
-      temperature: 0.3,
-    });
-
-    const reply = await new Promise((resolve, reject) => {
-      const r = https.request({
-        hostname: 'openrouter.ai', path: '/api/v1/chat/completions', method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://nkherbal.com', 'X-Title': 'NK Herbal CRM', 'Content-Length': Buffer.byteLength(body) }
-      }, (resp) => {
-        let data = '';
-        resp.on('data', c => data += c);
-        resp.on('end', () => {
-          try { resolve(JSON.parse(data).choices?.[0]?.message?.content?.trim() || ''); }
-          catch { reject(new Error('Parse error')); }
-        });
-      });
-      r.on('error', reject);
-      r.setTimeout(20000, () => { r.destroy(); reject(new Error('Timeout')); });
-      r.write(body); r.end();
-    });
-
-    res.json({ reply });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
 // AI-powered lead summary across all conversations
 function buildSnapshot(c) {
   const msgs = c.messages.slice(-15).map(m => {
