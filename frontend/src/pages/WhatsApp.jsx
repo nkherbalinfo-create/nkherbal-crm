@@ -319,6 +319,8 @@ export default function WhatsApp() {
   });
   const [showTyping, setShowTyping] = useState(false);
   const typingTimerRef = useRef(null);
+  const [magicReply, setMagicReply] = useState('');
+  const [magicLoading, setMagicLoading] = useState(false);
   const isMobile = useIsMobile(767);
   const msgEndRef = useRef(null);
   const selectedPhoneRef = useRef(null);
@@ -412,6 +414,31 @@ export default function WhatsApp() {
     } catch { addToast('Failed to save label', 'error'); }
   };
 
+  const fetchMagicReply = async () => {
+    if (!selected) return;
+    setMagicLoading(true); setMagicReply('');
+    try {
+      const { data } = await api.post(`/wa/${selected.phone}/magic-reply`, {});
+      setMagicReply(data.reply);
+    } catch { addToast('Magic reply failed', 'error'); }
+    finally { setMagicLoading(false); }
+  };
+
+  const getSentiment = (conv) => {
+    const last = conv.lastMessage || '';
+    const pos = /interested|haan|ha |okay|accha|bhejiye|chahiye|order|send|denge|lena|price batao|kitna|detail|address/i.test(last);
+    const neg = /nahi|no |nope|mehenga|expensive|baad mein|sochta|nhi|mat|band|block|stop/i.test(last);
+    return pos && !neg ? 'positive' : neg ? 'negative' : 'neutral';
+  };
+
+  const getResponseAge = (lastAt) => {
+    if (!lastAt) return null;
+    const mins = Math.floor((Date.now() - new Date(lastAt)) / 60000);
+    if (mins < 60) return { label: `${mins}m`, cls: mins < 15 ? 'sla-ok' : mins < 45 ? 'sla-warn' : 'sla-late' };
+    const hrs = Math.floor(mins / 60);
+    return { label: `${hrs}h`, cls: hrs < 2 ? 'sla-warn' : 'sla-late' };
+  };
+
   const selectConv = async (conv) => {
     selectedPhoneRef.current = conv.phone;
     msgCountRef.current = 0;
@@ -421,6 +448,8 @@ export default function WhatsApp() {
     setMsgSearch('');
     setMsgSearchOpen(false);
     setNotesTab(false);
+    setMagicReply('');
+    setMagicLoading(false);
     // Clear badge immediately on click
     markSeen(conv.phone, conv.messageCount);
     if (isMobile) setMobileChatOpen(true);
@@ -690,8 +719,12 @@ export default function WhatsApp() {
             const isSelected = selected?.phone===c.phone;
             const isBroadcast = broadcastSelected.has(c.phone);
             const unread = Math.max(0, (c.messageCount || 0) - (seenCounts[c.phone] || 0));
+            const sentiment = getSentiment(c);
+            const age = getResponseAge(c.lastMessageAt);
+            const topLabel = c.labels?.[0] || null;
             return (
             <div key={c.phone} onClick={()=>selectConv(c)}
+              className={`wa-conv-item${topLabel ? ` label-${topLabel}` : ''}`}
               style={{
                 display:'flex', alignItems:'center', gap:10,
                 padding:'9px 11px', cursor:'pointer',
@@ -699,7 +732,7 @@ export default function WhatsApp() {
                 background: isBroadcast ? 'var(--accent-bg)' : isSelected ? 'var(--accent-bg)' : 'var(--hover)',
                 border: `1px solid ${isSelected ? 'var(--accent)' : isBroadcast ? 'var(--accent)' : 'var(--rule)'}`,
                 boxShadow: isSelected ? '0 2px 8px rgba(61,138,92,.1)' : 'none',
-                transition:'all 0.12s',
+                transition:'all 0.14s',
               }}
               onMouseEnter={e=>{ if(!isSelected && !isBroadcast) { e.currentTarget.style.background='rgba(61,138,92,.08)'; } }}
               onMouseLeave={e=>{ if(!isSelected && !isBroadcast) { e.currentTarget.style.background='var(--hover)'; } }}>
@@ -709,14 +742,20 @@ export default function WhatsApp() {
                 onChange={()=>{}}
                 style={{ accentColor:'var(--accent)', cursor:'pointer', width:14, height:14, flexShrink:0 }}
               />
-              <Av name={c.name} size={36} />
+              <div className={unread > 0 ? 'wa-avatar-unread' : ''}>
+                <Av name={c.name} size={36} />
+              </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:2 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:4, minWidth:0 }}>
                     <span style={{ fontSize:13, fontWeight:600, color:'var(--fg)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.name}</span>
                     <LangChip name={c.name} />
                   </div>
-                  <span style={{ fontSize:10, color:'var(--faint)', fontFamily:'Inter', flexShrink:0, marginLeft:4, whiteSpace:'nowrap' }}>{timeStr(c.lastMessageAt)}</span>
+                  <div style={{ display:'flex', alignItems:'center', gap:4, flexShrink:0, marginLeft:4 }}>
+                    <span className={`sentiment-dot ${sentiment}`} title={`Sentiment: ${sentiment}`} />
+                    {age && <span className={age.cls} style={{ fontSize:10, fontFamily:'Inter', fontWeight:500 }}>{age.label}</span>}
+                    {!age && <span style={{ fontSize:10, color:'var(--faint)', fontFamily:'Inter' }}>{timeStr(c.lastMessageAt)}</span>}
+                  </div>
                 </div>
                 <div style={{ fontSize:12, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontStyle: c.lastMessage ? 'normal' : 'italic', lineHeight:1.3 }}>
                   {c.paymentClaimed && <span style={{ marginRight:4 }}>💰</span>}
@@ -775,7 +814,7 @@ export default function WhatsApp() {
         ) : (
           <div style={{ display:'flex', flexDirection:'column', minHeight:0, minWidth:0, flex:1 }}>
             {/* Chat header with mobile back button */}
-            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 16px', borderBottom:'1px solid var(--rule)', flexShrink:0 }}>
+            <div className="wa-chat-header" style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 16px', flexShrink:0 }}>
               {isMobile && (
                 <button onClick={() => { setMobileChatOpen(false); setSelected(null); selectedPhoneRef.current = null; msgCountRef.current = 0; setMessages([]); setLead(null); }}
                   style={{ background:'none', border:'none', color:'var(--muted)', cursor:'pointer', padding:'2px 6px 2px 0', display:'flex', alignItems:'center', flexShrink:0 }}>
@@ -812,6 +851,14 @@ export default function WhatsApp() {
               <span className={`chip ${botPaused?'chip-warn':'chip-ok'}`} style={{ fontSize:10 }}>
                 {botPaused?'Bot paused':'Bot active'}
               </span>
+              {botPaused && (
+                <button className="wa-magic-btn" onClick={fetchMagicReply} disabled={magicLoading} title="AI generates the perfect reply">
+                  {magicLoading
+                    ? <span style={{ width:10, height:10, border:'2px solid rgba(255,255,255,.3)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />
+                    : <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.1 9.1 2 12l7.1 2.9L12 22l2.9-7.1L22 12l-7.1-2.9z"/></svg>}
+                  {magicLoading ? 'Thinking…' : 'Magic Reply'}
+                </button>
+              )}
               <button className="btn-secondary" onClick={toggleBot} title={botPaused ? 'Resume automatic bot replies' : 'Pause bot and reply manually'} style={{ fontSize:11.5 }}>
                 {botPaused?'Resume bot':'Take over'}
               </button>
@@ -886,14 +933,13 @@ export default function WhatsApp() {
                     )}
                     {/* Text bubble */}
                     {text && (
-                      <div style={{
+                      <div className={`msg-in ${isUser ? 'wa-bubble-user' : 'wa-bubble-bot'}`} style={{
                         maxWidth:'78%', padding:'8px 12px', borderRadius:isUser?'2px 14px 14px 14px':'14px 2px 14px 14px',
                         background:isUser?'var(--card)':'var(--accent)',
                         color:isUser?'var(--fg)':'var(--accent-ink)',
                         fontSize:13.5, lineHeight:1.5,
                         border: isUser?'1px solid var(--rule)':'none',
                         whiteSpace:'pre-wrap', wordBreak:'break-word',
-                        boxShadow: isUser ? 'none' : '0 1px 2px rgba(61,138,92,.15)',
                       }}>
                         <WaText text={text} />
                       </div>
@@ -998,6 +1044,24 @@ export default function WhatsApp() {
               <div style={{ padding:'10px 14px', display:'flex', flexDirection:'column', gap:8 }}>
               {botPaused ? (
                 <>
+                  {/* Magic reply suggestion bar */}
+                  {magicReply && (
+                    <div className="magic-suggestion" style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 12px', background:'linear-gradient(135deg,rgba(61,138,92,.08),rgba(82,199,136,.06))', border:'1px solid rgba(61,138,92,.2)', borderRadius:10, margin:'0 0 4px 0' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#3d8a5c" style={{ flexShrink:0, marginTop:1 }}><path d="M12 2L9.1 9.1 2 12l7.1 2.9L12 22l2.9-7.1L22 12l-7.1-2.9z"/></svg>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:10, fontWeight:600, color:'var(--accent)', marginBottom:4 }}>✨ AI Suggested Reply</div>
+                        <div style={{ fontSize:12.5, color:'var(--fg)', lineHeight:1.5 }}>{magicReply}</div>
+                      </div>
+                      <div style={{ display:'flex', gap:5, flexShrink:0 }}>
+                        <button onClick={() => { setManualMsg(magicReply); setMagicReply(''); }}
+                          className="btn-primary" style={{ fontSize:11, padding:'4px 10px' }}>Use</button>
+                        <button onClick={() => setMagicReply('')}
+                          className="icon-btn" style={{ width:26, height:26, borderRadius:6 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {/* Reply preview bar */}
                   {replyTo && (
                     <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', background:'var(--accent-bg)', borderLeft:'3px solid var(--accent)', borderRadius:'0 8px 8px 0', margin:'0 0 4px 0' }}>
