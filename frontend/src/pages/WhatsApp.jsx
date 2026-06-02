@@ -760,13 +760,11 @@ export default function WhatsApp() {
                     onMouseEnter={e => { const btn = e.currentTarget.querySelector('.reply-btn'); if(btn) btn.style.opacity='1'; }}
                     onMouseLeave={e => { const btn = e.currentTarget.querySelector('.reply-btn'); if(btn) btn.style.opacity='0'; }}>
                     {/* Reply button (shown on hover) */}
-                    {m.wamid && (
-                      <button className="reply-btn" onClick={() => { setReplyTo({ wamid: m.wamid, content: previewText, role: m.role }); setTimeout(()=>document.querySelector('textarea')?.focus(),50); }}
-                        style={{ opacity:0, transition:'opacity 0.15s', alignSelf: isUser ? 'flex-start' : 'flex-end', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:999, padding:'3px 10px', fontSize:11, color:'var(--muted)', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                        Reply
-                      </button>
-                    )}
+                    <button className="reply-btn" onClick={() => { setReplyTo({ wamid: m.wamid || null, content: previewText, role: m.role }); setTimeout(()=>document.querySelector('textarea,input[placeholder*="reply"]')?.focus(),50); }}
+                      style={{ opacity:0, transition:'opacity 0.15s', alignSelf: isUser ? 'flex-start' : 'flex-end', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:999, padding:'3px 10px', fontSize:11, color:'var(--muted)', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                      Reply
+                    </button>
                     {/* Voice note player */}
                     {audioSrc && <VoiceNote src={audioSrc} isUser={isUser} transcript={audioTranscript} />}
                     {/* Customer video */}
