@@ -866,7 +866,7 @@ export default function WhatsApp() {
                   <div style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }} className="msg-row">
                     {/* Reply button — appears on hover via CSS */}
                     {/* Bubble + inline reply button on hover */}
-                    <div className="bubble-wrap" style={{ display:'flex', alignItems:'flex-end', gap:6, flexDirection: isUser ? 'row' : 'row-reverse', maxWidth:'78%' }}>
+                    <div className="bubble-wrap" style={{ display:'flex', alignItems:'flex-end', gap:6, flexDirection: isUser ? 'row' : 'row-reverse', maxWidth:'100%' }}>
                       <button className="reply-btn" onClick={() => { setReplyTo({ wamid: m.wamid||null, content: previewText, role: m.role }); setTimeout(()=>document.querySelector('input[placeholder*="reply"]')?.focus(),50); }}
                         title="Reply" style={{ flexShrink:0, opacity:0, transition:'opacity 0.15s', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:'50%', width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--muted)' }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
