@@ -79,13 +79,15 @@ function sendWhatsAppMedia(to, mediaId, type, caption, filename) {
   });
 }
 
-function sendWhatsAppMessageDirect(to, text) {
-  const body = JSON.stringify({
+function sendWhatsAppMessageDirect(to, text, replyToWamid) {
+  const payload = {
     messaging_product: 'whatsapp',
     to,
     type: 'text',
     text: { body: text, preview_url: false }
-  });
+  };
+  if (replyToWamid) payload.context = { message_id: replyToWamid };
+  const body = JSON.stringify(payload);
 
   return new Promise((resolve, reject) => {
     const req = https.request({

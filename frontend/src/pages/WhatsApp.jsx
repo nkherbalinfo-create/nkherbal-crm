@@ -288,6 +288,7 @@ export default function WhatsApp() {
   const [searchFilter, setSearchFilter] = useState('');
   const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, type }
   const fileInputRef = useRef(null);
+  const [replyTo, setReplyTo] = useState(null); // { wamid, content, role }
   const [aiSummaryModal, setAiSummaryModal] = useState(false);
   const [aiSummaryData, setAiSummaryData] = useState(null);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
@@ -381,6 +382,7 @@ export default function WhatsApp() {
     selectedPhoneRef.current = conv.phone;
     msgCountRef.current = 0;
     setSelected(conv);
+    setReplyTo(null);
     // Clear badge immediately on click
     markSeen(conv.phone, conv.messageCount);
     if (isMobile) setMobileChatOpen(true);
@@ -506,8 +508,9 @@ export default function WhatsApp() {
     if (!manualMsg.trim()) return;
     setSending(true);
     try {
-      await api.post('/wa/send', { phone:selected.phone, message:manualMsg });
+      await api.post('/wa/send', { phone:selected.phone, message:manualMsg, replyToWamid: replyTo?.wamid });
       setManualMsg('');
+      setReplyTo(null);
       setMessages(m=>[...m, { role:'assistant', content:manualMsg, timestamp:new Date() }]);
       setTimeout(() => msgEndRef.current?.scrollIntoView({ behavior:'smooth' }), 0);
       addToast('Message sent');
@@ -751,8 +754,19 @@ export default function WhatsApp() {
               {messages.map((m,i)=>{
                 const { text, product, imgUrl, allImages, uploadedImg, uploadedDoc, audioSrc, audioTranscript, videoSrc } = parseImgTag(m.content);
                 const isUser = m.role === 'user';
+                const previewText = text || (uploadedImg ? '📷 Image' : videoSrc ? '🎥 Video' : uploadedDoc ? `📄 ${uploadedDoc.name}` : audioSrc ? '🎤 Voice note' : '');
                 return (
-                  <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}>
+                  <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }}
+                    onMouseEnter={e => { const btn = e.currentTarget.querySelector('.reply-btn'); if(btn) btn.style.opacity='1'; }}
+                    onMouseLeave={e => { const btn = e.currentTarget.querySelector('.reply-btn'); if(btn) btn.style.opacity='0'; }}>
+                    {/* Reply button (shown on hover) */}
+                    {m.wamid && (
+                      <button className="reply-btn" onClick={() => { setReplyTo({ wamid: m.wamid, content: previewText, role: m.role }); setTimeout(()=>document.querySelector('textarea')?.focus(),50); }}
+                        style={{ opacity:0, transition:'opacity 0.15s', alignSelf: isUser ? 'flex-start' : 'flex-end', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:999, padding:'3px 10px', fontSize:11, color:'var(--muted)', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                        Reply
+                      </button>
+                    )}
                     {/* Voice note player */}
                     {audioSrc && <VoiceNote src={audioSrc} isUser={isUser} transcript={audioTranscript} />}
                     {/* Customer video */}
@@ -865,6 +879,19 @@ export default function WhatsApp() {
               <div style={{ padding:'10px 14px', display:'flex', flexDirection:'column', gap:8 }}>
               {botPaused ? (
                 <>
+                  {/* Reply preview bar */}
+                  {replyTo && (
+                    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', background:'var(--accent-bg)', borderLeft:'3px solid var(--accent)', borderRadius:'0 8px 8px 0', margin:'0 0 4px 0' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:10.5, fontWeight:600, color:'var(--accent)', marginBottom:1 }}>{replyTo.role === 'user' ? 'Customer' : 'You'}</div>
+                        <div style={{ fontSize:12, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{replyTo.content.slice(0,80)}</div>
+                      </div>
+                      <button onClick={() => setReplyTo(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--faint)', padding:2 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  )}
                   {/* File preview */}
                   {pendingFile && (
                     <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', background:'var(--accent-bg)', border:'1px solid var(--accent)', borderRadius:9 }}>

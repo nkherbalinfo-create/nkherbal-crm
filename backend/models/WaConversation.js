@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema({
   role:      { type: String, enum: ['user', 'assistant'], required: true },
   content:   { type: String, required: true },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
+  wamid:     { type: String }  // WhatsApp message ID for quote-reply
 }, { _id: false });
 
 const waConversationSchema = new mongoose.Schema({

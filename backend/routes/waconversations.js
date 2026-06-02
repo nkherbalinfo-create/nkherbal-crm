@@ -104,10 +104,10 @@ router.delete('/:phone', protect, async (req, res) => {
 // Manual send from CRM (when bot is paused / take over)
 router.post('/send', protect, async (req, res) => {
   try {
-    const { phone, message } = req.body;
+    const { phone, message, replyToWamid } = req.body;
     if (!phone || !message) return res.status(400).json({ message: 'phone and message required' });
 
-    await sendWhatsAppMessageDirect(phone, message);
+    await sendWhatsAppMessageDirect(phone, message, replyToWamid);
 
     // Save to conversation history
     await WaConversation.findOneAndUpdate(

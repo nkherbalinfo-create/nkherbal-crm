@@ -644,7 +644,7 @@ router.post('/webhook', async (req, res) => {
           }
 
           // ── Save user message immediately so it's never lost ──
-          conv.messages.push({ role: 'user', content: text });
+          conv.messages.push({ role: 'user', content: text, wamid: msg.id });
           conv.lastMessageAt = new Date();
           await conv.save(); // ← CRITICAL: save before AI call so message persists even if AI fails
 
