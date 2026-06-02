@@ -1083,6 +1083,7 @@ export default function WhatsApp() {
                 <div style={{ fontSize:11, fontWeight:600, color:'var(--muted)' }}>Private notes — not sent to customer</div>
                 <textarea value={notesText} onChange={e=>setNotesText(e.target.value)}
                   placeholder="Write notes about this customer…"
+                  className="notes-area"
                   style={{ flex:1, minHeight:200, padding:'10px 12px', borderRadius:9, border:'1px solid var(--rule)', background:'var(--bg)', color:'var(--fg)', fontSize:12.5, lineHeight:1.6, resize:'vertical', fontFamily:'inherit' }} />
                 <button onClick={() => saveNotes(selected.phone, notesText)} disabled={notesSaving}
                   className="btn-primary" style={{ fontSize:12, alignSelf:'flex-end' }}>
@@ -1120,6 +1121,7 @@ export default function WhatsApp() {
                           const toneBg = { Interested:'var(--info-bg)', 'Not Interested':'var(--danger-bg)', Converted:'var(--accent-bg)', 'Follow Up':'var(--warn-bg)' }[s];
                           return (
                             <button key={s} onClick={() => updateLeadStatus(s)} disabled={updatingStatus || active}
+                              className="lead-status-btn"
                               style={{
                                 padding:'4px 10px', borderRadius:999, fontSize:11, fontWeight:500,
                                 border: `1px solid ${active ? tone : 'var(--rule)'}`,
@@ -1127,7 +1129,6 @@ export default function WhatsApp() {
                                 color: active ? tone : 'var(--muted)',
                                 cursor: active ? 'default' : 'pointer',
                                 opacity: updatingStatus ? 0.6 : 1,
-                                transition:'all 0.18s ease',
                               }}>
                               {s}
                             </button>

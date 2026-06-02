@@ -1051,6 +1051,34 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(127,191,149,.2);
 }
 
+/* ── Notes textarea ──────────────────────────────────── */
+.notes-area {
+  transition: border-color 0.18s ease, box-shadow 0.2s ease, background 0.15s ease;
+}
+.notes-area:hover {
+  border-color: rgba(61,138,92,.25) !important;
+  box-shadow: 0 0 0 3px rgba(61,138,92,.06);
+}
+.notes-area:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(61,138,92,.12);
+  outline: none;
+}
+
+/* ── Lead status pill buttons ────────────────────────── */
+.lead-status-btn {
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.12s ease, box-shadow 0.16s ease;
+}
+.lead-status-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(37,35,32,.10);
+  filter: brightness(1.05);
+}
+.lead-status-btn:not(:disabled):active {
+  transform: scale(0.95) translateY(0);
+  box-shadow: none;
+}
+
 /* ── WhatsApp conversation list item ─────────────────── */
 .wa-conv-item {
   transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, transform 0.12s ease;
