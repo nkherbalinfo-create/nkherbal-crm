@@ -40,6 +40,9 @@ export default function Settings() {
   const [syncing, setSyncing] = useState(false);
   const [syncingWaLeads, setSyncingWaLeads] = useState(false);
   const [waLeadResult, setWaLeadResult] = useState(null);
+  const [guestLink, setGuestLink] = useState('');
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestCopied, setGuestCopied] = useState(false);
 
   // Profile edit state
   const [profileForm, setProfileForm] = useState({ name: user?.name||'', email: user?.email||'' });
@@ -282,48 +285,31 @@ export default function Settings() {
             </>
           )}
 
-          {activeNav==='Appearance' && (() => {
-            const [guestLink, setGuestLink] = useState('');
-            const [guestLoading, setGuestLoading] = useState(false);
-            const [copied, setCopied] = useState(false);
-            const generateLink = async () => {
-              setGuestLoading(true);
-              try {
-                const { data } = await api.get('/auth/guest-link');
-                setGuestLink(data.url);
-              } catch { addToast('Failed to generate link', 'error'); }
-              finally { setGuestLoading(false); }
-            };
-            const copyLink = () => {
-              navigator.clipboard.writeText(guestLink);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-              addToast('Link copied!');
-            };
-            return (
+          {activeNav==='Appearance' && (
             <Card title="Guest / View-only Access" subtitle="Share a read-only link — recipient can browse everything but cannot make changes">
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                 <div style={{ fontSize:12.5, color:'var(--muted)', lineHeight:1.6 }}>
-                  The link is valid for <strong>30 days</strong>. Anyone with it gets full view access — no login required. Generate a new link to invalidate the old one.
+                  Valid for <strong>30 days</strong>. Anyone with the link gets full view access — no login required. Generate a new link to invalidate the old one.
                 </div>
                 {!guestLink ? (
-                  <button onClick={generateLink} disabled={guestLoading} className="btn-secondary" style={{ alignSelf:'flex-start', display:'flex', alignItems:'center', gap:6 }}>
+                  <button onClick={async () => { setGuestLoading(true); try { const { data } = await api.get('/auth/guest-link'); setGuestLink(data.url); } catch { addToast('Failed','error'); } finally { setGuestLoading(false); } }}
+                    disabled={guestLoading} className="btn-secondary" style={{ alignSelf:'flex-start', display:'flex', alignItems:'center', gap:6 }}>
                     {guestLoading ? <span style={{ width:12, height:12, border:'2px solid var(--rule)', borderTopColor:'var(--accent)', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>}
                     {guestLoading ? 'Generating…' : 'Generate guest link'}
                   </button>
                 ) : (
                   <div style={{ display:'flex', gap:8, alignItems:'center' }}>
                     <input className="input" readOnly value={guestLink} style={{ fontSize:11.5, flex:1, color:'var(--faint)' }} onClick={e => e.target.select()} />
-                    <button onClick={copyLink} className={copied ? 'btn-primary' : 'btn-secondary'} style={{ flexShrink:0, display:'flex', alignItems:'center', gap:5, fontSize:12 }}>
-                      {copied ? '✓ Copied!' : 'Copy link'}
+                    <button onClick={() => { navigator.clipboard.writeText(guestLink); setGuestCopied(true); setTimeout(()=>setGuestCopied(false),2000); addToast('Link copied!'); }}
+                      className={guestCopied ? 'btn-primary' : 'btn-secondary'} style={{ flexShrink:0, fontSize:12 }}>
+                      {guestCopied ? '✓ Copied!' : 'Copy link'}
                     </button>
                     <button onClick={() => setGuestLink('')} className="btn-secondary" style={{ flexShrink:0, fontSize:12 }}>Reset</button>
                   </div>
                 )}
               </div>
             </Card>
-            );
-          })()}
+          )}
 
           {activeNav==='Appearance' && (
             <Card title="Appearance" subtitle="Choose your preferred theme">
