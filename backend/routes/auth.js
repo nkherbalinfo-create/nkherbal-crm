@@ -30,8 +30,11 @@ async function sendResetEmail(to, code) {
   console.log(`[Auth] ✅ Reset code sent to ${to}`);
 }
 
-const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+const signToken = (id, role = 'admin') =>
+  jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+const signGuestToken = () =>
+  jwt.sign({ id: 'guest', role: 'guest' }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
 router.post('/register', async (req, res) => {
   try {
@@ -51,10 +54,17 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user || !(await user.matchPassword(password)))
       return res.status(401).json({ message: 'Invalid credentials' });
-    res.json({ token: signToken(user._id), user: { id: user._id, name: user.name, email: user.email } });
+    res.json({ token: signToken(user._id, user.role || 'admin'), user: { id: user._id, name: user.name, email: user.email, role: user.role || 'admin' } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+});
+
+// Generate a 30-day read-only guest link
+router.get('/guest-link', protect, (req, res) => {
+  const token = signGuestToken();
+  const frontendUrl = process.env.FRONTEND_URL || 'https://project-mhuks.vercel.app';
+  res.json({ token, url: `${frontendUrl}?guest=${token}` });
 });
 
 router.get('/me', protect, async (req, res) => {

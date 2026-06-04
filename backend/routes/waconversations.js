@@ -1,7 +1,7 @@
 const express = require('express');
 const https = require('https');
 const WaConversation = require('../models/WaConversation');
-const { protect } = require('../middleware/auth');
+const { protect, readOnly } = require('../middleware/auth');
 const { sendWhatsAppMessageDirect, uploadBufferToWhatsApp, sendWhatsAppMedia } = require('../services/waSender');
 const router = express.Router();
 
@@ -70,7 +70,7 @@ router.get('/:phone', protect, async (req, res) => {
 });
 
 // Clear payment claimed flag after manual verification
-router.patch('/:phone/payment', protect, async (req, res) => {
+router.patch('/:phone/payment', protect, readOnly, async (req, res) => {
   try {
     const conv = await WaConversation.findOneAndUpdate(
       { phone: req.params.phone },
@@ -82,7 +82,7 @@ router.patch('/:phone/payment', protect, async (req, res) => {
 });
 
 // Toggle bot pause
-router.patch('/:phone/pause', protect, async (req, res) => {
+router.patch('/:phone/pause', protect, readOnly, async (req, res) => {
   try {
     const { paused } = req.body;
     const conv = await WaConversation.findOneAndUpdate({ phone: req.params.phone }, { botPaused: paused }, { new: true });
@@ -93,7 +93,7 @@ router.patch('/:phone/pause', protect, async (req, res) => {
 });
 
 // Update labels
-router.patch('/:phone/labels', protect, async (req, res) => {
+router.patch('/:phone/labels', protect, readOnly, async (req, res) => {
   try {
     const conv = await WaConversation.findOneAndUpdate(
       { phone: req.params.phone },
@@ -105,7 +105,7 @@ router.patch('/:phone/labels', protect, async (req, res) => {
 });
 
 // Update internal notes
-router.patch('/:phone/notes', protect, async (req, res) => {
+router.patch('/:phone/notes', protect, readOnly, async (req, res) => {
   try {
     const conv = await WaConversation.findOneAndUpdate(
       { phone: req.params.phone },
@@ -117,7 +117,7 @@ router.patch('/:phone/notes', protect, async (req, res) => {
 });
 
 // Delete a conversation from CRM
-router.delete('/:phone', protect, async (req, res) => {
+router.delete('/:phone', protect, readOnly, async (req, res) => {
   try {
     const conv = await WaConversation.findOneAndDelete({ phone: req.params.phone });
     if (!conv) return res.status(404).json({ message: 'Conversation not found' });
@@ -128,7 +128,7 @@ router.delete('/:phone', protect, async (req, res) => {
 });
 
 // Manual send from CRM (when bot is paused / take over)
-router.post('/send', protect, async (req, res) => {
+router.post('/send', protect, readOnly, async (req, res) => {
   try {
     const { phone, message, replyToWamid } = req.body;
     if (!phone || !message) return res.status(400).json({ message: 'phone and message required' });
@@ -199,7 +199,7 @@ router.patch('/:phone/messages/edit', protect, async (req, res) => {
 });
 
 // Manual media send from CRM (image / document)
-router.post('/send-media', protect, async (req, res) => {
+router.post('/send-media', protect, readOnly, async (req, res) => {
   try {
     const { phone, fileBase64, fileName, mimeType, caption } = req.body;
     if (!phone || !fileBase64 || !mimeType) return res.status(400).json({ message: 'phone, fileBase64, mimeType required' });

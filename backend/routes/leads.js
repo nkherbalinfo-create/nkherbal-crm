@@ -1,6 +1,6 @@
 const express = require('express');
 const Lead = require('../models/Lead');
-const { protect } = require('../middleware/auth');
+const { protect, readOnly } = require('../middleware/auth');
 const router = express.Router();
 
 router.get('/', protect, async (req, res) => {
@@ -29,7 +29,7 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, readOnly, async (req, res) => {
   try {
     const lead = await Lead.create(req.body);
     res.status(201).json(lead);
@@ -38,7 +38,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', protect, readOnly, async (req, res) => {
   try {
     const lead = await Lead.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
@@ -48,7 +48,7 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, readOnly, async (req, res) => {
   try {
     await Lead.findByIdAndDelete(req.params.id);
     res.json({ message: 'Lead deleted' });

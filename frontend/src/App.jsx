@@ -171,6 +171,8 @@ function GlobalSearch({ open, onClose }) {
 }
 
 function Layout() {
+  const { user } = useAuth();
+  const isGuest = user?.role === 'guest';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState(null); // null | 'menu' | 'lead' | 'order'
@@ -238,6 +240,13 @@ function Layout() {
     <div className="app-shell" style={{ display: 'flex' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} onQuickAdd={() => setQuickAdd('menu')} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden', minWidth: 0 }} className="lg-main">
+        {/* Guest view banner */}
+        {isGuest && (
+          <div style={{ background:'linear-gradient(90deg,#1e40af,#3b82f6)', color:'#fff', padding:'8px 20px', display:'flex', alignItems:'center', gap:10, fontSize:12.5, fontWeight:500, flexShrink:0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>👁 View-only mode — you can browse everything but changes are disabled</span>
+          </div>
+        )}
         {/* Mobile header — no hamburger, bottom nav handles navigation */}
         <MobileHeader className="mobile-header" />
         <main className="content-shell" style={{ flex: 1 }}>

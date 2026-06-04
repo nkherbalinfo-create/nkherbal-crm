@@ -3,15 +3,33 @@ import api from '../utils/api';
 
 const AuthContext = createContext(null);
 
+function decodeJwt(token) {
+  try { return JSON.parse(atob(token.split('.')[1])); } catch { return {}; }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check for guest token in URL ?guest=TOKEN
+    const params = new URLSearchParams(window.location.search);
+    const guestToken = params.get('guest');
+    if (guestToken) {
+      localStorage.setItem('token', guestToken);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     const token = localStorage.getItem('token');
     if (token) {
+      const decoded = decodeJwt(token);
+      if (decoded.role === 'guest') {
+        setUser({ id: 'guest', name: 'Guest', email: '', role: 'guest' });
+        setLoading(false);
+        return;
+      }
       api.get('/auth/me')
-        .then(res => setUser(res.data))
+        .then(res => setUser({ ...res.data, role: res.data.role || 'admin' }))
         .catch(() => localStorage.removeItem('token'))
         .finally(() => setLoading(false));
     } else {
