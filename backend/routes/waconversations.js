@@ -133,14 +133,64 @@ router.post('/send', protect, async (req, res) => {
     const { phone, message, replyToWamid } = req.body;
     if (!phone || !message) return res.status(400).json({ message: 'phone and message required' });
 
-    await sendWhatsAppMessageDirect(phone, message, replyToWamid);
+    const waRes = await sendWhatsAppMessageDirect(phone, message, replyToWamid);
+    const sentWamid = waRes?.messages?.[0]?.id || null;
 
-    // Save to conversation history
+    // Save to conversation history with wamid so we can edit later
     await WaConversation.findOneAndUpdate(
       { phone },
-      { $push: { messages: { role: 'assistant', content: message } }, lastMessageAt: new Date() },
+      { $push: { messages: { role: 'assistant', content: message, wamid: sentWamid } }, lastMessageAt: new Date() },
       { upsert: true }
     );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Edit a sent message (CRM + WhatsApp)
+router.patch('/:phone/messages/edit', protect, async (req, res) => {
+  try {
+    const { wamid, newText, msgIndex } = req.body;
+    if (!newText?.trim()) return res.status(400).json({ message: 'newText required' });
+
+    const conv = await WaConversation.findOne({ phone: req.params.phone });
+    if (!conv) return res.status(404).json({ message: 'Conversation not found' });
+
+    // Update by index or wamid
+    const idx = msgIndex !== undefined
+      ? msgIndex
+      : conv.messages.findIndex(m => m.wamid === wamid);
+
+    if (idx === -1 || idx >= conv.messages.length) return res.status(404).json({ message: 'Message not found' });
+
+    conv.messages[idx].content = newText + ' *(edited)*';
+    conv.markModified('messages');
+    await conv.save();
+
+    // Edit on WhatsApp if wamid available
+    if (wamid && process.env.WA_ACCESS_TOKEN) {
+      try {
+        const body = JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: req.params.phone,
+          type: 'text',
+          text: { body: newText },
+          context: { message_id: wamid }
+        });
+        await new Promise((resolve) => {
+          const r = https.request({
+            hostname: 'graph.facebook.com',
+            path: `/v25.0/${process.env.WA_PHONE_NUMBER_ID}/messages`,
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+          }, (resp) => { resp.resume(); resp.on('end', resolve); });
+          r.on('error', resolve);
+          r.write(body); r.end();
+        });
+      } catch { /* WA edit is best-effort */ }
+    }
 
     res.json({ success: true });
   } catch (err) {

@@ -297,6 +297,9 @@ export default function WhatsApp() {
   const [pendingFile, setPendingFile] = useState(null); // { file, previewUrl, type }
   const fileInputRef = useRef(null);
   const [replyTo, setReplyTo] = useState(null); // { wamid, content, role }
+  const [editingMsg, setEditingMsg] = useState(null); // { index, wamid, text }
+  const [editText, setEditText] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
   const [convFilter, setConvFilter] = useState('all'); // all | unread | paused | payment
   const [labelModal, setLabelModal] = useState(false);
   const [notesText, setNotesText] = useState('');
@@ -412,6 +415,24 @@ export default function WhatsApp() {
     } catch { addToast('Failed to save label', 'error'); }
   };
 
+  const saveEdit = async () => {
+    if (!editText.trim() || !editingMsg) return;
+    setEditSaving(true);
+    try {
+      await api.patch(`/wa/${selected.phone}/messages/edit`, {
+        wamid: editingMsg.wamid,
+        msgIndex: editingMsg.index,
+        newText: editText.trim(),
+      });
+      setMessages(prev => prev.map((m, i) =>
+        i === editingMsg.index ? { ...m, content: editText.trim() + ' *(edited)*' } : m
+      ));
+      setEditingMsg(null);
+      addToast('Message edited');
+    } catch { addToast('Failed to edit', 'error'); }
+    finally { setEditSaving(false); }
+  };
+
   const selectConv = async (conv) => {
     selectedPhoneRef.current = conv.phone;
     msgCountRef.current = 0;
@@ -421,6 +442,8 @@ export default function WhatsApp() {
     setMsgSearch('');
     setMsgSearchOpen(false);
     setNotesTab(false);
+    setEditingMsg(null);
+    setEditText('');
     // Clear badge immediately on click
     markSeen(conv.phone, conv.messageCount);
     if (isMobile) setMobileChatOpen(true);
@@ -869,10 +892,18 @@ export default function WhatsApp() {
                     {/* Reply button — appears on hover via CSS */}
                     {/* Bubble + inline reply button on hover */}
                     <div className="bubble-wrap" style={{ display:'flex', alignItems:'flex-end', gap:6, flexDirection: isUser ? 'row' : 'row-reverse', maxWidth:'100%' }}>
-                      <button className="reply-btn" onClick={() => { setReplyTo({ wamid: m.wamid||null, content: previewText, role: m.role }); setTimeout(()=>document.querySelector('input[placeholder*="reply"]')?.focus(),50); }}
-                        title="Reply" style={{ flexShrink:0, opacity:0, transition:'opacity 0.15s', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:'50%', width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--muted)' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                      </button>
+                      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                        <button className="reply-btn" onClick={() => { setReplyTo({ wamid: m.wamid||null, content: previewText, role: m.role }); setTimeout(()=>document.querySelector('input[placeholder*="reply"]')?.focus(),50); }}
+                          title="Reply" style={{ flexShrink:0, opacity:0, transition:'opacity 0.15s', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:'50%', width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--muted)' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                        </button>
+                        {!isUser && (
+                          <button className="reply-btn" onClick={() => { setEditingMsg({ index: i, wamid: m.wamid||null }); setEditText((m.content||'').replace(/ \*\(edited\)\*$/, '')); }}
+                            title="Edit message" style={{ flexShrink:0, opacity:0, transition:'opacity 0.15s', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:'50%', width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--muted)' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                        )}
+                      </div>
                       <div style={{ flex:1, display:'flex', flexDirection:'column', gap:3, alignItems: isUser ? 'flex-start' : 'flex-end' }}>
                     {/* Voice note player */}
                     {audioSrc && <VoiceNote src={audioSrc} isUser={isUser} transcript={audioTranscript} />}
@@ -884,8 +915,24 @@ export default function WhatsApp() {
                         </video>
                       </div>
                     )}
-                    {/* Text bubble */}
-                    {text && (
+                    {/* Inline edit mode */}
+                    {editingMsg?.index === i ? (
+                      <div style={{ maxWidth:'78%', display:'flex', flexDirection:'column', gap:6 }}>
+                        <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)}
+                          onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); } if (e.key==='Escape') setEditingMsg(null); }}
+                          style={{ padding:'8px 12px', borderRadius:12, border:'2px solid var(--accent)', background:'var(--card)', color:'var(--fg)', fontSize:13.5, lineHeight:1.5, resize:'none', fontFamily:'inherit', minWidth:180, outline:'none', boxShadow:'0 0 0 3px rgba(61,138,92,.12)' }}
+                          rows={Math.min(6, editText.split('\n').length + 1)} />
+                        <div style={{ display:'flex', gap:6, justifyContent:'flex-end' }}>
+                          <button onClick={() => setEditingMsg(null)} className="btn-secondary" style={{ fontSize:11, padding:'4px 10px' }}>Cancel</button>
+                          <button onClick={saveEdit} disabled={editSaving} className="btn-primary" style={{ fontSize:11, padding:'4px 10px' }}>
+                            {editSaving ? 'Saving…' : 'Save'}
+                          </button>
+                        </div>
+                        <div style={{ fontSize:10.5, color:'var(--faint)', textAlign:'right' }}>Enter to save · Esc to cancel</div>
+                      </div>
+                    ) : (
+                    /* Text bubble */
+                    text && (
                       <div style={{
                         maxWidth:'78%', padding:'8px 12px', borderRadius:isUser?'2px 14px 14px 14px':'14px 2px 14px 14px',
                         background:isUser?'var(--card)':'var(--accent)',
@@ -897,7 +944,7 @@ export default function WhatsApp() {
                       }}>
                         <WaText text={text} />
                       </div>
-                    )}
+                    ))}
                     {/* Single product image */}
                     {imgUrl && (
                       <div style={{ maxWidth:'78%', borderRadius:14, overflow:'hidden', border: isUser ? '1px solid var(--rule)' : 'none', boxShadow: isUser ? 'var(--shadow-card)' : '0 1px 3px rgba(61,138,92,.1)' }}>
