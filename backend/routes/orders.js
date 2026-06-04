@@ -2,7 +2,7 @@ const express = require('express');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Lead = require('../models/Lead');
-const { protect } = require('../middleware/auth');
+const { protect, readOnly } = require('../middleware/auth');
 const router = express.Router();
 
 async function upsertCustomer(orderData) {
@@ -57,7 +57,7 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, readOnly, async (req, res) => {
   try {
     const customerType = await upsertCustomer(req.body);
     const order = await Order.create({ ...req.body, customerType });
@@ -84,7 +84,7 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', protect, readOnly, async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!order) return res.status(404).json({ message: 'Order not found' });
@@ -94,7 +94,7 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, readOnly, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
