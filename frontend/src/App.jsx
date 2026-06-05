@@ -244,7 +244,13 @@ function Layout() {
         {isGuest && (
           <div style={{ background:'linear-gradient(90deg,#1e40af,#3b82f6)', color:'#fff', padding:'8px 20px', display:'flex', alignItems:'center', gap:10, fontSize:12.5, fontWeight:500, flexShrink:0 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <span>👁 View-only mode — you can browse everything but changes are disabled</span>
+            <span style={{ flex:1 }}>👁 View-only mode — you can browse everything but changes are disabled</span>
+            <button onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }}
+              style={{ background:'rgba(255,255,255,0.2)', border:'1px solid rgba(255,255,255,0.4)', color:'#fff', borderRadius:7, padding:'4px 12px', cursor:'pointer', fontSize:12, fontWeight:600, flexShrink:0, transition:'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.3)'}
+              onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.2)'}>
+              Log in as admin →
+            </button>
           </div>
         )}
         {/* Mobile header — no hamburger, bottom nav handles navigation */}
