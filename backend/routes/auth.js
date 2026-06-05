@@ -60,7 +60,12 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Generate a 30-day read-only guest link
+// Public guest login (no password needed — read-only access)
+router.post('/guest', (req, res) => {
+  res.json({ token: signGuestToken(), user: { id: 'guest', name: 'Guest', role: 'guest' } });
+});
+
+// Generate a 30-day read-only guest link (admin only)
 router.get('/guest-link', protect, (req, res) => {
   const token = signGuestToken();
   const frontendUrl = process.env.FRONTEND_URL || 'https://project-mhuks.vercel.app';

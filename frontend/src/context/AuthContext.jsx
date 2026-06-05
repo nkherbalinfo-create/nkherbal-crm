@@ -16,7 +16,12 @@ export function AuthProvider({ children }) {
     const params = new URLSearchParams(window.location.search);
     const guestToken = params.get('guest');
     if (guestToken) {
-      localStorage.setItem('token', guestToken);
+      // Only apply guest token if there's no existing admin session
+      const existing = localStorage.getItem('token');
+      const existingRole = existing ? decodeJwt(existing).role : null;
+      if (!existing || existingRole === 'guest') {
+        localStorage.setItem('token', guestToken);
+      }
       window.history.replaceState({}, '', window.location.pathname);
     }
 
@@ -51,6 +56,12 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const loginAsGuest = async () => {
+    const { data } = await api.post('/auth/guest');
+    localStorage.setItem('token', data.token);
+    setUser({ id: 'guest', name: 'Guest', email: '', role: 'guest' });
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
@@ -59,7 +70,7 @@ export function AuthProvider({ children }) {
   const updateUser = (updated) => setUser(prev => ({ ...prev, ...updated }));
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, loginAsGuest, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

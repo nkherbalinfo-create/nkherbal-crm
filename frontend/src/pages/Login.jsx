@@ -25,8 +25,9 @@ export default function Login() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [shaking, setShaking] = useState(false);
-  const { login, register } = useAuth();
+  const { login, register, loginAsGuest } = useAuth();
   const navigate = useNavigate();
+  const [guestLoading, setGuestLoading] = useState(false);
 
   // Double-RAF: ensures React renders the class REMOVED first, then adds it back
   // so the browser always sees it as a fresh animation — works 100% reliably
@@ -164,6 +165,26 @@ export default function Login() {
                 {loading ? <span style={{ display:'flex', alignItems:'center', gap:8 }}><Spinner light /> Please wait…</span>
                          : mode === 'login' ? 'Sign in' : 'Create account'}
               </button>
+
+              {mode === 'login' && (
+                <>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, margin:'4px 0' }}>
+                    <div style={{ flex:1, height:1, background:'var(--rule)' }} />
+                    <span style={{ fontSize:11, color:'var(--faint)' }}>or</span>
+                    <div style={{ flex:1, height:1, background:'var(--rule)' }} />
+                  </div>
+                  <button type="button" disabled={guestLoading}
+                    onClick={async () => { setGuestLoading(true); try { await loginAsGuest(); navigate('/'); } catch { setError('Guest login failed'); } finally { setGuestLoading(false); } }}
+                    style={{ width:'100%', padding:'9px 16px', borderRadius:9, border:'1px solid var(--rule)', background:'transparent', color:'var(--muted)', cursor:'pointer', fontSize:12.5, fontWeight:500, display:'flex', alignItems:'center', justifyContent:'center', gap:6, transition:'all 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor='var(--accent)'; e.currentTarget.style.color='var(--accent)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor='var(--rule)'; e.currentTarget.style.color='var(--muted)'; }}>
+                    {guestLoading ? <><Spinner /> Loading…</> : <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      Continue as Guest (view only)
+                    </>}
+                  </button>
+                </>
+              )}
             </form>
           )}
 
