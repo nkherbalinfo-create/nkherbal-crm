@@ -891,25 +891,25 @@ export default function WhatsApp() {
                   <div style={{ display:'flex', flexDirection:'column', alignItems:isUser?'flex-start':'flex-end', gap:3 }} className="msg-row">
                     {/* Reply button — appears on hover via CSS */}
                     {/* Bubble + inline reply button on hover */}
-                    <div className="bubble-wrap" style={{ display:'flex', alignItems:'flex-end', gap:6, flexDirection: isUser ? 'row' : 'row-reverse', maxWidth:'100%' }}>
-                      <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                    <div className="bubble-wrap" style={{ display:'flex', alignItems:'flex-end', gap:5, flexDirection: isUser ? 'row' : 'row-reverse', maxWidth:'75%' }}>
+                      <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0 }}>
                         <button className="reply-btn" onClick={() => { setReplyTo({ wamid: m.wamid||null, content: previewText, role: m.role }); setTimeout(()=>document.querySelector('input[placeholder*="reply"]')?.focus(),50); }}
-                          title="Reply" style={{ flexShrink:0, opacity:0, transition:'opacity 0.15s', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:'50%', width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--muted)' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                          title="Reply" style={{ opacity:0, transition:'opacity 0.15s', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:'50%', width:26, height:26, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--muted)' }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
                         </button>
                         {!isUser && (
                           <button className="reply-btn" onClick={() => { setEditingMsg({ index: i, wamid: m.wamid||null }); setEditText((m.content||'').replace(/ \*\(edited\)\*$/, '')); }}
-                            title="Edit message" style={{ flexShrink:0, opacity:0, transition:'opacity 0.15s', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:'50%', width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--muted)' }}>
+                            title="Edit message" style={{ opacity:0, transition:'opacity 0.15s', background:'var(--card)', border:'1px solid var(--rule)', borderRadius:'50%', width:26, height:26, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--muted)' }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                           </button>
                         )}
                       </div>
-                      <div style={{ flex:1, display:'flex', flexDirection:'column', gap:3, alignItems: isUser ? 'flex-start' : 'flex-end' }}>
+                      <div style={{ display:'flex', flexDirection:'column', gap:3, alignItems: isUser ? 'flex-start' : 'flex-end', minWidth:0, flex:1 }}>
                     {/* Voice note player */}
                     {audioSrc && <VoiceNote src={audioSrc} isUser={isUser} transcript={audioTranscript} />}
                     {/* Customer video */}
                     {videoSrc && (
-                      <div style={{ maxWidth:'78%', borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,.15)' }}>
+                      <div style={{ borderRadius:14, overflow:'hidden', boxShadow:'0 1px 3px rgba(0,0,0,.15)' }}>
                         <video controls style={{ width:'100%', maxHeight:300, display:'block', background:'#000' }}>
                           <source src={videoSrc} />
                         </video>
@@ -917,7 +917,7 @@ export default function WhatsApp() {
                     )}
                     {/* Inline edit mode */}
                     {editingMsg?.index === i ? (
-                      <div style={{ maxWidth:'78%', display:'flex', flexDirection:'column', gap:6 }}>
+                      <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:6 }}>
                         <textarea autoFocus value={editText} onChange={e => setEditText(e.target.value)}
                           onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); } if (e.key==='Escape') setEditingMsg(null); }}
                           style={{ padding:'8px 12px', borderRadius:12, border:'2px solid var(--accent)', background:'var(--card)', color:'var(--fg)', fontSize:13.5, lineHeight:1.5, resize:'none', fontFamily:'inherit', minWidth:180, outline:'none', boxShadow:'0 0 0 3px rgba(61,138,92,.12)' }}
@@ -934,13 +934,13 @@ export default function WhatsApp() {
                     /* Text bubble */
                     text && (
                       <div style={{
-                        maxWidth:'78%', padding:'8px 12px', borderRadius:isUser?'2px 14px 14px 14px':'14px 2px 14px 14px',
-                        background:isUser?'var(--card)':'var(--accent)',
+                        padding:'8px 12px', borderRadius:isUser?'2px 14px 14px 14px':'14px 2px 14px 14px',
+                        background:isUser?'var(--bg)':'var(--accent)',
                         color:isUser?'var(--fg)':'var(--accent-ink)',
                         fontSize:13.5, lineHeight:1.5,
-                        border: isUser?'1px solid var(--rule)':'none',
+                        border: isUser?'1px solid var(--rule-strong)':'none',
                         whiteSpace:'pre-wrap', wordBreak:'break-word',
-                        boxShadow: isUser ? 'none' : '0 1px 2px rgba(61,138,92,.15)',
+                        boxShadow: isUser ? '0 1px 3px rgba(37,35,32,.08)' : '0 1px 2px rgba(61,138,92,.15)',
                       }}>
                         <WaText text={text} />
                       </div>
