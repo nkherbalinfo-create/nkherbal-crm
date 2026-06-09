@@ -187,6 +187,7 @@ export default function Leads() {
   const [exitId, setExitId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingMeta, setExportingMeta] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingCell, setEditingCell] = useState(null); // { id, field, value }
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('leads_view') || 'table');
@@ -405,6 +406,27 @@ export default function Leads() {
     finally { setExporting(false); }
   };
 
+  const exportMetaCsv = async () => {
+    setExportingMeta(true);
+    try {
+      const { data } = await api.get('/leads', { params: { limit: 10000 } });
+      const rows = data.leads || [];
+      const lines = ['phone,fn,ln,email'];
+      rows.forEach(l => {
+        const parts = (l.name || '').trim().split(/\s+/);
+        const fn = parts[0] || '';
+        const ln = parts.slice(1).join(' ') || '';
+        const digits = (l.mobile || '').replace(/\D/g, '');
+        const phone = digits ? `+91${digits.slice(-10)}` : '';
+        lines.push([phone, fn, ln, ''].map(v => `"${v}"`).join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      saveAs(blob, `nkherbal_meta_audience_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      addToast(`${rows.length} contacts exported for Meta Ads`);
+    } catch { addToast('Export failed', 'error'); }
+    finally { setExportingMeta(false); }
+  };
+
   const persistViews = (views) => {
     setSavedViews(views);
     localStorage.setItem('savedViews_leads', JSON.stringify(views));
@@ -495,6 +517,11 @@ export default function Leads() {
             {exporting
               ? <><span style={{ width:11, height:11, border:'2px solid var(--muted)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> Exporting…</>
               : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export Excel</>}
+          </button>
+          <button className="btn-secondary" onClick={exportMetaCsv} disabled={exportingMeta} title="Export phone list for Meta Ads custom audience" style={{ display:'flex', alignItems:'center', gap:5, fontSize:12 }}>
+            {exportingMeta
+              ? <><span style={{ width:11, height:11, border:'2px solid var(--muted)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> Exporting…</>
+              : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg> Meta Ads CSV</>}
           </button>
           <button className="btn-primary" onClick={()=>{setEditing(null);setForm(emptyForm);setModal(true);}} style={{ display:'flex', alignItems:'center', gap:5 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

@@ -322,6 +322,7 @@ export default function WhatsApp() {
   });
   const [showTyping, setShowTyping] = useState(false);
   const typingTimerRef = useRef(null);
+  const [convLoading, setConvLoading] = useState(true);
   const isMobile = useIsMobile(767);
   const msgEndRef = useRef(null);
   const selectedPhoneRef = useRef(null);
@@ -341,12 +342,16 @@ export default function WhatsApp() {
     try {
       const { data } = await api.get('/wa');
       setConvs(data);
+      setConvLoading(false);
       // If a conversation is currently open, mark it as seen immediately so badge stays 0
       if (selectedPhoneRef.current) {
         const active = data.find(c => c.phone === selectedPhoneRef.current);
         if (active) markSeen(active.phone, active.messageCount);
       }
-    } catch (e) { console.error('[loadConvs]', e?.response?.status, e?.response?.data || e?.message); }
+    } catch (e) {
+      setConvLoading(false);
+      console.error('[loadConvs]', e?.response?.status, e?.response?.data || e?.message);
+    }
   };
 
   useEffect(() => { loadConvs(); const t = setInterval(loadConvs, 6000); return ()=>clearInterval(t); }, []);
@@ -699,7 +704,13 @@ export default function WhatsApp() {
               );
             })}
           </div>
-          {convs.length===0 && (
+          {convLoading && (
+            <div style={{ padding:24, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+              <span style={{ width:20, height:20, border:'2px solid var(--rule)', borderTopColor:'var(--accent)', borderRadius:'50%', animation:'spin 0.7s linear infinite', display:'inline-block' }} />
+              <span style={{ fontSize:11, color:'var(--faint)' }}>Loading conversations…</span>
+            </div>
+          )}
+          {!convLoading && convs.length===0 && (
             <div style={{ padding:24, textAlign:'center', color:'var(--faint)', fontSize:12 }}>No conversations yet</div>
           )}
           <div style={{ display:'flex', flexDirection:'column', gap:6, padding:'10px 12px', overflow:'auto', flex:1 }}>
