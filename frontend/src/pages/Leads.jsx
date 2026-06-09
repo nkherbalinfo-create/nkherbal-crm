@@ -188,6 +188,8 @@ export default function Leads() {
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportingMeta, setExportingMeta] = useState(false);
+  const [metaDropdown, setMetaDropdown] = useState(false);
+  const metaDropRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [editingCell, setEditingCell] = useState(null); // { id, field, value }
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('leads_view') || 'table');
@@ -406,7 +408,9 @@ export default function Leads() {
     finally { setExporting(false); }
   };
 
-  const exportMetaCsv = async () => {
+  const exportMetaCsv = async (type) => {
+    // type: 'engaged' | 'customers'
+    setMetaDropdown(false);
     setExportingMeta(true);
     try {
       const [leadsRes, ordersRes] = await Promise.all([
@@ -416,41 +420,59 @@ export default function Leads() {
       const leads  = leadsRes.data.leads  || [];
       const orders = ordersRes.data.orders || [];
 
-      // Build a map: phone → { fn, ln, email, totalSpend }
-      const map = new Map();
-
-      leads.forEach(l => {
-        const digits = (l.mobile || '').replace(/\D/g, '');
-        if (!digits) return;
-        const phone = `+91${digits.slice(-10)}`;
-        const parts = (l.name || '').trim().split(/\s+/);
-        if (!map.has(phone)) map.set(phone, { fn: parts[0] || '', ln: parts.slice(1).join(' ') || '', email: '', totalSpend: 0 });
-      });
-
-      orders.forEach(o => {
-        const digits = (o.mobile || '').replace(/\D/g, '');
-        if (!digits) return;
-        const phone = `+91${digits.slice(-10)}`;
-        const parts = (o.customerName || '').trim().split(/\s+/);
-        const entry = map.get(phone);
-        if (entry) {
-          // Update name/email from order if we have better data
-          if (o.email) entry.email = o.email;
-          entry.totalSpend += (o.orderValue || 0);
-        } else {
-          map.set(phone, { fn: parts[0] || '', ln: parts.slice(1).join(' ') || '', email: o.email || '', totalSpend: o.orderValue || 0 });
-        }
-      });
+      const makePhone = (mobile) => {
+        const d = (mobile || '').replace(/\D/g, '');
+        return d ? `+91${d.slice(-10)}` : null;
+      };
+      const splitName = (name) => {
+        const p = (name || '').trim().split(/\s+/);
+        return { fn: p[0] || '', ln: p.slice(1).join(' ') || '' };
+      };
 
       const lines = ['phone,fn,ln,email,value'];
-      map.forEach(({ fn, ln, email, totalSpend }, phone) => {
-        const val = totalSpend > 0 ? totalSpend : '';
-        lines.push([phone, fn, ln, email, val].map(v => `"${v}"`).join(','));
-      });
 
-      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      saveAs(blob, `nkherbal_meta_audience_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-      addToast(`${map.size} contacts exported (leads + customers)`);
+      if (type === 'engaged') {
+        // Leads with status Interested or Follow Up (not yet converted)
+        const engaged = leads.filter(l => l.status === 'Interested' || l.status === 'Follow Up');
+        const seen = new Set();
+        engaged.forEach(l => {
+          const phone = makePhone(l.mobile);
+          if (!phone || seen.has(phone)) return;
+          seen.add(phone);
+          const { fn, ln } = splitName(l.name);
+          lines.push([phone, fn, ln, '', ''].map(v => `"${v}"`).join(','));
+        });
+        const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        saveAs(blob, `nkherbal_meta_engaged_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        addToast(`${seen.size} engaged leads exported`);
+      } else {
+        // Customers: all orders + Converted leads, merged by phone with total spend
+        const map = new Map();
+        orders.forEach(o => {
+          const phone = makePhone(o.mobile);
+          if (!phone) return;
+          const { fn, ln } = splitName(o.customerName);
+          const entry = map.get(phone);
+          if (entry) {
+            if (o.email) entry.email = o.email;
+            entry.totalSpend += (o.orderValue || 0);
+          } else {
+            map.set(phone, { fn, ln, email: o.email || '', totalSpend: o.orderValue || 0 });
+          }
+        });
+        leads.filter(l => l.status === 'Converted').forEach(l => {
+          const phone = makePhone(l.mobile);
+          if (!phone || map.has(phone)) return;
+          const { fn, ln } = splitName(l.name);
+          map.set(phone, { fn, ln, email: '', totalSpend: 0 });
+        });
+        map.forEach(({ fn, ln, email, totalSpend }, phone) => {
+          lines.push([phone, fn, ln, email, totalSpend || ''].map(v => `"${v}"`).join(','));
+        });
+        const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        saveAs(blob, `nkherbal_meta_customers_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        addToast(`${map.size} customers exported`);
+      }
     } catch { addToast('Export failed', 'error'); }
     finally { setExportingMeta(false); }
   };
@@ -546,11 +568,34 @@ export default function Leads() {
               ? <><span style={{ width:11, height:11, border:'2px solid var(--muted)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> Exporting…</>
               : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export Excel</>}
           </button>
-          <button className="btn-secondary" onClick={exportMetaCsv} disabled={exportingMeta} title="Export phone list for Meta Ads custom audience" style={{ display:'flex', alignItems:'center', gap:5, fontSize:12 }}>
-            {exportingMeta
-              ? <><span style={{ width:11, height:11, border:'2px solid var(--muted)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> Exporting…</>
-              : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg> Meta Ads CSV</>}
-          </button>
+          <div style={{ position:'relative' }} ref={metaDropRef}>
+            <button className="btn-secondary" onClick={() => setMetaDropdown(v => !v)} disabled={exportingMeta}
+              style={{ display:'flex', alignItems:'center', gap:5, fontSize:12 }}>
+              {exportingMeta
+                ? <><span style={{ width:11, height:11, border:'2px solid var(--muted)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} /> Exporting…</>
+                : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg> Meta Ads CSV <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg></>}
+            </button>
+            {metaDropdown && (
+              <div style={{ position:'absolute', top:'calc(100% + 4px)', right:0, background:'var(--card)', border:'1px solid var(--rule)', borderRadius:10, boxShadow:'0 4px 16px rgba(0,0,0,.12)', zIndex:200, minWidth:200, overflow:'hidden' }}
+                onMouseLeave={() => setMetaDropdown(false)}>
+                <button onClick={() => exportMetaCsv('engaged')}
+                  style={{ width:'100%', padding:'10px 14px', border:'none', background:'none', cursor:'pointer', textAlign:'left', display:'flex', flexDirection:'column', gap:2 }}
+                  onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background='none'}>
+                  <span style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)' }}>Engaged Audiences</span>
+                  <span style={{ fontSize:11, color:'var(--muted)' }}>Interested + Follow Up leads</span>
+                </button>
+                <div style={{ height:1, background:'var(--rule)', margin:'0 10px' }} />
+                <button onClick={() => exportMetaCsv('customers')}
+                  style={{ width:'100%', padding:'10px 14px', border:'none', background:'none', cursor:'pointer', textAlign:'left', display:'flex', flexDirection:'column', gap:2 }}
+                  onMouseEnter={e => e.currentTarget.style.background='var(--hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background='none'}>
+                  <span style={{ fontSize:12.5, fontWeight:600, color:'var(--fg)' }}>Customers</span>
+                  <span style={{ fontSize:11, color:'var(--muted)' }}>All orders + Converted leads</span>
+                </button>
+              </div>
+            )}
+          </div>
           <button className="btn-primary" onClick={()=>{setEditing(null);setForm(emptyForm);setModal(true);}} style={{ display:'flex', alignItems:'center', gap:5 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add lead
