@@ -871,9 +871,9 @@ export default function Orders() {
 
       {/* Deleted orders modal */}
       {deletedModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:600, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.65)', zIndex:600, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px 16px', overflowY:'auto' }}
           onClick={() => setDeletedModal(false)}>
-          <div style={{ background:'var(--card)', borderRadius:16, width:'100%', maxWidth:700, maxHeight:'80vh', display:'flex', flexDirection:'column', boxShadow:'0 16px 48px rgba(0,0,0,.3)' }}
+          <div style={{ background:'var(--card)', borderRadius:16, width:'100%', maxWidth:700, maxHeight:'75vh', display:'flex', flexDirection:'column', boxShadow:'0 16px 48px rgba(0,0,0,.4)', margin:'auto' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ padding:'18px 20px', borderBottom:'1px solid var(--rule)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div>
