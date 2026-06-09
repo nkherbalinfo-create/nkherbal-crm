@@ -119,6 +119,10 @@ export default function Orders() {
   const [editSearch, setEditSearch] = useState('');
   const [editResults, setEditResults] = useState([]);
   const [editSearchOpen, setEditSearchOpen] = useState(false);
+  const [deletedModal, setDeletedModal] = useState(false);
+  const [deletedOrders, setDeletedOrders] = useState([]);
+  const [deletedLoading, setDeletedLoading] = useState(false);
+  const [restoring, setRestoring] = useState(null);
   const pressTimer = useRef(null);
   const { addToast } = useToast();
 
@@ -279,6 +283,27 @@ export default function Orders() {
     catch { addToast('Delete failed','error'); load(); }
   };
 
+  const openDeletedOrders = async () => {
+    setDeletedModal(true);
+    setDeletedLoading(true);
+    try {
+      const { data } = await api.get('/orders/deleted');
+      setDeletedOrders(data.orders || []);
+    } catch { addToast('Failed to load deleted orders', 'error'); }
+    finally { setDeletedLoading(false); }
+  };
+
+  const restoreOrder = async (id) => {
+    setRestoring(id);
+    try {
+      await api.patch(`/orders/${id}/restore`);
+      setDeletedOrders(prev => prev.filter(o => o._id !== id));
+      addToast('Order restored successfully');
+      load();
+    } catch { addToast('Failed to restore order', 'error'); }
+    finally { setRestoring(null); }
+  };
+
   const syncWooCommerce = async () => {
     setSyncing(true);
     try { const {data}=await api.post('/sync/woocommerce',{}); addToast(data.message,'success'); load(); }
@@ -371,6 +396,10 @@ export default function Orders() {
                 )}
               </div>
 
+              <button className="btn-secondary" onClick={openDeletedOrders} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                Deleted orders
+              </button>
               <button className="btn-primary" onClick={openAdd} style={{ display:'flex', alignItems:'center', gap:5 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 New order
@@ -839,6 +868,47 @@ export default function Orders() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {panelMobile && <CustomerPanel mobile={panelMobile} onClose={() => setPanelMobile(null)} />}
+
+      {/* Deleted orders modal */}
+      {deletedModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:600, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={() => setDeletedModal(false)}>
+          <div style={{ background:'var(--card)', borderRadius:16, width:'100%', maxWidth:700, maxHeight:'80vh', display:'flex', flexDirection:'column', boxShadow:'0 16px 48px rgba(0,0,0,.3)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ padding:'18px 20px', borderBottom:'1px solid var(--rule)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div>
+                <div style={{ fontWeight:600, fontSize:15, color:'var(--fg)' }}>Deleted Orders</div>
+                <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:2 }}>WooCommerce orders removed from view — data is preserved</div>
+              </div>
+              <button onClick={() => setDeletedModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--muted)', fontSize:20, lineHeight:1 }}>✕</button>
+            </div>
+            <div style={{ overflowY:'auto', flex:1, padding:16 }}>
+              {deletedLoading && <div style={{ textAlign:'center', padding:32, color:'var(--faint)' }}>Loading…</div>}
+              {!deletedLoading && deletedOrders.length === 0 && (
+                <div style={{ textAlign:'center', padding:32, color:'var(--faint)', fontSize:13 }}>No deleted orders found</div>
+              )}
+              {!deletedLoading && deletedOrders.map(o => (
+                <div key={o._id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:10, border:'1px solid var(--rule)', marginBottom:8, background:'var(--bg)' }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                      <span style={{ fontWeight:600, fontSize:13, color:'var(--fg)' }}>{o.customerName}</span>
+                      <span style={{ fontSize:11, color:'var(--faint)' }}>{o.orderId}</span>
+                      <span style={{ fontSize:11, color:'var(--accent)', fontWeight:600 }}>₹{(o.orderValue||0).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div style={{ fontSize:11.5, color:'var(--muted)', marginTop:3 }}>
+                      {o.productName} · {o.mobile} · {o.orderDate ? new Date(o.orderDate).toLocaleDateString('en-IN') : ''}
+                    </div>
+                  </div>
+                  <button onClick={() => restoreOrder(o._id)} disabled={restoring === o._id}
+                    style={{ padding:'6px 14px', borderRadius:8, border:'1px solid var(--accent)', background:'var(--accent-bg)', color:'var(--accent)', cursor:'pointer', fontSize:12, fontWeight:600, flexShrink:0, opacity: restoring===o._id ? 0.6 : 1 }}>
+                    {restoring === o._id ? 'Restoring…' : 'Restore'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Desktop bulk bar — fixed bottom */}
       {!isMobile && selected.size > 0 && (

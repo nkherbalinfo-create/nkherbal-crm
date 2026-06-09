@@ -94,6 +94,23 @@ router.put('/:id', protect, readOnly, async (req, res) => {
   }
 });
 
+// List soft-deleted (WooCommerce) orders — admin only
+router.get('/deleted', protect, async (req, res) => {
+  try {
+    const orders = await Order.find({ manuallyDeleted: true }).sort({ orderDate: -1 }).lean();
+    res.json({ orders });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Restore a soft-deleted order
+router.patch('/:id/restore', protect, readOnly, async (req, res) => {
+  try {
+    const order = await Order.findByIdAndUpdate(req.params.id, { manuallyDeleted: false }, { new: true });
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    res.json(order);
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 router.delete('/:id', protect, readOnly, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
