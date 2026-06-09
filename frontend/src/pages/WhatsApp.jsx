@@ -323,6 +323,8 @@ export default function WhatsApp() {
   const [showTyping, setShowTyping] = useState(false);
   const typingTimerRef = useRef(null);
   const [convLoading, setConvLoading] = useState(true);
+  const [serverWaking, setServerWaking] = useState(false);
+  const convLoadAttemptRef = useRef(0);
   const isMobile = useIsMobile(767);
   const msgEndRef = useRef(null);
   const selectedPhoneRef = useRef(null);
@@ -339,16 +341,30 @@ export default function WhatsApp() {
   };
 
   const loadConvs = async () => {
+    convLoadAttemptRef.current += 1;
+    const isFirst = convLoadAttemptRef.current === 1;
     try {
-      const { data } = await api.get('/wa');
+      // Use 70s timeout on first load so Render cold-start (30–60s) can complete
+      const { data } = await api.get('/wa', { timeout: isFirst ? 70000 : 20000 });
       setConvs(data);
       setConvLoading(false);
+      setServerWaking(false);
       // If a conversation is currently open, mark it as seen immediately so badge stays 0
       if (selectedPhoneRef.current) {
         const active = data.find(c => c.phone === selectedPhoneRef.current);
         if (active) markSeen(active.phone, active.messageCount);
       }
     } catch (e) {
+      const isTimeout = e?.code === 'ECONNABORTED' || e?.message?.includes('timeout');
+      if (isFirst && isTimeout) {
+        // Server was sleeping — show waking message and retry once more with long timeout
+        setServerWaking(true);
+        try {
+          const { data } = await api.get('/wa', { timeout: 90000 });
+          setConvs(data);
+          setServerWaking(false);
+        } catch { /* will retry on next 6s poll */ }
+      }
       setConvLoading(false);
       console.error('[loadConvs]', e?.response?.status, e?.response?.data || e?.message);
     }
@@ -704,10 +720,12 @@ export default function WhatsApp() {
               );
             })}
           </div>
-          {convLoading && (
+          {(convLoading || serverWaking) && (
             <div style={{ padding:24, textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
               <span style={{ width:20, height:20, border:'2px solid var(--rule)', borderTopColor:'var(--accent)', borderRadius:'50%', animation:'spin 0.7s linear infinite', display:'inline-block' }} />
-              <span style={{ fontSize:11, color:'var(--faint)' }}>Loading conversations…</span>
+              <span style={{ fontSize:11, color:'var(--faint)', lineHeight:1.5 }}>
+                {serverWaking ? <>Server is starting up…<br />This takes ~30 seconds on first load</> : 'Loading conversations…'}
+              </span>
             </div>
           )}
           {!convLoading && convs.length===0 && (
