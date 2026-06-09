@@ -409,20 +409,48 @@ export default function Leads() {
   const exportMetaCsv = async () => {
     setExportingMeta(true);
     try {
-      const { data } = await api.get('/leads', { params: { limit: 10000 } });
-      const rows = data.leads || [];
-      const lines = ['phone,fn,ln,email'];
-      rows.forEach(l => {
-        const parts = (l.name || '').trim().split(/\s+/);
-        const fn = parts[0] || '';
-        const ln = parts.slice(1).join(' ') || '';
+      const [leadsRes, ordersRes] = await Promise.all([
+        api.get('/leads', { params: { limit: 10000 } }),
+        api.get('/orders', { params: { limit: 10000 } }),
+      ]);
+      const leads  = leadsRes.data.leads  || [];
+      const orders = ordersRes.data.orders || [];
+
+      // Build a map: phone → { fn, ln, email, totalSpend }
+      const map = new Map();
+
+      leads.forEach(l => {
         const digits = (l.mobile || '').replace(/\D/g, '');
-        const phone = digits ? `+91${digits.slice(-10)}` : '';
-        lines.push([phone, fn, ln, ''].map(v => `"${v}"`).join(','));
+        if (!digits) return;
+        const phone = `+91${digits.slice(-10)}`;
+        const parts = (l.name || '').trim().split(/\s+/);
+        if (!map.has(phone)) map.set(phone, { fn: parts[0] || '', ln: parts.slice(1).join(' ') || '', email: '', totalSpend: 0 });
       });
+
+      orders.forEach(o => {
+        const digits = (o.mobile || '').replace(/\D/g, '');
+        if (!digits) return;
+        const phone = `+91${digits.slice(-10)}`;
+        const parts = (o.customerName || '').trim().split(/\s+/);
+        const entry = map.get(phone);
+        if (entry) {
+          // Update name/email from order if we have better data
+          if (o.email) entry.email = o.email;
+          entry.totalSpend += (o.orderValue || 0);
+        } else {
+          map.set(phone, { fn: parts[0] || '', ln: parts.slice(1).join(' ') || '', email: o.email || '', totalSpend: o.orderValue || 0 });
+        }
+      });
+
+      const lines = ['phone,fn,ln,email,value'];
+      map.forEach(({ fn, ln, email, totalSpend }, phone) => {
+        const val = totalSpend > 0 ? totalSpend : '';
+        lines.push([phone, fn, ln, email, val].map(v => `"${v}"`).join(','));
+      });
+
       const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
       saveAs(blob, `nkherbal_meta_audience_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-      addToast(`${rows.length} contacts exported for Meta Ads`);
+      addToast(`${map.size} contacts exported (leads + customers)`);
     } catch { addToast('Export failed', 'error'); }
     finally { setExportingMeta(false); }
   };
