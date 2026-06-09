@@ -74,6 +74,14 @@ router.post('/', protect, readOnly, async (req, res) => {
   }
 });
 
+// List soft-deleted (WooCommerce) orders — must be before /:id
+router.get('/deleted', protect, async (req, res) => {
+  try {
+    const orders = await Order.find({ manuallyDeleted: true }).sort({ orderDate: -1 }).lean();
+    res.json({ orders });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 router.get('/:id', protect, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -92,14 +100,6 @@ router.put('/:id', protect, readOnly, async (req, res) => {
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
-});
-
-// List soft-deleted (WooCommerce) orders — admin only
-router.get('/deleted', protect, async (req, res) => {
-  try {
-    const orders = await Order.find({ manuallyDeleted: true }).sort({ orderDate: -1 }).lean();
-    res.json({ orders });
-  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 // Restore a soft-deleted order
