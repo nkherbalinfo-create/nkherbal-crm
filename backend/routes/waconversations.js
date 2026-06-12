@@ -30,6 +30,11 @@ router.get('/', protect, async (req, res) => {
     const convs = await WaConversation.find()
       .sort({ lastMessageAt: -1 })
       .limit(500)
+      .select({
+        phone: 1, name: 1, lastMessageAt: 1, botPaused: 1, paymentClaimed: 1,
+        leadId: 1, labels: 1, notes: 1, userMessageCount: 1,
+        messages: { $slice: -1 },
+      })
       .lean();
 
     const result = convs.map(c => {
@@ -44,7 +49,7 @@ router.get('/', protect, async (req, res) => {
       name:  c.name || `+${c.phone}`,
       lastMessage,
       lastMessageAt: c.lastMessageAt,
-      messageCount: c.messages.filter(m => m.role === 'user').length,
+      messageCount: c.userMessageCount || 0,
       botPaused: c.botPaused || false,
       paymentClaimed: c.paymentClaimed || false,
       leadId: c.leadId,

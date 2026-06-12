@@ -436,6 +436,7 @@ router.post('/test-message', async (req, res) => {
     let conv = await WaConversation.findOne({ phone });
     if (!conv) conv = await WaConversation.create({ phone, name, messages: [] });
     conv.messages.push({ role: 'user', content: text });
+    conv.userMessageCount = (conv.userMessageCount || 0) + 1;
     conv.lastMessageAt = new Date();
     await conv.save();
     res.json({ ok: true, phone, text, totalMessages: conv.messages.length });
@@ -645,6 +646,7 @@ router.post('/webhook', async (req, res) => {
 
           // ── Save user message immediately so it's never lost ──
           conv.messages.push({ role: 'user', content: text, wamid: msg.id });
+          conv.userMessageCount = (conv.userMessageCount || 0) + 1;
           conv.lastMessageAt = new Date();
           await conv.save(); // ← CRITICAL: save before AI call so message persists even if AI fails
 

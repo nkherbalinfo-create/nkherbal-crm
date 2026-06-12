@@ -12,6 +12,7 @@ const waConversationSchema = new mongoose.Schema({
   name:     { type: String },
   leadId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
   messages: { type: [messageSchema], default: [] },
+  userMessageCount:   { type: Number, default: 0 },
   lastMessageAt:      { type: Date, default: Date.now },
   botPaused:          { type: Boolean, default: false },
   paymentClaimed:     { type: Boolean, default: false },
@@ -20,5 +21,7 @@ const waConversationSchema = new mongoose.Schema({
   labels:             { type: [String], default: [] },
   notes:              { type: String, default: '' }
 }, { timestamps: true });
+
+waConversationSchema.index({ lastMessageAt: -1 });
 
 module.exports = mongoose.model('WaConversation', waConversationSchema);
