@@ -1,4 +1,5 @@
 import { useState, createContext, useContext, useCallback } from 'react';
+import { toast as sonnerToast } from 'sonner';
 
 const ToastContext = createContext(null);
 
@@ -15,6 +16,11 @@ export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((message, type = 'success') => {
+    // Mirror to Sonner for the new unified toaster
+    if (type === 'error') sonnerToast.error(message);
+    else if (type === 'info') sonnerToast.info(message);
+    else sonnerToast.success(message);
+    // Also keep legacy in-page toasts so no existing pages break
     const id = Date.now();
     setToasts(p => [...p, { id, message, type }]);
     setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3500);

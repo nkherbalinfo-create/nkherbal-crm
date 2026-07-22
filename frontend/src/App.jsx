@@ -1,6 +1,7 @@
 ﻿import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useState, useEffect, useRef } from 'react';
+import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider, useToast } from './components/Toast';
@@ -406,6 +407,21 @@ export default function App() {
         <AuthProvider>
           <ToastProvider>
             {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                style: {
+                  background: 'var(--card)',
+                  color: 'var(--fg)',
+                  border: '1px solid var(--rule-strong)',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                },
+              }}
+              richColors
+              closeButton
+            />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<ProtectedRoute />}>

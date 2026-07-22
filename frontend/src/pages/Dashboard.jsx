@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -7,6 +8,34 @@ import {
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { SelectInput } from '../components/FormControls';
+
+function useCountUp(target, duration = 900, enabled = true) {
+  const [value, setValue] = useState(0);
+  const raf = useRef(null);
+  useEffect(() => {
+    if (!enabled) { setValue(target); return; }
+    const n = parseFloat(String(target).replace(/[^0-9.]/g, '')) || 0;
+    if (!n) { setValue(target); return; }
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const cur = Math.round(eased * n);
+      setValue(cur);
+      if (p < 1) raf.current = requestAnimationFrame(tick);
+      else setValue(target);
+    };
+    raf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf.current);
+  }, [target, enabled]);
+  return value;
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 10 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] } },
+};
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
 // ── Formatters ─────────────────────────────────────────
 const inr = (n, compact = false) => {
@@ -219,7 +248,8 @@ export default function Dashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, overflow: 'hidden', maxWidth: '100%' }}>
 
       {/* ── Page header ──────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'flex-end', flexWrap: 'wrap', gap: 12 }}>
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: [0.16,1,0.3,1] }}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'flex-end', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>{dayName}, {dateStr}</div>
           <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 600, letterSpacing: '-0.02em', margin: '4px 0 0', color: 'var(--fg)', lineHeight: 1.2 }}>Hello {firstName}</h1>
@@ -275,7 +305,7 @@ export default function Dashboard() {
           </button>
           </>}
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Mobile month navigator ───────────────────── */}
       {isMobile && (
@@ -323,8 +353,9 @@ export default function Dashboard() {
           ))}
         </div>
       ) : (
-        /* Desktop: 4 individual KPI cards with better design */
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+        /* Desktop: 4 individual KPI cards with Framer Motion stagger */
+        <motion.div variants={stagger} initial="hidden" animate="show"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
           {loading ? [0,1,2,3].map(i => (
             <div key={i} className="card" style={{ padding: '18px 20px' }}>
               <Skel w="50%" h={10} />
@@ -332,7 +363,8 @@ export default function Dashboard() {
               <Skel w="70%" h={10} />
             </div>
           )) : KPIs.map((m, i) => (
-            <div key={i} className="card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12, background: m.up ? 'linear-gradient(135deg, var(--card) 0%, rgba(61,138,92,.03) 100%)' : 'var(--card)', borderColor: m.up ? 'rgba(61,138,92,.15)' : 'var(--rule)' }}>
+            <motion.div key={i} variants={fadeUp} className="card"
+              style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12, background: m.up ? 'linear-gradient(135deg, var(--card) 0%, rgba(5,150,105,.03) 100%)' : 'var(--card)', borderColor: m.up ? 'rgba(5,150,105,.15)' : 'var(--rule)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{m.l}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: m.up ? 'var(--accent)' : 'var(--danger)', padding: '3px 8px', borderRadius: 6, background: m.up ? 'var(--accent-bg)' : 'var(--danger-bg)' }}>
@@ -350,9 +382,9 @@ export default function Dashboard() {
                   <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={72} h={32} id={m.l} />
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* ── Conversion Funnel ────────────────────────── */}
