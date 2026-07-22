@@ -234,7 +234,7 @@ function parseImgTag(content) {
 
 const LABEL_DEFS = [
   { key:'hot',      label:'🔥 Hot Lead',        color:'#92400e', bg:'#fef3c7' },
-  { key:'payment',  label:'💳 Payment Pending',  color:'#1e40af', bg:'#dbeafe' },
+  { key:'payment',  label:'💳 Payment Pending',  color:'#64748b', bg:'rgba(100,116,139,.10)' },
   { key:'cod',      label:'📦 COD Order',        color:'#065f46', bg:'#d1fae5' },
   { key:'followup', label:'📞 Follow-up',        color:'#6d28d9', bg:'#ede9fe' },
   { key:'vip',      label:'⭐ VIP',              color:'#92400e', bg:'#fef9c3' },

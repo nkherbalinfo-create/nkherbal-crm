@@ -6,7 +6,7 @@ const GRADIENTS = {
   violet:  ['#8b5cf6', '#6366f1'],
   amber:   ['#f59e0b', '#ef4444'],
   rose:    ['#ef4444', '#f97316'],
-  sky:     ['#06b6d4', '#3b82f6'],
+  sky:     ['#64748b', '#475569'],
   teal:    ['#14b8a6', '#06b6d4'],
   orange:  ['#f97316', '#f59e0b'],
 };
