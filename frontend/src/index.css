@@ -4,65 +4,82 @@
 
 /* ── Design Tokens ────────────────────────────────────── */
 :root {
-  /* ── Color palette ─ one accent (emerald), rest slate ── */
-  --bg:         #f8fafc;   /* slate-50 */
-  --bg-2:       #f8fafc;
+  /* ── Color palette ─ zinc neutrals, one emerald accent ── */
+  --bg:         #fafafa;   /* zinc-50 — pure neutral, no blue tint */
+  --bg-2:       #fafafa;
   --card:       #ffffff;
-  --card-soft:  #f8fafc;
-  --fg:         #0f172a;   /* slate-900 */
-  --muted:      rgba(15,23,42,.52);
-  --faint:      rgba(15,23,42,.30);
-  --rule:       rgba(15,23,42,.07);
-  --rule-strong:rgba(15,23,42,.12);
-  --hover:      rgba(15,23,42,.04);
+  --card-soft:  #f4f4f5;   /* zinc-100 */
+  --fg:         #18181b;   /* zinc-900 — pure dark, no blue */
+  --muted:      #71717a;   /* zinc-500 */
+  --faint:      rgba(24,24,27,.38);
+  --rule:       #e4e4e7;   /* zinc-200 */
+  --rule-strong:#d4d4d8;   /* zinc-300 */
+  --hover:      rgba(24,24,27,.04);
   --accent:     #059669;   /* emerald-600 — the ONE accent */
   --accent-2:   #047857;
   --accent-bg:  rgba(5,150,105,.09);
   --accent-ink: #ffffff;
-  --chip:       rgba(15,23,42,.06);
-  --danger:     #dc2626;   /* red-600 */
+  --chip:       rgba(24,24,27,.06);
+  --danger:     #dc2626;
   --danger-bg:  rgba(220,38,38,.08);
-  --warn:       #d97706;   /* amber-600 */
+  --warn:       #d97706;
   --warn-bg:    rgba(217,119,6,.08);
-  --info:       #64748b;   /* slate-500 — neutral, no blue clash */
-  --info-bg:    rgba(100,116,139,.09);
+  --info:       #71717a;   /* zinc-500 — neutral, no blue */
+  --info-bg:    rgba(113,113,122,.09);
   --success:    #059669;
   --success-bg: rgba(5,150,105,.09);
-  --sidebar-bg: #f1f5f9;   /* slate-100 */
+
+  /* ── Sidebar (always dark) ── */
+  --sidebar-bg:    #0f1117;
+  --sidebar-fg:    #f4f4f5;
+  --sidebar-muted: rgba(244,244,245,.58);
+  --sidebar-faint: rgba(244,244,245,.32);
+  --sidebar-hover: rgba(244,244,245,.07);
+  --sidebar-rule:  rgba(244,244,245,.09);
+  --sidebar-card:  rgba(244,244,245,.06);
+  --sidebar-chip:  rgba(244,244,245,.09);
+
   --shadow-card: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
   --shadow-elevated: 0 4px 16px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
   --shadow-soft: none;
   --shadow-nav:  0 1px 0 var(--rule);
-  --radius: 0.5rem;   /* 8px — shadcn default */
+  --radius: 0.5rem;
 }
 
 .dark {
-  --bg:         #0f172a;   /* slate-900 */
-  --bg-2:       #0f172a;
-  --card:       #1e293b;   /* slate-800 */
-  --card-soft:  #172033;
-  --fg:         #f1f5f9;   /* slate-100 */
-  --muted:      rgba(241,245,249,.55);
-  --faint:      rgba(241,245,249,.33);
-  --rule:       rgba(241,245,249,.07);
-  --rule-strong:rgba(241,245,249,.13);
-  --hover:      rgba(241,245,249,.05);
+  --bg:         #111113;   /* zinc-950 */
+  --bg-2:       #111113;
+  --card:       #1c1c1f;   /* zinc-900 */
+  --card-soft:  #232326;
+  --fg:         #fafafa;   /* zinc-50 */
+  --muted:      #a1a1aa;   /* zinc-400 */
+  --faint:      rgba(250,250,250,.35);
+  --rule:       rgba(250,250,250,.08);
+  --rule-strong:rgba(250,250,250,.13);
+  --hover:      rgba(250,250,250,.05);
   --accent:     #34d399;   /* emerald-400 */
   --accent-2:   #6ee7b7;
   --accent-bg:  rgba(52,211,153,.12);
   --accent-ink: #064e3b;
-  --chip:       rgba(241,245,249,.08);
+  --chip:       rgba(250,250,250,.08);
   --danger:     #f87171;
   --danger-bg:  rgba(248,113,113,.10);
   --warn:       #fbbf24;
   --warn-bg:    rgba(251,191,36,.10);
-  --info:       #94a3b8;   /* slate-400 dark-mode */
-  --info-bg:    rgba(148,163,184,.10);
+  --info:       #a1a1aa;   /* zinc-400 */
+  --info-bg:    rgba(161,161,170,.10);
   --success:    #34d399;
   --success-bg: rgba(52,211,153,.12);
-  --sidebar-bg: #0a0f1e;
-  --shadow-card: 0 1px 4px rgba(0,0,0,.15), 0 2px 12px rgba(0,0,0,.12);
-  --shadow-elevated: 0 4px 20px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.16);
+  --sidebar-bg: #09090b;   /* zinc-950 */
+  --sidebar-fg:    #fafafa;
+  --sidebar-muted: rgba(250,250,250,.58);
+  --sidebar-faint: rgba(250,250,250,.32);
+  --sidebar-hover: rgba(250,250,250,.07);
+  --sidebar-rule:  rgba(250,250,250,.09);
+  --sidebar-card:  rgba(250,250,250,.05);
+  --sidebar-chip:  rgba(250,250,250,.09);
+  --shadow-card: 0 1px 4px rgba(0,0,0,.18), 0 2px 12px rgba(0,0,0,.14);
+  --shadow-elevated: 0 4px 20px rgba(0,0,0,.25), 0 2px 8px rgba(0,0,0,.18);
 }
 
 /* ── Base ─────────────────────────────────────────────── */

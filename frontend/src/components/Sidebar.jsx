@@ -65,7 +65,7 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
   return (
     <aside style={{
       width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
-      background: 'var(--sidebar-bg)', borderRight: '1px solid var(--rule)',
+      background: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-rule)',
       padding: '16px 8px 12px',
       overflowY: 'auto', overflowX: 'hidden',
     }}>
@@ -83,8 +83,8 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
         {!c && (
           <div style={{ display: 'flex', flex: 1, gap: 10, alignItems: 'center', minWidth: 0, ...textStyle }}>
             <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
-              <div style={{ fontSize: 10.5, color: 'var(--faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sidebar-fg)', letterSpacing: '-0.01em' }}>NK Herbal</div>
+              <div style={{ fontSize: 10.5, color: 'var(--sidebar-faint)', letterSpacing: '0.02em' }}>Sales workspace</div>
             </div>
             <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
               <button onClick={onQuickAdd} title="Quick add"
@@ -94,7 +94,7 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
               <button onClick={toggleCollapse} title="Collapse sidebar"
-                style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--hover)', color:'var(--muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.8 }}
+                style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--sidebar-hover)', color:'var(--sidebar-muted)', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.8 }}
                 onMouseEnter={e => { e.currentTarget.style.opacity='1'; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity='0.8'; }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -107,12 +107,12 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
       {/* Search */}
       {!c && (
         <div onClick={() => { onSearchOpen?.(); onClose?.(); }}
-          style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 11px', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)', marginBottom: 14, cursor: 'pointer', boxShadow: '0 1px 3px rgba(37,35,32,.05)', ...textStyle }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(61,138,92,.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--rule)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(37,35,32,.05)'; }}>
+          style={{ background: 'var(--sidebar-card)', border: '1px solid var(--sidebar-rule)', borderRadius: 10, padding: '8px 11px', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--sidebar-muted)', marginBottom: 14, cursor: 'pointer', ...textStyle }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(5,150,105,.5)'; e.currentTarget.style.background = 'rgba(5,150,105,.08)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--sidebar-rule)'; e.currentTarget.style.background = 'var(--sidebar-card)'; }}>
           <Icon name="search" size={13} />
-          <span style={{ fontSize: 12, flex: 1, color: 'var(--faint)' }}>Search…</span>
-          <kbd style={{ fontFamily: 'Inter', fontSize: 9.5, color: 'var(--faint)', background: 'var(--chip)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--rule)' }}>⌘K</kbd>
+          <span style={{ fontSize: 12, flex: 1, color: 'var(--sidebar-faint)' }}>Search…</span>
+          <kbd style={{ fontFamily: 'Inter', fontSize: 9.5, color: 'var(--sidebar-faint)', background: 'var(--sidebar-chip)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--sidebar-rule)' }}>⌘K</kbd>
         </div>
       )}
 
@@ -120,7 +120,7 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
       {NAV_SECTIONS.map(({ label, items }, si) => (
         <div key={si} style={{ display: 'flex', flexDirection: 'column', marginTop: label && !c ? 14 : 0 }}>
           {label && !c && (
-            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', ...textStyle }}>
+            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--sidebar-faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', ...textStyle }}>
               {label}
             </div>
           )}
@@ -135,7 +135,7 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
                 width: c ? 40 : 'auto', height: 40,
                 padding: c ? 0 : '9px 11px',
                 borderRadius: 10, cursor: 'pointer', textDecoration: 'none',
-                color: isActive ? 'var(--accent-ink)' : 'var(--muted)',
+                color: isActive ? '#ffffff' : 'var(--sidebar-muted)',
                 fontSize: 13, fontWeight: isActive ? 600 : 400,
                 marginBottom: 1,
                 marginLeft: c ? 'auto' : 'unset', marginRight: c ? 'auto' : 'unset',
@@ -143,7 +143,7 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
               })}>
               {({ isActive }) => (
                 <>
-                  <Icon name={icon} size={16} color={isActive ? 'var(--accent-ink)' : 'var(--faint)'} />
+                  <Icon name={icon} size={16} color={isActive ? '#ffffff' : 'var(--sidebar-faint)'} />
                   {!c && <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...textStyle }}>{navLabel}</span>}
                   {!c && badge && badges[badge] > 0 && (
                     <span style={{ fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999, background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--accent-bg)', color: 'var(--accent)', fontWeight: 700, minWidth: 18, textAlign: 'center', ...textStyle }}>
@@ -159,34 +159,34 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
 
       {/* Monthly target */}
       {target && !c && (
-        <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--rule)', boxShadow: 'var(--shadow-card)', ...textStyle }}>
+        <div style={{ margin: 'auto 0 0', padding: '12px 14px', borderRadius: 12, background: 'var(--sidebar-card)', border: '1px solid var(--sidebar-rule)', ...textStyle }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}>Monthly target</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.pct}%</div>
+            <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--sidebar-muted)' }}>Monthly target</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--sidebar-fg)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.pct}%</div>
           </div>
           <div style={{ width: '100%', height: 5, background: 'var(--rule)', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
             <div style={{ width: `${target.pct}%`, height: '100%', background: `linear-gradient(90deg, var(--accent), ${target.pct > 80 ? '#2ecc71' : 'var(--accent)'})`, borderRadius: 3, transition: 'width .4s cubic-bezier(.16,1,.3,1)' }} />
           </div>
-          <div style={{ fontSize: 10.5, color: 'var(--faint)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.current} of {target.max}</div>
+          <div style={{ fontSize: 10.5, color: 'var(--sidebar-faint)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums' }}>{target.current} of {target.max}</div>
         </div>
       )}
 
       {/* Bottom */}
-      <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: (target && !c) ? 10 : 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <div style={{ borderTop: '1px solid var(--sidebar-rule)', paddingTop: 8, marginTop: (target && !c) ? 10 : 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
         {c ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '4px 0' }}>
             <button onClick={toggle} title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-              style={{ width: 34, height: 34, borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', transition: 'background 0.15s, color 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--fg)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}>
+              style={{ width: 34, height: 34, borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--sidebar-muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', transition: 'background 0.15s, color 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-muted)'; }}>
               <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><NotificationCenter /></div>
             <div title={user?.name || 'User'} style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(61,138,92,.3)', cursor: 'default' }}>{initials}</div>
             <button onClick={handleLogout} title="Sign out"
-              style={{ width: 34, height: 34, borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--faint)', cursor: 'pointer', display: 'grid', placeItems: 'center', transition: 'background 0.15s, color 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--faint)'; }}>
+              style={{ width: 34, height: 34, borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--sidebar-faint)', cursor: 'pointer', display: 'grid', placeItems: 'center', transition: 'background 0.15s, color 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,.15)'; e.currentTarget.style.color = '#f87171'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-faint)'; }}>
               <Icon name="logout" size={14} />
             </button>
           </div>
@@ -194,9 +194,9 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
           <div style={{ ...textStyle }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 4px', height: 38 }}>
               <button onClick={toggle}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--muted)', fontSize: 12.5, cursor: 'pointer', flex: 1, fontFamily: 'inherit', transition: 'background 0.15s ease, color 0.15s ease', lineHeight: 1, height: 38, whiteSpace: 'nowrap' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--hover)'; e.currentTarget.style.color = 'var(--fg)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)'; }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 9, border: 'none', background: 'transparent', color: 'var(--sidebar-muted)', fontSize: 12.5, cursor: 'pointer', flex: 1, fontFamily: 'inherit', transition: 'background 0.15s ease, color 0.15s ease', lineHeight: 1, height: 38, whiteSpace: 'nowrap' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--sidebar-hover)'; e.currentTarget.style.color = 'var(--sidebar-fg)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--sidebar-muted)'; }}>
                 <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
                 {theme === 'dark' ? 'Light mode' : 'Dark mode'}
               </button>
@@ -205,13 +205,13 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 4px', borderRadius: 9, marginTop: 2 }}>
               <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(61,138,92,.3)' }}>{initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'User'}</div>
-                <div style={{ fontSize: 10.5, color: 'var(--faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--sidebar-fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'User'}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--sidebar-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
               </div>
               <button onClick={handleLogout} title="Sign out"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--faint)', display: 'flex', padding: 6, borderRadius: 7, transition: 'background 0.15s, color 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--faint)'; }}>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sidebar-faint)', display: 'flex', padding: 6, borderRadius: 7, transition: 'background 0.15s, color 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,.15)'; e.currentTarget.style.color = '#f87171'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--sidebar-faint)'; }}>
                 <Icon name="logout" size={14} />
               </button>
             </div>
