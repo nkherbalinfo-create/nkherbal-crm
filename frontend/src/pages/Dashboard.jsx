@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Users, CheckCircle2 } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -149,8 +150,8 @@ function Skel({ w = '100%', h = 14 }) {
 }
 
 const STATUS_TONE = { Delivered: 'ok', Shipped: 'muted', Processing: 'muted', Cancelled: 'danger', RTO: 'warn' };
-const CHAN_COLORS = ['#3d8a5c', '#a8d5be', '#2a6642', '#c8e8d8'];
-const CHAN_COLOR_MAP = { WhatsApp: '#3d8a5c', Website: '#a8d5be' };
+const CHAN_COLORS = ['#10b981', '#34d399', '#059669', '#6ee7b7'];
+const CHAN_COLOR_MAP = { WhatsApp: '#10b981', Website: '#34d399' };
 
 // ──────────────────────────────────────────────────────
 export default function Dashboard() {
@@ -236,12 +237,12 @@ export default function Dashboard() {
   const chanTotal  = channelData.reduce((s, c) => s + c.revenue, 0) || 1;
   const donutSegs  = channelData.map((c, i) => ({ value: c.revenue, color: CHAN_COLOR_MAP[c._id] ?? CHAN_COLORS[i % 4] }));
 
-  const fmtChange = (pct) => pct === null ? null : `${pct > 0 ? '+' : ''}${pct}% vs last period`;
+  const fmtChange = (pct) => pct === null ? null : `${pct > 0 ? '+' : ''}${pct}%`;
   const KPIs = loading ? [] : [
-    { l: 'Revenue',       v: inr(ov.totalRevenue, true), sub: fmtChange(ov.revenueChange) || `AOV ${inr(Math.round(ov.avgOrderValue||0))}`, spark: sparkRev, up: ov.revenueChange === null ? true : ov.revenueChange >= 0 },
-    { l: 'Orders',        v: num(ov.totalOrders),         sub: fmtChange(ov.ordersChange) || `${ov.newCustomers||0} new this period`,      spark: sparkOrd, up: ov.ordersChange === null ? true : ov.ordersChange >= 0 },
-    { l: 'New customers', v: num(ov.newCustomers),        sub: `${ov.repeatCustomers||0} returning`,         spark: sparkOrd.map(v => Math.max(0, v - 1)), up: true },
-    { l: 'Delivered rate',v: `${delivPct.toFixed(1)}%`,  sub: delivPct >= 80 ? 'On track' : 'Needs attention', spark: [delivPct-6,delivPct-3,delivPct-1,delivPct], up: delivPct >= 80 },
+    { l: 'Revenue',       v: inr(ov.totalRevenue, true), sub: fmtChange(ov.revenueChange) ? `${fmtChange(ov.revenueChange)} vs last period` : `AOV ${inr(Math.round(ov.avgOrderValue||0))}`, pct: ov.revenueChange, spark: sparkRev, up: ov.revenueChange === null ? true : ov.revenueChange >= 0, Icon: DollarSign },
+    { l: 'Orders',        v: num(ov.totalOrders),  sub: fmtChange(ov.ordersChange) ? `${fmtChange(ov.ordersChange)} vs last period` : `${ov.newCustomers||0} new this period`, pct: ov.ordersChange, spark: sparkOrd, up: ov.ordersChange === null ? true : ov.ordersChange >= 0, Icon: ShoppingBag },
+    { l: 'New customers', v: num(ov.newCustomers), sub: `${ov.repeatCustomers||0} returning customers`, pct: null, spark: sparkOrd.map(v => Math.max(0, v - 1)), up: true, Icon: Users },
+    { l: 'Delivered',     v: `${delivPct.toFixed(1)}%`, sub: delivPct >= 80 ? 'Delivery rate on track' : 'Below 80% target', pct: null, spark: [delivPct-6,delivPct-3,delivPct-1,delivPct], up: delivPct >= 80, Icon: CheckCircle2 },
   ];
 
   return (
@@ -251,9 +252,9 @@ export default function Dashboard() {
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: [0.16,1,0.3,1] }}
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'flex-end', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400 }}>{dayName}, {dateStr}</div>
-          <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 600, letterSpacing: '-0.02em', margin: '4px 0 0', color: 'var(--fg)', lineHeight: 1.2 }}>Hello {firstName}</h1>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>Here's how NK Herbal is performing today.</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400, letterSpacing: '0.01em', marginBottom: 4 }}>{dayName}, {dateStr}</div>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, letterSpacing: '-0.03em', margin: 0, color: 'var(--fg)', lineHeight: 1.15 }}>Good day, {firstName}</h1>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 5 }}>Here's how NK Herbal is performing this month.</div>
         </div>
         <div className="toolbar-row">
           {/* Mobile: + Order button */}
@@ -326,74 +327,65 @@ export default function Dashboard() {
       )}
 
       {/* ── KPI strip ─────────────────────────────────── */}
-      {isMobile ? (
-        /* Mobile: 4 individual cards */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {loading ? [0,1,2,3].map(i => (
-            <div key={i} className="card" style={{ padding: '16px' }}>
-              <Skel w="55%" h={10} />
-              <Skel w="70%" h={26} style={{ margin: '10px 0 8px' }} />
-              <Skel w="60%" h={10} />
+      <motion.div variants={stagger} initial="hidden" animate="show"
+        style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: isMobile ? 10 : 14 }}>
+        {loading ? [0,1,2,3].map(i => (
+          <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '16px' : '20px 22px', boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <Skel w="50%" h={11} />
+              <Skel w={32} h={32} style={{ borderRadius: 8 }} />
             </div>
-          )) : KPIs.map((m, i) => (
-            <div key={i} className="card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8, background: m.up ? 'linear-gradient(135deg, var(--card) 0%, rgba(61,138,92,.03) 100%)' : 'var(--card)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
-                <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 500, flex: 1 }}>{m.l}</div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: m.up ? 'var(--accent)' : 'var(--danger)', background: m.up ? 'var(--accent-bg)' : 'var(--danger-bg)', padding: '2px 6px', borderRadius: 5, whiteSpace: 'nowrap' }}>
-                  {m.up ? '↑' : '↓'}
-                </span>
-              </div>
-              <div className="num" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
-                {m.v}
-              </div>
-              <div style={{ fontSize: 10.5, color: 'var(--faint)' }}>
-                {m.sub.includes('%') ? m.sub : <span style={{ color: 'var(--muted)' }}>{m.sub}</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        /* Desktop: 4 individual KPI cards with Framer Motion stagger */
-        <motion.div variants={stagger} initial="hidden" animate="show"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-          {loading ? [0,1,2,3].map(i => (
-            <div key={i} className="card" style={{ padding: '18px 20px' }}>
-              <Skel w="50%" h={10} />
-              <Skel w="60%" h={28} style={{ margin: '12px 0 10px' }} />
-              <Skel w="70%" h={10} />
-            </div>
-          )) : KPIs.map((m, i) => (
-            <motion.div key={i} variants={fadeUp} className="card"
-              style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12, background: m.up ? 'linear-gradient(135deg, var(--card) 0%, rgba(5,150,105,.03) 100%)' : 'var(--card)', borderColor: m.up ? 'rgba(5,150,105,.15)' : 'var(--rule)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{m.l}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: m.up ? 'var(--accent)' : 'var(--danger)', padding: '3px 8px', borderRadius: 6, background: m.up ? 'var(--accent-bg)' : 'var(--danger-bg)' }}>
-                  {m.up ? '↑' : '↓'} {Math.abs(m.sub.split('%')[0]) || 'N/A'}%
+            <Skel w="60%" h={isMobile ? 24 : 30} style={{ marginBottom: 10 }} />
+            <Skel w="75%" h={11} />
+          </div>
+        )) : KPIs.map((m, i) => {
+          const Ic = m.Icon;
+          const trendColor = m.up ? 'var(--accent)' : 'var(--danger)';
+          const trendBg    = m.up ? 'var(--accent-bg)' : 'var(--danger-bg)';
+          const sparkData  = m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6];
+          return (
+            <motion.div key={i} variants={fadeUp}
+              style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '16px' : '20px 22px', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+              {/* Label + icon */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.01em' }}>{m.l}</span>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--accent-bg)', display: 'grid', placeItems: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+                  <Ic size={15} strokeWidth={2} />
                 </div>
               </div>
-              <div className="num" style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg)', lineHeight: 1 }}>
+
+              {/* Metric */}
+              <div className="num" style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--fg)', lineHeight: 1, marginBottom: 10 }}>
                 {m.v}
               </div>
+
+              {/* Footer: trend + sparkline */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ fontSize: 11.5, color: 'var(--faint)', flex: 1 }}>
-                  {m.sub.includes('%') ? m.sub : <span style={{ color: 'var(--muted)' }}>{m.sub}</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: trendColor, fontWeight: 500 }}>
+                  {m.up
+                    ? <TrendingUp size={13} strokeWidth={2} style={{ flexShrink: 0 }} />
+                    : <TrendingDown size={13} strokeWidth={2} style={{ flexShrink: 0 }} />}
+                  <span style={{ color: 'var(--muted)', fontWeight: 400 }}>{m.sub}</span>
                 </div>
-                <div style={{ color: m.up ? 'var(--accent)' : 'var(--danger)', flexShrink: 0, opacity: 0.7 }}>
-                  <Spark data={m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6]} w={72} h={32} id={m.l} />
-                </div>
+                {!isMobile && (
+                  <div style={{ color: trendColor, flexShrink: 0, opacity: 0.65 }}>
+                    <Spark data={sparkData} w={60} h={26} id={m.l} />
+                  </div>
+                )}
               </div>
             </motion.div>
-          ))}
-        </motion.div>
-      )}
+          );
+        })}
+      </motion.div>
 
       {/* ── Conversion Funnel ────────────────────────── */}
       {!loading && funnel.total > 0 && (
-        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 22px' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Sales funnel</div>
-              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>All-time lead pipeline · {funnel.total} total leads</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Sales funnel</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>All-time lead pipeline · {funnel.total} total leads</div>
             </div>
             {ov.dormantCustomers > 0 && (
               <a href="/customers" style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 11px', borderRadius:8, background:'var(--warn-bg)', color:'var(--warn)', fontSize:11.5, fontWeight:500, textDecoration:'none' }}>
@@ -454,12 +446,12 @@ export default function Dashboard() {
       <div className="dashboard-grid">
 
         {/* Revenue trend */}
-        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Revenue trend</div>
-              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
-                {inr(chartData.reduce((s, d) => s + d.Revenue, 0), true)} over {trendRange} months
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Revenue trend</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>
+                {inr(chartData.reduce((s, d) => s + d.Revenue, 0), true)} · last {trendRange} months
               </div>
             </div>
             <div style={{ display: 'flex', background: 'var(--chip)', border: '1px solid var(--rule)', borderRadius: 8, overflow: 'hidden' }}>
@@ -484,8 +476,8 @@ export default function Dashboard() {
               <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stopColor="#3d8a5c" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#3d8a5c" stopOpacity={0} />
+                    <stop offset="0%"   stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 6" stroke="var(--rule)" vertical={false} />
@@ -502,11 +494,11 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="Revenue"
-                  stroke="#3d8a5c"
+                  stroke="#10b981"
                   strokeWidth={2}
                   fill="url(#revArea)"
                   dot={false}
-                  activeDot={{ r: 4, fill: '#3d8a5c', strokeWidth: 2, stroke: 'var(--card)' }}
+                  activeDot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: 'var(--card)' }}
                   isAnimationActive={!chartAnimatedRef.current}
                   animationDuration={900}
                   animationEasing="ease-out"
@@ -519,9 +511,9 @@ export default function Dashboard() {
         </div>
 
         {/* Channels donut */}
-        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Channels</div>
-          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>By revenue share</div>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Channels</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>By revenue share</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingTop: 20 }}>
             {loading ? (
               <div className="skeleton" style={{ width: 124, height: 124, borderRadius: '50%', flexShrink: 0 }} />
@@ -575,11 +567,11 @@ export default function Dashboard() {
       <div className="dashboard-grid">
 
         {/* Recent orders */}
-        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>Recent orders</div>
-              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>Latest 6</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Recent orders</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>Latest 6</div>
             </div>
             <a href="/orders" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
               View all
@@ -616,8 +608,8 @@ export default function Dashboard() {
         </div>
 
         {/* Top products */}
-        <div className="surface" style={{ padding: isMobile ? '14px 14px' : '18px 20px' }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 2 }}>Top products</div>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em', marginBottom: 2 }}>Top products</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>By revenue this period</div>
           {loading ? [0,1,2,3,4].map(i => (
             <div key={i} style={{ padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none' }}>

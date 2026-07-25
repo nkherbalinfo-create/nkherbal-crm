@@ -143,7 +143,7 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
               })}>
               {({ isActive }) => (
                 <>
-                  <Icon name={icon} size={16} color={isActive ? '#ffffff' : 'var(--sidebar-faint)'} />
+                  <Icon name={icon} size={16} color={isActive ? '#34d399' : 'var(--sidebar-faint)'} />
                   {!c && <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...textStyle }}>{navLabel}</span>}
                   {!c && badge && badges[badge] > 0 && (
                     <span style={{ fontFamily: 'Inter', fontSize: 10, padding: '2px 7px', borderRadius: 999, background: isActive ? 'rgba(255,255,255,0.95)' : 'var(--accent-bg)', color: 'var(--accent)', fontWeight: 700, minWidth: 18, textAlign: 'center', ...textStyle }}>
