@@ -5,8 +5,8 @@
 /* ── Design Tokens ────────────────────────────────────── */
 :root {
   /* ── Color palette ─ zinc neutrals, one emerald accent ── */
-  --bg:         #fafafa;   /* zinc-50 — pure neutral, no blue tint */
-  --bg-2:       #fafafa;
+  --bg:         #f3f3f4;   /* zinc-100 — gives cards clear lift */
+  --bg-2:       #eeeeef;
   --card:       #ffffff;
   --card-soft:  #f4f4f5;   /* zinc-100 */
   --fg:         #18181b;   /* zinc-900 — pure dark, no blue */
@@ -39,7 +39,7 @@
   --sidebar-card:  rgba(244,244,245,.06);
   --sidebar-chip:  rgba(244,244,245,.09);
 
-  --shadow-card: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-card: 0 1px 2px rgba(0,0,0,.04), 0 3px 12px rgba(0,0,0,.07);
   --shadow-elevated: 0 4px 20px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.05);
   --shadow-soft: none;
   --shadow-nav:  0 1px 0 var(--rule);
@@ -47,7 +47,7 @@
 }
 
 .dark {
-  --bg:         #111113;   /* zinc-950 */
+  --bg:         #0d0d0f;   /* deeper dark — more card contrast */
   --bg-2:       #111113;
   --card:       #1c1c1f;   /* zinc-900 */
   --card-soft:  #232326;

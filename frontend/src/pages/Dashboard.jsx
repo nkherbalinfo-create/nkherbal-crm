@@ -119,7 +119,7 @@ function Donut({ segments = [], size = 120, thickness = 18, track }) {
 function ChartTip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '8px 12px', fontSize: 12, boxShadow: '0 4px 16px rgba(37,35,32,.12)' }}>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 10, padding: '9px 13px', fontSize: 12, boxShadow: '0 4px 20px rgba(0,0,0,.13), 0 1px 4px rgba(0,0,0,.07)' }}>
       <div style={{ color: 'var(--muted)', marginBottom: 3, fontSize: 11, fontFamily: 'Inter' }}>{label}</div>
       <div style={{ color: 'var(--fg)', fontFamily: 'Inter', fontVariantNumeric: 'tabular-nums', fontWeight: 600, fontSize: 13 }}>
         {inr(payload[0]?.value)}
@@ -238,15 +238,24 @@ export default function Dashboard() {
   const donutSegs  = channelData.map((c, i) => ({ value: c.revenue, color: CHAN_COLOR_MAP[c._id] ?? CHAN_COLORS[i % 4] }));
 
   const fmtChange = (pct) => pct === null ? null : `${pct > 0 ? '+' : ''}${pct}%`;
+
+  // Per-metric badge identity — breaks the identical-card pattern
+  const METRIC_COLORS = [
+    { badgeBg: 'rgba(16,185,129,.13)',  badgeColor: '#10b981' }, // Revenue  — emerald
+    { badgeBg: 'rgba(245,158,11,.13)',  badgeColor: '#f59e0b' }, // Orders   — amber
+    { badgeBg: 'rgba(99,102,241,.13)',  badgeColor: '#6366f1' }, // Customers — indigo
+    { badgeBg: 'rgba(14,165,233,.13)',  badgeColor: '#0ea5e9' }, // Delivery  — sky
+  ];
+
   const KPIs = loading ? [] : [
-    { l: 'Revenue',       v: inr(ov.totalRevenue, true), sub: fmtChange(ov.revenueChange) ? `${fmtChange(ov.revenueChange)} vs last period` : `AOV ${inr(Math.round(ov.avgOrderValue||0))}`, pct: ov.revenueChange, spark: sparkRev, up: ov.revenueChange === null ? true : ov.revenueChange >= 0, Icon: DollarSign },
-    { l: 'Orders',        v: num(ov.totalOrders),  sub: fmtChange(ov.ordersChange) ? `${fmtChange(ov.ordersChange)} vs last period` : `${ov.newCustomers||0} new this period`, pct: ov.ordersChange, spark: sparkOrd, up: ov.ordersChange === null ? true : ov.ordersChange >= 0, Icon: ShoppingBag },
-    { l: 'New customers', v: num(ov.newCustomers), sub: `${ov.repeatCustomers||0} returning customers`, pct: null, spark: sparkOrd.map(v => Math.max(0, v - 1)), up: true, Icon: Users },
-    { l: 'Delivered',     v: `${delivPct.toFixed(1)}%`, sub: delivPct >= 80 ? 'Delivery rate on track' : 'Below 80% target', pct: null, spark: [delivPct-6,delivPct-3,delivPct-1,delivPct], up: delivPct >= 80, Icon: CheckCircle2 },
+    { l: 'Revenue',       v: inr(ov.totalRevenue, true), sub: fmtChange(ov.revenueChange) ? `${fmtChange(ov.revenueChange)} vs last period` : `AOV ${inr(Math.round(ov.avgOrderValue||0))}`, pct: ov.revenueChange, spark: sparkRev, up: ov.revenueChange === null ? true : ov.revenueChange >= 0, Icon: DollarSign, ...METRIC_COLORS[0] },
+    { l: 'Orders',        v: num(ov.totalOrders),  sub: fmtChange(ov.ordersChange) ? `${fmtChange(ov.ordersChange)} vs last period` : `${ov.newCustomers||0} new this period`, pct: ov.ordersChange, spark: sparkOrd, up: ov.ordersChange === null ? true : ov.ordersChange >= 0, Icon: ShoppingBag, ...METRIC_COLORS[1] },
+    { l: 'New customers', v: num(ov.newCustomers), sub: `${ov.repeatCustomers||0} returning customers`, pct: null, spark: sparkOrd.map(v => Math.max(0, v - 1)), up: true, Icon: Users, ...METRIC_COLORS[2] },
+    { l: 'Delivered',     v: `${delivPct.toFixed(1)}%`, sub: delivPct >= 80 ? 'Delivery rate on track' : 'Below 80% target', pct: null, spark: [delivPct-6,delivPct-3,delivPct-1,delivPct], up: delivPct >= 80, Icon: CheckCircle2, ...METRIC_COLORS[3] },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, overflow: 'hidden', maxWidth: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, overflow: 'hidden', maxWidth: '100%' }}>
 
       {/* ── Page header ──────────────────────────────── */}
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: [0.16,1,0.3,1] }}
@@ -254,7 +263,11 @@ export default function Dashboard() {
         <div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400, letterSpacing: '0.01em', marginBottom: 4 }}>{dayName}, {dateStr}</div>
           <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, letterSpacing: '-0.03em', margin: 0, color: 'var(--fg)', lineHeight: 1.15 }}>Good day, {firstName}</h1>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 5 }}>Here's how NK Herbal is performing this month.</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 5 }}>
+            {!loading && ov.totalRevenue > 0
+              ? <>{inr(ov.totalRevenue, true)} revenue · <span className="num">{num(ov.totalOrders)}</span> orders in {monthStr}</>
+              : monthOffset === 0 ? "Here's how NK Herbal is performing." : `Viewing ${monthStr}`}
+          </div>
         </div>
         <div className="toolbar-row">
           {/* Mobile: + Order button */}
@@ -332,44 +345,44 @@ export default function Dashboard() {
         {loading ? [0,1,2,3].map(i => (
           <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '16px' : '20px 22px', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <Skel w="50%" h={11} />
-              <Skel w={32} h={32} style={{ borderRadius: 8 }} />
+              <Skel w="44%" h={11} />
+              <Skel w={34} h={34} style={{ borderRadius: 9 }} />
             </div>
-            <Skel w="60%" h={isMobile ? 24 : 30} style={{ marginBottom: 10 }} />
-            <Skel w="75%" h={11} />
+            <Skel w="55%" h={isMobile ? 26 : 34} style={{ marginBottom: 12 }} />
+            <Skel w="72%" h={11} />
           </div>
         )) : KPIs.map((m, i) => {
           const Ic = m.Icon;
-          const trendColor = m.up ? 'var(--accent)' : 'var(--danger)';
-          const trendBg    = m.up ? 'var(--accent-bg)' : 'var(--danger-bg)';
+          // Use card's own badge color when up, danger when down
+          const trendColor = m.up ? m.badgeColor : 'var(--danger)';
           const sparkData  = m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6];
           return (
             <motion.div key={i} variants={fadeUp}
               style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '16px' : '20px 22px', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-              {/* Label + icon */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.01em' }}>{m.l}</span>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--accent-bg)', display: 'grid', placeItems: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+              {/* Label + icon — each card has its own badge color */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.01em' }}>{m.l}</span>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: m.badgeBg, display: 'grid', placeItems: 'center', color: m.badgeColor, flexShrink: 0 }}>
                   <Ic size={15} strokeWidth={2} />
                 </div>
               </div>
 
-              {/* Metric */}
-              <div className="num" style={{ fontSize: isMobile ? 22 : 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--fg)', lineHeight: 1, marginBottom: 10 }}>
+              {/* Metric — larger + tighter tracking */}
+              <div className="num" style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--fg)', lineHeight: 1, marginBottom: 12 }}>
                 {m.v}
               </div>
 
-              {/* Footer: trend + sparkline */}
+              {/* Footer: trend icon + sub text + sparkline */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: trendColor, fontWeight: 500 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5 }}>
                   {m.up
-                    ? <TrendingUp size={13} strokeWidth={2} style={{ flexShrink: 0 }} />
-                    : <TrendingDown size={13} strokeWidth={2} style={{ flexShrink: 0 }} />}
+                    ? <TrendingUp size={13} strokeWidth={2} style={{ flexShrink: 0, color: trendColor }} />
+                    : <TrendingDown size={13} strokeWidth={2} style={{ flexShrink: 0, color: trendColor }} />}
                   <span style={{ color: 'var(--muted)', fontWeight: 400 }}>{m.sub}</span>
                 </div>
                 {!isMobile && (
-                  <div style={{ color: trendColor, flexShrink: 0, opacity: 0.65 }}>
+                  <div style={{ color: m.badgeColor, flexShrink: 0, opacity: 0.7 }}>
                     <Spark data={sparkData} w={60} h={26} id={m.l} />
                   </div>
                 )}
@@ -469,10 +482,10 @@ export default function Dashboard() {
             </div>
           </div>
           {loading ? (
-            <div className="skeleton" style={{ height: 180, borderRadius: 8 }} />
+            <div className="skeleton" style={{ height: 240, borderRadius: 8 }} />
           ) : (
             <div key={chartKey} style={{ opacity: chartFading ? 0 : 1, transition: chartFading ? 'opacity 0.15s ease' : 'opacity 0.25s ease' }}>
-            <ResponsiveContainer width="100%" height={210}>
+            <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={chartData} margin={{ top: 16, right: 16, left: 16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revArea" x1="0" y1="0" x2="0" y2="1">
@@ -495,10 +508,10 @@ export default function Dashboard() {
                   type="monotone"
                   dataKey="Revenue"
                   stroke="#10b981"
-                  strokeWidth={2}
+                  strokeWidth={2.2}
                   fill="url(#revArea)"
                   dot={false}
-                  activeDot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: 'var(--card)' }}
+                  activeDot={{ r: 4.5, fill: '#10b981', strokeWidth: 2, stroke: 'var(--card)' }}
                   isAnimationActive={!chartAnimatedRef.current}
                   animationDuration={900}
                   animationEasing="ease-out"
@@ -573,8 +586,12 @@ export default function Dashboard() {
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Recent orders</div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>Latest 6</div>
             </div>
-            <a href="/orders" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}>
+            <a href="/orders"
+              style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, transition: 'color .13s, background .13s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-bg)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'transparent'; }}>
               View all
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
           </div>
           {loading ? [0,1,2,3,4,5].map(i => (
@@ -586,7 +603,9 @@ export default function Dashboard() {
               <Skel w={70} h={22} />
             </div>
           )) : recentOrders.map((o, i) => (
-            <div key={o._id} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 80px 90px', gap: 12, padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center' }}>
+            <div key={o._id} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 80px 90px', gap: 12, padding: '11px 8px', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center', margin: '0 -8px', borderRadius: 8, transition: 'background .1s', cursor: 'default' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               <Av name={o.customerName} size={30} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.customerName}</div>
@@ -609,7 +628,16 @@ export default function Dashboard() {
 
         {/* Top products */}
         <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em', marginBottom: 2 }}>Top products</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Top products</div>
+            <a href="/reports"
+              style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, transition: 'color .13s, background .13s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-bg)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'transparent'; }}>
+              Reports
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>By revenue this period</div>
           {loading ? [0,1,2,3,4].map(i => (
             <div key={i} style={{ padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none' }}>
