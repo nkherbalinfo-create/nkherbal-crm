@@ -262,7 +262,7 @@ export default function Dashboard() {
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'flex-end', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 400, letterSpacing: '0.01em', marginBottom: 4 }}>{dayName}, {dateStr}</div>
-          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, letterSpacing: '-0.03em', margin: 0, color: 'var(--fg)', lineHeight: 1.15 }}>Good day, {firstName}</h1>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, letterSpacing: '-0.03em', margin: 0, color: 'var(--fg)', lineHeight: 1.15, fontFamily: "'Geist', 'Inter', system-ui" }}>Good day, {firstName}</h1>
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 5 }}>
             {!loading && ov.totalRevenue > 0
               ? <>{inr(ov.totalRevenue, true)} revenue · <span className="num">{num(ov.totalOrders)}</span> orders in {monthStr}</>
@@ -323,7 +323,7 @@ export default function Dashboard() {
 
       {/* ── Mobile month navigator ───────────────────── */}
       {isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: '10px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: '10px 14px' }}>
           <button onClick={() => setMonthOffset(o => o - 1)}
             style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '4px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', fontSize: 18 }}>
             ‹
@@ -343,7 +343,7 @@ export default function Dashboard() {
       <motion.div variants={stagger} initial="hidden" animate="show"
         style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: isMobile ? 10 : 14 }}>
         {loading ? [0,1,2,3].map(i => (
-          <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '16px' : '20px 22px', boxShadow: 'var(--shadow-card)' }}>
+          <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: isMobile ? '16px' : '20px 22px', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <Skel w="44%" h={11} />
               <Skel w={34} h={34} style={{ borderRadius: 9 }} />
@@ -358,7 +358,9 @@ export default function Dashboard() {
           const sparkData  = m.spark.length >= 2 ? m.spark : [0,1,2,4,5,6];
           return (
             <motion.div key={i} variants={fadeUp}
-              style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '16px' : '20px 22px', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: 0 }}>
+              style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: isMobile ? '16px' : '20px 22px', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: 0, transition: 'border-color 0.18s, box-shadow 0.18s, transform 0.18s cubic-bezier(0.16,1,0.3,1)', willChange: 'transform', cursor: 'default' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,.10)'; e.currentTarget.style.borderColor = `${m.badgeColor}28`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; e.currentTarget.style.borderColor = 'var(--rule)'; }}>
 
               {/* Label + icon — each card has its own badge color */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
@@ -368,8 +370,8 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Metric — larger + tighter tracking */}
-              <div className="num" style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--fg)', lineHeight: 1, marginBottom: 12 }}>
+              {/* Metric — larger + tighter tracking, Geist for crispness */}
+              <div className="num" style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, letterSpacing: '-0.04em', color: 'var(--fg)', lineHeight: 1, marginBottom: 12, fontFamily: "'Geist', 'Inter', system-ui" }}>
                 {m.v}
               </div>
 
@@ -394,7 +396,7 @@ export default function Dashboard() {
 
       {/* ── Conversion Funnel ────────────────────────── */}
       {!loading && funnel.total > 0 && (
-        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Sales funnel</div>
@@ -459,7 +461,7 @@ export default function Dashboard() {
       <div className="dashboard-grid">
 
         {/* Revenue trend */}
-        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Revenue trend</div>
@@ -524,7 +526,7 @@ export default function Dashboard() {
         </div>
 
         {/* Channels donut */}
-        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Channels</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>By revenue share</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingTop: 20 }}>
@@ -580,7 +582,7 @@ export default function Dashboard() {
       <div className="dashboard-grid">
 
         {/* Recent orders */}
-        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Recent orders</div>
@@ -594,6 +596,15 @@ export default function Dashboard() {
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
           </div>
+          {/* Table column headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 80px 90px', gap: 12, padding: '0 8px 10px', alignItems: 'center', borderBottom: '1px solid var(--rule)', marginBottom: 2 }}>
+            <div />
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Customer</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Product</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Amount</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--faint)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Status</div>
+          </div>
+
           {loading ? [0,1,2,3,4,5].map(i => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 1fr 80px 90px', gap: 12, padding: '12px 0', borderTop: i ? '1px solid var(--rule)' : 'none', alignItems: 'center' }}>
               <div className="skeleton" style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0 }} />
@@ -627,7 +638,7 @@ export default function Dashboard() {
         </div>
 
         {/* Top products */}
-        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 12, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: isMobile ? '14px' : '20px 24px', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Top products</div>
             <a href="/reports"

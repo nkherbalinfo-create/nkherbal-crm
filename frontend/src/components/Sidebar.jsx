@@ -75,7 +75,7 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
         <div
           onClick={c ? toggleCollapse : undefined}
           title={c ? 'Expand sidebar' : undefined}
-          style={{ width: 36, height: 36, borderRadius: 12, background: 'var(--accent)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 2px 10px rgba(61,138,92,.35)', cursor: c ? 'pointer' : 'default' }}
+          style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 2px 12px rgba(16,185,129,.4), 0 0 0 1px rgba(255,255,255,.08) inset', cursor: c ? 'pointer' : 'default' }}
           onMouseEnter={e => { if (c) e.currentTarget.style.transform = 'scale(1.05)'; }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}>
           <Icon name="leaf" size={18} color="white" />
@@ -88,9 +88,9 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
             </div>
             <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
               <button onClick={onQuickAdd} title="Quick add"
-                style={{ width:26, height:26, borderRadius:8, border:'none', background:'var(--accent)', color:'#fff', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, opacity:0.9 }}
-                onMouseEnter={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1.08)'; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity='0.9'; e.currentTarget.style.transform='scale(1)'; }}>
+                style={{ width:26, height:26, borderRadius:8, border:'none', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', cursor:'pointer', display:'grid', placeItems:'center', flexShrink:0, boxShadow:'0 1px 6px rgba(16,185,129,.35)' }}
+                onMouseEnter={e => { e.currentTarget.style.transform='scale(1.08)'; e.currentTarget.style.boxShadow='0 2px 10px rgba(16,185,129,.45)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 1px 6px rgba(16,185,129,.35)'; }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
               <button onClick={toggleCollapse} title="Collapse sidebar"
@@ -118,10 +118,16 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
 
       {/* Navigation */}
       {NAV_SECTIONS.map(({ label, items }, si) => (
-        <div key={si} style={{ display: 'flex', flexDirection: 'column', marginTop: label && !c ? 14 : 0 }}>
+        <div key={si} style={{ display: 'flex', flexDirection: 'column', marginTop: label && !c ? 10 : 0 }}>
           {label && !c && (
-            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'var(--sidebar-faint)', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 11px 8px', userSelect: 'none', ...textStyle }}>
-              {label}
+            <div style={{ padding: '0 4px 4px', userSelect: 'none', ...textStyle }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--sidebar-rule)' }} />
+                <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--sidebar-faint)', letterSpacing: '0.03em' }}>
+                  {label.charAt(0) + label.slice(1).toLowerCase()}
+                </span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--sidebar-rule)' }} />
+              </div>
             </div>
           )}
           {items.map(({ to, label: navLabel, icon, badge }) => (
@@ -202,8 +208,10 @@ function SidebarContent({ collapsed, textReady, toggleCollapse, badges, target, 
               </button>
               <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}><NotificationCenter /></div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 11px 4px', borderRadius: 9, marginTop: 2 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(61,138,92,.3)' }}>{initials}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 10, marginTop: 2, background: 'var(--sidebar-card)', border: '1px solid var(--sidebar-rule)', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--sidebar-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--sidebar-card)'}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, boxShadow: '0 1px 4px rgba(16,185,129,.35)' }}>{initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--sidebar-fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'User'}</div>
                 <div style={{ fontSize: 10.5, color: 'var(--sidebar-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
