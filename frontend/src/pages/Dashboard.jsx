@@ -249,7 +249,7 @@ export default function Dashboard() {
 
   const KPIs = loading ? [] : [
     { l: 'Revenue',       v: inr(ov.totalRevenue, true), sub: fmtChange(ov.revenueChange) ? `${fmtChange(ov.revenueChange)} vs last period` : `AOV ${inr(Math.round(ov.avgOrderValue||0))}`, pct: ov.revenueChange, spark: sparkRev, up: ov.revenueChange === null ? true : ov.revenueChange >= 0, Icon: DollarSign, ...METRIC_COLORS[0] },
-    { l: 'Orders',        v: num(ov.totalOrders),  sub: fmtChange(ov.ordersChange) ? `${fmtChange(ov.ordersChange)} vs last period` : `${ov.newCustomers||0} new this period`, pct: ov.ordersChange, spark: sparkOrd, up: ov.ordersChange === null ? true : ov.ordersChange >= 0, Icon: ShoppingBag, ...METRIC_COLORS[1] },
+    { l: 'Orders',        v: num(ov.totalOrders),  sub: fmtChange(ov.ordersChange) ? `${num(ov.totalUnits||0)} units · ${fmtChange(ov.ordersChange)} vs last period` : `${num(ov.totalUnits||0)} units · ${ov.newCustomers||0} new`, pct: ov.ordersChange, spark: sparkOrd, up: ov.ordersChange === null ? true : ov.ordersChange >= 0, Icon: ShoppingBag, ...METRIC_COLORS[1] },
     { l: 'New customers', v: num(ov.newCustomers), sub: `${ov.repeatCustomers||0} returning customers`, pct: null, spark: sparkOrd.map(v => Math.max(0, v - 1)), up: true, Icon: Users, ...METRIC_COLORS[2] },
     { l: 'Delivered',     v: `${delivPct.toFixed(1)}%`, sub: delivPct >= 80 ? 'Delivery rate on track' : 'Below 80% target', pct: null, spark: [delivPct-6,delivPct-3,delivPct-1,delivPct], up: delivPct >= 80, Icon: CheckCircle2, ...METRIC_COLORS[3] },
   ];

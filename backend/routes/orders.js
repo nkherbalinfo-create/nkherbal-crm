@@ -46,12 +46,13 @@ router.get('/', protect, async (req, res) => {
         { orderId: { $regex: s, $options: 'i' } }
       ];
     }
-    const total = await Order.countDocuments(filter);
-    const orders = await Order.find(filter)
-      .sort({ orderDate: -1 })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-    res.json({ orders, total, page: Number(page), pages: Math.ceil(total / limit) });
+    const [total, unitAgg, orders] = await Promise.all([
+      Order.countDocuments(filter),
+      Order.aggregate([{ $match: filter }, { $group: { _id: null, totalUnits: { $sum: '$quantity' } } }]),
+      Order.find(filter).sort({ orderDate: -1 }).skip((page - 1) * limit).limit(Number(limit)),
+    ]);
+    const totalUnits = unitAgg[0]?.totalUnits ?? 0;
+    res.json({ orders, total, totalUnits, page: Number(page), pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

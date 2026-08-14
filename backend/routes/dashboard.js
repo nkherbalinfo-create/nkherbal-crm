@@ -45,6 +45,7 @@ router.get('/stats', protect, async (req, res) => {
           $group: {
             _id: null,
             totalOrders: { $sum: 1 },
+            totalUnits: { $sum: '$quantity' },
             totalRevenue: { $sum: '$orderValue' },
             avgOrderValue: { $avg: '$orderValue' },
             newCustomers: { $sum: { $cond: [{ $eq: ['$customerType', 'New'] }, 1, 0] } },

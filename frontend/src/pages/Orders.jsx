@@ -174,7 +174,7 @@ export default function Orders() {
       const params = { page, limit:8, ...Object.fromEntries(Object.entries(filters).filter(([,v])=>v)) };
       const { data } = await api.get('/orders', { params });
       setOrders(data.orders);
-      setMeta({ total:data.total, page:data.page, pages:data.pages });
+      setMeta({ total:data.total, totalUnits:data.totalUnits, page:data.page, pages:data.pages });
       setListKey(k => k + 1);
     } catch { addToast('Failed to load orders','error'); }
   }, [page, filters]);
@@ -349,7 +349,7 @@ export default function Orders() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
         <div>
           <div style={{ fontSize: isMobile ? 20 : 22, fontWeight:600, letterSpacing:'-0.02em', color:'var(--fg)' }}>Orders</div>
-          <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{meta.total} total orders</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>{meta.total} total orders · {meta.totalUnits ?? 0} units</div>
         </div>
         <div style={{ display:'flex', gap:8, flexShrink:0 }}>
           {isMobile ? (
