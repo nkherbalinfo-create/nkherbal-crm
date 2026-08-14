@@ -160,6 +160,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [ads, setAds] = useState(null);
   const [chartKey, setChartKey] = useState(0);
   const [chartFading, setChartFading] = useState(false);
   const [channel, setChannel] = useState('');
@@ -200,14 +201,16 @@ export default function Dashboard() {
       const start = `${yr}-${String(mo + 1).padStart(2, '0')}-01`;
       const end   = `${yr}-${String(mo + 1).padStart(2, '0')}-${new Date(yr, mo + 1, 0).getDate()}`;
       const params = { startDate: start, endDate: end, trendMonths: trendRange, ...(channel ? { channel } : {}) };
-      const [dash, orders] = await Promise.all([
+      const [dash, orders, adsData] = await Promise.all([
         api.get('/dashboard/stats', { params }),
         api.get('/orders', { params: { limit: 6, ...params } }),
+        api.get('/ads/stats').catch(() => null),
       ]);
       hasLoadedRef.current = true;
       setData(dash.data);
       setChartKey(k => k + 1);
       setRecentOrders(orders.data.orders || []);
+      if (adsData) setAds(adsData.data);
     } catch {} finally { setLoading(false); }
   }, [channel, monthOffset, trendRange]);
 
@@ -453,6 +456,85 @@ export default function Dashboard() {
               );
             })}
           </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Meta Ads widget ──────────────────────────── */}
+      {ads && (
+        <div style={{ background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 16, padding: isMobile ? '14px' : '18px 24px', boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* Meta logo mark */}
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#1877f2,#42a5f5)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>Meta Ads</div>
+                <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1 }}>
+                  {ads.thisMonth?.dateStart && ads.thisMonth?.dateStop
+                    ? `${ads.thisMonth.dateStart} – ${ads.thisMonth.dateStop}`
+                    : 'This month'}
+                </div>
+              </div>
+            </div>
+            {/* Balance pill */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999, background: ads.overview.balance > 500 ? 'rgba(16,185,129,.1)' : 'rgba(245,158,11,.1)', border: `1px solid ${ads.overview.balance > 500 ? 'rgba(16,185,129,.2)' : 'rgba(245,158,11,.2)'}` }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: ads.overview.balance > 500 ? '#10b981' : '#f59e0b' }} />
+              <span style={{ fontSize: 11.5, fontWeight: 500, color: ads.overview.balance > 500 ? '#10b981' : '#f59e0b' }}>
+                ₹{ads.overview.balance.toLocaleString('en-IN')} balance
+              </span>
+            </div>
+          </div>
+
+          {/* 4 stat tiles */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: 10, marginBottom: 16 }}>
+            {[
+              { label: 'Spent this month', value: `₹${ads.thisMonth.spend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, sub: `₹${ads.overview.amountSpent.toLocaleString('en-IN')} all time`, color: '#f59e0b' },
+              { label: 'Reach',            value: ads.thisMonth.reach.toLocaleString('en-IN'), sub: `${ads.thisMonth.impressions.toLocaleString('en-IN')} impressions`, color: '#6366f1' },
+              { label: 'Clicks',           value: ads.thisMonth.clicks.toLocaleString('en-IN'), sub: `${ads.thisMonth.ctr.toFixed(2)}% CTR`, color: '#10b981' },
+              { label: 'Cost per click',   value: `₹${ads.thisMonth.cpc.toFixed(2)}`, sub: 'avg CPC this month', color: '#0ea5e9' },
+            ].map((t, i) => (
+              <div key={i} style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--rule)' }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6, fontWeight: 500 }}>{t.label}</div>
+                <div className="num" style={{ fontSize: 18, fontWeight: 700, color: 'var(--fg)', letterSpacing: '-0.03em', lineHeight: 1 }}>{t.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{t.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Daily spend sparkline */}
+          {ads.daily?.length > 0 && (
+            <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 14 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, fontWeight: 500 }}>Daily spend — last 30 days</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 44 }}>
+                {ads.daily.map((d, i) => {
+                  const max = Math.max(...ads.daily.map(x => x.spend));
+                  const h = max > 0 ? Math.max(3, Math.round((d.spend / max) * 44)) : 3;
+                  return (
+                    <div key={i} title={`${d.date}: ₹${d.spend.toFixed(0)}`}
+                      style={{ flex: 1, height: h, borderRadius: 2, background: '#f59e0b', opacity: 0.75, transition: 'height .3s ease', cursor: 'default' }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                      onMouseLeave={e => e.currentTarget.style.opacity = '0.75'}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Active campaigns */}
+          {ads.activeCampaigns?.length > 0 && (
+            <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12, marginTop: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, fontWeight: 500 }}>Active campaigns</div>
+              {ads.activeCampaigns.map((c, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: 'var(--fg)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                  {c.dailyBudget && <span className="num" style={{ fontSize: 11.5, color: 'var(--muted)' }}>₹{c.dailyBudget.toLocaleString('en-IN')}/day</span>}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
