@@ -2,45 +2,15 @@ const express = require('express');
 const crypto = require('crypto');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
+const {
+  mapOrderStatus,
+  mapPaymentStatus,
+  matchProduct,
+  orderValueFromWC,
+  correctedOrderValue,
+  amountText
+} = require('../services/wcOrderMapping');
 const router = express.Router();
-
-// Map WooCommerce order status → CRM order status
-function mapOrderStatus(wcStatus) {
-  const map = {
-    'pending': 'Processing',
-    'processing': 'Processing',
-    'on-hold': 'Processing',
-    'completed': 'Delivered',
-    'cancelled': 'Cancelled',
-    'refunded': 'Cancelled',
-    'failed': 'Cancelled',
-    'shipped': 'Shipped'
-  };
-  return map[wcStatus] || 'Processing';
-}
-
-// Map WooCommerce payment method → CRM payment status
-function mapPaymentStatus(wcOrder) {
-  const method = wcOrder.payment_method || '';
-  const status = wcOrder.status || '';
-  if (status === 'completed') return 'Paid';
-  if (method.includes('cod') || method.includes('cash')) return 'COD';
-  if (status === 'processing') return 'Paid';
-  return 'Pending';
-}
-
-// Find best matching CRM product name from WooCommerce line item
-function matchProduct(wcProductName) {
-  const name = (wcProductName || '').toLowerCase();
-  if (name.includes('muejaza plus')) return 'Muejaza Plus For Men (300g)';
-  if (name.includes('muejaza') && name.includes('shahi')) return 'Muejaza & Shahi Kalp Combo (300g)';
-  if (name.includes('muejaza')) return 'Muejaza For Men (300g)';
-  if (name.includes('shahi kalp')) return 'Shahi Kalp For Men & Women (300g)';
-  if (name.includes('testo') || name.includes('vardhak')) return 'Testo – Vardhak For Men (300g)';
-  if (name.includes('shilajit') && (name.includes('50') || name.includes('50g'))) return 'Kashmiri Shilajit 50g';
-  if (name.includes('shilajit')) return 'Kashmiri Shilajit 25g';
-  return wcProductName || 'Custom Product';
-}
 
 async function upsertCustomer(mobile, customerName, city, orderValue, orderDate) {
   let customer = await Customer.findOne({ mobile });
@@ -63,11 +33,15 @@ async function upsertCustomer(mobile, customerName, city, orderValue, orderDate)
 // Verify WooCommerce webhook signature
 function verifySignature(req) {
   const secret = process.env.WC_WEBHOOK_SECRET;
-  if (!secret) return true; // skip if not configured
+  if (!secret) {
+    console.warn('[WooCommerce] WC_WEBHOOK_SECRET is not set — webhook signature NOT checked. Set it in the backend environment.');
+    return true;
+  }
   const signature = req.headers['x-wc-webhook-signature'];
   if (!signature) return false;
-  const hash = crypto.createHmac('sha256', secret).update(req.rawBody).digest('base64');
-  return hash === signature;
+  const expected = Buffer.from(crypto.createHmac('sha256', secret).update(req.rawBody || '').digest('base64'));
+  const given = Buffer.from(String(signature));
+  return expected.length === given.length && crypto.timingSafeEqual(expected, given);
 }
 
 router.post('/woocommerce', async (req, res) => {
@@ -92,7 +66,7 @@ router.post('/woocommerce', async (req, res) => {
     const billingAddress = [billing.address_1, billing.address_2, billing.city, billing.state, billing.postcode].filter(Boolean).join(', ');
     const paymentMethod = wc.payment_method_title || wc.payment_method || '';
     const orderDate = new Date(wc.date_created || Date.now());
-    const orderValue = parseFloat(wc.total || 0);
+    const orderValue = orderValueFromWC(wc);
     const wcOrderId = String(wc.id || '');
 
     // Map all line items with GST breakdown
@@ -121,6 +95,12 @@ router.post('/woocommerce', async (req, res) => {
     if (existing) {
       existing.orderStatus = mapOrderStatus(wc.status);
       existing.paymentStatus = mapPaymentStatus(wc);
+      // Partial COD saved at the deposit amount → correct it to the full order value
+      const corrected = correctedOrderValue(existing.orderValue, wc);
+      if (corrected !== null) {
+        await Customer.updateOne({ mobile: existing.mobile }, { $inc: { totalRevenue: corrected - existing.orderValue } });
+        existing.orderValue = corrected;
+      }
       // Backfill missing fields if not stored on original sync
       if (!existing.lineItems?.length && lineItems.length) {
         existing.lineItems = lineItems;
@@ -176,7 +156,7 @@ router.post('/woocommerce', async (req, res) => {
           `Namaste *${customerName.split(' ')[0]} Ji*! Aapka order receive ho gaya hai.\n\n` +
           `📦 *Order Details:*\n` +
           `• Product: *${productName}*\n` +
-          `• Amount: *₹${orderValue.toLocaleString('en-IN')}*\n` +
+          `• Amount: *${amountText(wc)}*\n` +
           `• Order ID: *${order.orderId}*\n\n` +
           `🚚 Aapka order 3–5 working days mein deliver ho jaayega.\n` +
           `Tracking details aapko WhatsApp/SMS par milegi.\n\n` +
@@ -197,78 +177,6 @@ router.post('/woocommerce', async (req, res) => {
   }
 });
 
-// ── Test endpoint — simulate a CC Avenue payment (for testing only) ──
-// Usage: POST https://crm-backend-azu8.onrender.com/api/webhooks/ccavenue-test
-// Body: { "mobile": "9876543210", "name": "Test User", "amount": "4000", "product": "Muejaza For Men" }
-router.post('/ccavenue-test', async (req, res) => {
-  const { mobile = '9999999999', name = 'Test Customer', amount = '4000', product = 'Muejaza For Men (300g)' } = req.body;
-  console.log(`[CCAvenue TEST] Simulating payment: ${name} (${mobile}) ₹${amount}`);
-
-  // Inject fake CC Avenue data and call the same handler logic
-  req.body = {
-    order_status:   'Success',
-    billing_tel:    mobile,
-    billing_name:   name,
-    billing_address: '123 Test Street',
-    billing_city:   'Mumbai',
-    billing_state:  'Maharashtra',
-    billing_zip:    '400001',
-    billing_email:  'test@test.com',
-    amount:         amount,
-    order_id:       `TEST-${Date.now()}`,
-    tracking_id:    `TRK-${Date.now()}`,
-    merchant_param3: product
-  };
-
-  // Reuse the same handler
-  res.json({ ok: true, message: `Test payment simulated for ${mobile}. Check WhatsApp and Render logs.` });
-
-  // Fire the actual CC Avenue logic asynchronously
-  const WaConversation = require('../models/WaConversation');
-  const { sendWhatsAppMessageDirect } = require('../services/waSender');
-  const sse = require('../services/sseBroadcaster');
-  const data = req.body;
-
-  try {
-    const mobile10 = String(data.billing_tel).replace(/\D/g, '').slice(-10);
-    const phone = `91${mobile10}`;
-    const amt = parseFloat(data.amount);
-    const customerName = data.billing_name;
-    const city = data.billing_city;
-    const address = [data.billing_address, data.billing_city, data.billing_state, data.billing_zip].filter(Boolean).join(', ');
-    const ccOrderId = data.order_id;
-    const firstName = customerName.split(' ')[0];
-
-    const customerType = await upsertCustomer(mobile10, customerName, city, amt, new Date());
-    const existingOrder = await Order.findOne({ notes: `cca:${ccOrderId}` });
-    if (!existingOrder) {
-      await Order.create({
-        orderDate: new Date(), customerName, mobile: mobile10, city,
-        email: data.billing_email, billingAddress: address,
-        productName: data.merchant_param3 || 'NK Herbal Product',
-        quantity: 1, orderValue: amt,
-        salesChannel: 'Website', leadSource: 'Organic',
-        paymentStatus: 'Paid', orderStatus: 'Processing',
-        customerType, followUpDone: false, upsellDone: false,
-        notes: `cca:${ccOrderId}`
-      });
-    }
-
-    const confirmMsg =
-      `✅ *Order Confirmed!* 🎉\n\nNamaste *${firstName} Ji*! Aapka payment verify ho gaya hai.\n\n` +
-      `📦 *Order Summary:*\n• Product: *${data.merchant_param3}*\n• Amount: *₹${amt.toLocaleString('en-IN')}*\n• Order ID: *${ccOrderId}*\n\n` +
-      `🚚 Aapka order 3–5 working days mein deliver ho jaayega. Tracking details milegi.\n\n` +
-      `Shukriya NK Herbal choose karne ke liye! 🌿🙏`;
-
-    await sendWhatsAppMessageDirect(phone, confirmMsg);
-    await WaConversation.findOneAndUpdate({ phone: { $in: [phone, mobile10] } }, { paymentClaimed: false });
-    sse.broadcast({ type: 'payment_confirmed', phone });
-    console.log(`[CCAvenue TEST] ✅ All done for ${phone}`);
-  } catch (err) {
-    console.error('[CCAvenue TEST] Error:', err.message);
-  }
-});
-
 // ── CC Avenue IPN — auto-confirm payment when CC Avenue notifies us ──
 // Setup: in CC Avenue merchant panel → Payment Options → Notify URL:
 //   https://crm-backend-azu8.onrender.com/api/webhooks/ccavenue
@@ -280,16 +188,22 @@ router.post('/ccavenue', async (req, res) => {
     const { sendWhatsAppMessageDirect } = require('../services/waSender');
     const sse = require('../services/sseBroadcaster');
 
-    let data = {};
-
-    // CC Avenue sends either encrypted (encResp) or plain text response
-    if (req.body.encResp) {
-      data = decryptCCAvenue(req.body.encResp);
-      console.log('[CCAvenue] Decrypted IPN:', JSON.stringify(data));
-    } else {
-      data = req.body;
-      console.log('[CCAvenue] Plain IPN:', JSON.stringify(data));
+    // Only trust the encrypted response: it can only be produced with our CCAvenue working key.
+    // Plain (unencrypted) bodies are ignored — anyone could post those to fake a payment.
+    // CCAvenue posts form data (encResp=...); server.js only parses JSON, so read the raw body too.
+    const encResp = req.body?.encResp || new URLSearchParams(req.rawBody || '').get('encResp');
+    if (!encResp) {
+      console.warn('[CCAvenue] Ignored IPN without encResp (unencrypted requests are not trusted)');
+      return;
     }
+    let data;
+    try {
+      data = decryptCCAvenue(encResp);
+    } catch (decErr) {
+      console.warn('[CCAvenue] Ignored IPN that could not be decrypted:', decErr.message);
+      return;
+    }
+    console.log('[CCAvenue] Decrypted IPN for order', data.order_id || '(none)', 'status', data.order_status || '(none)');
 
     const status = (data.order_status || data.payment_status || '').toLowerCase();
     if (status !== 'success' && status !== 'successful') {

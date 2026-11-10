@@ -2,32 +2,13 @@ const https = require('https');
 const http = require('http');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
-
-function mapOrderStatus(wcStatus) {
-  const map = { pending: 'Processing', processing: 'Processing', 'on-hold': 'Processing', completed: 'Delivered', cancelled: 'Cancelled', refunded: 'Cancelled', failed: 'Cancelled', shipped: 'Shipped' };
-  return map[wcStatus] || 'Processing';
-}
-
-function mapPaymentStatus(wc) {
-  const method = (wc.payment_method || '').toLowerCase();
-  const status = wc.status || '';
-  if (status === 'completed') return 'Paid';
-  if (method.includes('cod') || method.includes('cash')) return 'COD';
-  if (status === 'processing') return 'Paid';
-  return 'Pending';
-}
-
-function matchProduct(name) {
-  const n = (name || '').toLowerCase();
-  if (n.includes('muejaza plus')) return 'Muejaza Plus For Men (300g)';
-  if (n.includes('muejaza') && n.includes('shahi')) return 'Muejaza & Shahi Kalp Combo (300g)';
-  if (n.includes('muejaza')) return 'Muejaza For Men (300g)';
-  if (n.includes('shahi kalp')) return 'Shahi Kalp For Men & Women (300g)';
-  if (n.includes('testo') || n.includes('vardhak')) return 'Testo – Vardhak For Men (300g)';
-  if (n.includes('shilajit') && (n.includes('50') || n.includes('50g'))) return 'Kashmiri Shilajit 50g';
-  if (n.includes('shilajit')) return 'Kashmiri Shilajit 25g';
-  return name || 'Custom Product';
-}
+const {
+  mapOrderStatus,
+  mapPaymentStatus,
+  matchProduct,
+  orderValueFromWC,
+  correctedOrderValue
+} = require('./wcOrderMapping');
 
 async function upsertCustomer(mobile, customerName, city, orderValue, orderDate) {
   let customer = await Customer.findOne({ mobile });
@@ -73,7 +54,7 @@ async function processWCOrder(wc) {
   const billingAddress = [billing.address_1, billing.address_2, billing.city, billing.state, billing.postcode].filter(Boolean).join(', ');
   const paymentMethod = wc.payment_method_title || wc.payment_method || '';
   const orderDate = new Date(wc.date_created || Date.now());
-  const orderValue = parseFloat(wc.total || 0);
+  const orderValue = orderValueFromWC(wc);
   const wcOrderId = String(wc.id || '');
 
   const wcLineItems = wc.line_items || [];
@@ -103,6 +84,9 @@ async function processWCOrder(wc) {
     if (existing.manuallyDeleted) return 'skipped';
     existing.orderStatus = mapOrderStatus(wc.status);
     existing.paymentStatus = mapPaymentStatus(wc);
+    // Partial COD saved at the deposit amount → full order value (customer totals are rebuilt after sync)
+    const corrected = correctedOrderValue(existing.orderValue, wc);
+    if (corrected !== null) existing.orderValue = corrected;
     if (lineItems.length) existing.lineItems = lineItems;
     if (email) existing.email = email;
     if (billingAddress) existing.billingAddress = billingAddress;
