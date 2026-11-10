@@ -461,6 +461,9 @@ router.post('/webhook', async (req, res) => {
 
   try {
     const body = req.body;
+    // Order-confirmation buttons are only acted on when Meta's signature is valid (needs WA_APP_SECRET)
+    const orderConfirmation = require('../services/orderConfirmation');
+    const signatureOk = orderConfirmation.verifyMetaSignature(req.rawBody, req.headers['x-hub-signature-256']);
     console.log('[WhatsApp] 📥 Webhook received, object:', body?.object, '| entries:', body?.entry?.length || 0);
     if (body.object !== 'whatsapp_business_account') {
       console.log('[WhatsApp] ⚠️ Not a WA business account event, ignoring');
@@ -651,6 +654,16 @@ router.post('/webhook', async (req, res) => {
           await conv.save(); // ← CRITICAL: save before AI call so message persists even if AI fails
 
           console.log(`[WhatsApp] 💬 User message saved: "${text.slice(0, 60)}" from ${phone}`);
+
+          // ── Order confirmation / address replies — handled by the order flow, not the AI bot ──
+          try {
+            if (await orderConfirmation.handleIncoming({ phone, msg, text, verified: signatureOk })) {
+              sse.broadcast({ type: 'message', phone });
+              continue;
+            }
+          } catch (flowErr) {
+            console.error('[WhatsApp] Order flow error:', flowErr.message);
+          }
 
           // ── Show typing indicator to customer while AI processes ──
           sendTypingIndicator(phone); // fire-and-forget, don't await

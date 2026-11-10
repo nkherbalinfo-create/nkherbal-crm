@@ -9,6 +9,14 @@ const {
   orderValueFromWC,
   correctedOrderValue
 } = require('./wcOrderMapping');
+const confirmation = require('./orderConfirmation');
+
+// Catches paid orders whose webhook was missed (e.g. while the backend was asleep). Sends at most once.
+async function maybeStartConfirmation(order, wc) {
+  if (!confirmation.isPaidWcOrder(wc)) return;
+  try { await confirmation.startConfirmation(order._id); }
+  catch (err) { console.error('[Confirm] start failed:', err.message); }
+}
 
 async function upsertCustomer(mobile, customerName, city, orderValue, orderDate) {
   let customer = await Customer.findOne({ mobile });
@@ -95,13 +103,15 @@ async function processWCOrder(wc) {
     if (!existing.notes || !existing.notes.startsWith('wc:')) {
       existing.notes = `wc:${wcOrderId}`;
     }
+    confirmation.applyWcDetails(existing, wc);
     await existing.save();
+    await maybeStartConfirmation(existing, wc);
     return 'updated';
   }
 
   const customerType = await upsertCustomer(mobile, customerName, city, orderValue, orderDate);
   try {
-    await Order.create({
+    const doc = new Order({
       orderDate, customerName, mobile, city, email, billingAddress, paymentMethod,
       productName, quantity, orderValue, lineItems,
       salesChannel: 'Website', leadSource: 'Organic',
@@ -110,6 +120,9 @@ async function processWCOrder(wc) {
       customerType, followUpDone: false, upsellDone: false,
       notes: `wc:${wcOrderId}`
     });
+    confirmation.applyWcDetails(doc, wc);
+    await doc.save();
+    await maybeStartConfirmation(doc, wc);
     return 'created';
   } catch (err) {
     if (err.code === 11000) {

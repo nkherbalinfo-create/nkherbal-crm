@@ -72,6 +72,7 @@ function loadWebhooks() {
     require.cache[file] = { id: file, filename: file, loaded: true, exports: exportsObj };
   };
   stub('models/Order', {
+    findById: async () => null,
     findOne: async () => calls.existing,
     create: async (doc) => { calls.created.push(doc); return { ...doc, orderId: 'ORD-TEST-0001' }; }
   });

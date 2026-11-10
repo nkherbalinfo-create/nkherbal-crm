@@ -53,6 +53,10 @@ connectDB().then(() => {
   };
   setTimeout(runFollowUps, 5000);
   setInterval(runFollowUps, 6 * 60 * 60 * 1000);
+
+  // Order confirmation: reminder after a few hours, flag for a call when the customer doesn't reply
+  const { runReminders } = require('./services/orderConfirmation');
+  setInterval(() => runReminders().catch(err => console.error('[Confirm reminders error]', err.message)), 30 * 60 * 1000);
 });
 
 const app = express();
@@ -98,6 +102,7 @@ app.use('/api/followups', require('./routes/followups'));
 app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/wa', require('./routes/waconversations'));
 app.use('/api/ads', require('./routes/ads'));
+app.use('/api/automation', require('./routes/automation'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 

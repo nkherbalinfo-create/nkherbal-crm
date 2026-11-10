@@ -8,6 +8,7 @@ import { DateInput, FilterBar, SelectInput } from '../components/FormControls';
 import Pagination from '../components/Pagination';
 import { format } from 'date-fns';
 import CustomerPanel from '../components/CustomerPanel';
+import OrderShippingPanel, { ShipChip } from '../components/OrderShippingPanel';
 
 const PRODUCTS = [
   { name: 'Muejaza For Men (300g)', price: 4499 },
@@ -566,6 +567,7 @@ export default function Orders() {
                     <div style={{ display:'flex', gap:4, flexWrap:'wrap', flex:1, minWidth:0 }}>
                       <span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`} style={{ fontSize:10 }}>{o.salesChannel}</span>
                       <span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.paymentStatus}</span>
+                      <ShipChip order={o} />
                       <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`} style={{ fontSize:10 }}>{o.orderStatus}</span>
                     </div>
                     <div style={{ display:'flex', gap:5, flexShrink:0 }} onClick={e=>e.stopPropagation()}>
@@ -632,7 +634,12 @@ export default function Orders() {
                   <td style={{ padding:'11px 16px', fontFamily:'Inter', fontSize:13, fontWeight:600, color:'var(--fg)', fontVariantNumeric:'tabular-nums', whiteSpace:'nowrap' }}>₹{o.orderValue?.toLocaleString('en-IN')}</td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${CHAN_CHIP[o.salesChannel]||'chip-muted'}`}>{o.salesChannel}</span></td>
                   <td style={{ padding:'10px 16px' }}><span className={`chip ${PAY_CHIP[o.paymentStatus]||'chip-muted'}`}>{o.paymentStatus}</span></td>
-                  <td style={{ padding:'10px 16px' }}><span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`}>{o.orderStatus}</span></td>
+                  <td style={{ padding:'10px 16px' }}>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:4 }}>
+                      <span className={`chip ${STATUS_CHIP[o.orderStatus]||'chip-muted'}`}>{o.orderStatus}</span>
+                      <ShipChip order={o} />
+                    </div>
+                  </td>
                   <td style={{ padding:'10px 20px 10px 8px', whiteSpace:'nowrap' }}>
                     <div style={{ display:'flex', gap:4 }}>
                       <IconBtn onClick={()=>openView(o)} title="View" bg="var(--accent-bg)" color="var(--accent)"><SVG d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></IconBtn>
@@ -723,6 +730,9 @@ export default function Orders() {
                   </div>
                 </div>
               )}
+
+              <OrderShippingPanel key={viewOrder._id} order={viewOrder}
+                onUpdated={(o) => { if (o && o._id) { setViewOrder(o); setOrders(list => list.map(x => x._id === o._id ? o : x)); } }} />
 
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:'1px solid var(--rule)', paddingTop:12 }}>
                 <span className={`chip ${TYPE_CHIP[viewOrder.customerType]||'chip-muted'}`}>{viewOrder.customerType} Customer</span>

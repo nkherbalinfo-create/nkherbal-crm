@@ -46,8 +46,46 @@ const orderSchema = new mongoose.Schema({
     total: { type: Number },
     gst: { type: Number }
   }],
-  manuallyDeleted: { type: Boolean, default: false }
+  manuallyDeleted: { type: Boolean, default: false },
+
+  // ── Order confirmation + Delhivery automation ──────────────
+  wcOrderId: { type: String, index: true },          // WooCommerce order number (also in notes as wc:<id>)
+  partialCod: {                                      // WooBooster part payment: deposit online + balance as COD
+    deposit: { type: Number },
+    balance: { type: Number }
+  },
+  shipping: {                                        // address confirmed with the customer (falls back to billing)
+    name: { type: String },
+    phone: { type: String },
+    address: { type: String },
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String }
+  },
+  confirmation: {
+    status: {
+      type: String,
+      enum: ['none', 'sent', 'order_confirmed', 'awaiting_address', 'address_confirmed', 'needs_call', 'cancelled'],
+      default: 'none'
+    },
+    sentAt: { type: Date },
+    orderConfirmedAt: { type: Date },
+    addressConfirmedAt: { type: Date },
+    reminders: { type: Number, default: 0 },
+    lastReminderAt: { type: Date },
+    note: { type: String }                           // why it needs a call, last error, etc.
+  },
+  delhivery: {
+    status: { type: String, enum: ['none', 'created', 'failed', 'dry_run'], default: 'none' },
+    awb: { type: String },
+    createdAt: { type: Date },
+    error: { type: String },
+    codAmount: { type: Number },
+    declaredValue: { type: Number }
+  }
 }, { timestamps: true });
+
+orderSchema.index({ mobile: 1, 'confirmation.status': 1 });
 
 orderSchema.pre('save', async function (next) {
   if (!this.orderId) {

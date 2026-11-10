@@ -10,7 +10,14 @@ const {
   correctedOrderValue,
   amountText
 } = require('../services/wcOrderMapping');
+const confirmation = require('../services/orderConfirmation');
 const router = express.Router();
+
+// Paid order → start the WhatsApp confirmation (sends at most once; never blocks the webhook reply).
+function maybeStartConfirmation(order, wc) {
+  if (!confirmation.isPaidWcOrder(wc)) return;
+  confirmation.startConfirmation(order._id).catch(err => console.error('[Confirm] start failed:', err.message));
+}
 
 async function upsertCustomer(mobile, customerName, city, orderValue, orderDate) {
   let customer = await Customer.findOne({ mobile });
@@ -109,7 +116,9 @@ router.post('/woocommerce', async (req, res) => {
       if (!existing.email && email) existing.email = email;
       if (!existing.billingAddress && billingAddress) existing.billingAddress = billingAddress;
       if (!existing.paymentMethod && paymentMethod) existing.paymentMethod = paymentMethod;
+      confirmation.applyWcDetails(existing, wc);
       await existing.save();
+      if (!existing.manuallyDeleted) maybeStartConfirmation(existing, wc);
       return res.json({ message: 'Order updated', orderId: existing.orderId });
     }
 
@@ -143,10 +152,19 @@ router.post('/woocommerce', async (req, res) => {
 
     console.log(`[WooCommerce] New order synced: ${order.orderId} for ${customerName}`);
 
-    // ── Auto-send WhatsApp confirmation for paid website orders ──
+    // Order number, part-payment split and address for the confirmation / Delhivery flow
+    const created = await Order.findById(order._id);
+    if (created) {
+      confirmation.applyWcDetails(created, wc);
+      await created.save();
+    }
+
+    // ── Paid website orders: new confirmation flow when enabled, else the old one-line confirmation ──
     const isPaid = ['paid', 'processing', 'completed'].includes((wc.status || '').toLowerCase())
       || mapPaymentStatus(wc) === 'Paid';
-    if (isPaid && mobile) {
+    if (created && confirmation.appliesTo(mobile)) {
+      maybeStartConfirmation(created, wc);
+    } else if (isPaid && mobile) {
       try {
         const { sendWhatsAppMessageDirect } = require('../services/waSender');
         const WaConversation = require('../models/WaConversation');
