@@ -64,6 +64,36 @@ test('customer message shows the split', () => {
   assert.equal(map.amountText(wcOrder()), '₹4,300 (₹500 paid online, ₹3,800 cash on delivery)');
 });
 
+test('identical totals on the same day cannot overwrite another linked order', async () => {
+  const previous = { wcOrderId: '99001' };
+  const legacy = { orderId: 'ORD-LEGACY' };
+  const Order = {
+    findOne: async query => query.$or[0].wcOrderId === previous.wcOrderId ? previous : null,
+    find: query => {
+      assert.deepEqual(query.wcOrderId, { $in: [null, ''] });
+      assert.equal(query.salesChannel, 'Website');
+      assert.ok(query.notes.$not.test('wc:99001'));
+      return { limit: async () => [legacy] };
+    }
+  };
+  const date = new Date('2026-11-10T10:00:00');
+  assert.equal(await map.findExistingWcOrder(Order, '99001', '9876543210', date, 4300), previous);
+  assert.equal(await map.findExistingWcOrder(Order, '99002', '9876543210', date, 4300), legacy);
+  Order.find = () => ({ limit: async () => [legacy, { orderId: 'ORD-AMBIGUOUS' }] });
+  assert.equal(await map.findExistingWcOrder(Order, '99002', '9876543210', date, 4300), null);
+});
+
+test('an active linked CRM record takes precedence over a deleted deposit-only record', async () => {
+  const active = { wcOrderId: '24255', orderValue: 4000 };
+  const deleted = { notes: 'wc:24255', manuallyDeleted: true, orderValue: 500 };
+  const Order = {
+    findOne: async query => query.manuallyDeleted === true ? deleted : active
+  };
+  assert.equal(await map.findExistingWcOrder(Order, '24255'), active);
+  Order.findOne = async query => query.manuallyDeleted === true ? deleted : null;
+  assert.equal(await map.findExistingWcOrder(Order, '24255'), deleted);
+});
+
 // ── Webhook routes with stubbed database / WhatsApp ───────────────
 function loadWebhooks() {
   const calls = { created: [], customerUpdates: [], waSent: [], existing: null };
@@ -74,6 +104,7 @@ function loadWebhooks() {
   stub('models/Order', {
     findById: async () => null,
     findOne: async () => calls.existing,
+    find: () => ({ limit: async () => [] }),
     create: async (doc) => { calls.created.push(doc); return { ...doc, orderId: 'ORD-TEST-0001' }; }
   });
   stub('models/Customer', {
@@ -119,6 +150,8 @@ test('new website COD order is saved at ₹4,300', async () => {
   await handler('/woocommerce')(wcReq(wcOrder(), 'test-secret'), res);
   assert.equal(res.statusCode, 201);
   assert.equal(calls.created[0].orderValue, 4300);
+  assert.equal(calls.created[0].wcOrderId, '99001');
+  assert.deepEqual(calls.created[0].partialCod, { deposit: 500, balance: 3800 });
   assert.equal(calls.created[0].paymentStatus, 'Pending');
 });
 

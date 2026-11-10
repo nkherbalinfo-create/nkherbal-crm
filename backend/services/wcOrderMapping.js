@@ -61,6 +61,31 @@ function correctedOrderValue(existingValue, wc) {
   return Number(existingValue) === partial.deposit ? partial.total : null;
 }
 
+async function findExistingWcOrder(Order, wcOrderId, mobile, orderDate, orderValue) {
+  const identity = { $or: [{ wcOrderId }, { notes: `wc:${wcOrderId}` }] };
+  const linked = await Order.findOne({ ...identity, manuallyDeleted: { $ne: true } });
+  if (linked) return linked;
+
+  const deleted = await Order.findOne({ ...identity, manuallyDeleted: true });
+  if (deleted || !mobile) return deleted;
+
+  // A legacy manual website record may not have its WooCommerce ID yet.
+  // Never match a different WooCommerce order just because the customer and total match.
+  const dayStart = new Date(orderDate);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const candidates = await Order.find({
+    mobile,
+    salesChannel: 'Website',
+    orderValue,
+    orderDate: { $gte: dayStart, $lt: dayEnd },
+    wcOrderId: { $in: [null, ''] },
+    notes: { $not: /^wc:/ }
+  }).limit(2);
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
 function mapPaymentStatus(wc) {
   const method = (wc.payment_method || '').toLowerCase();
   const status = wc.status || '';
@@ -99,6 +124,7 @@ module.exports = {
   partialCod,
   orderValueFromWC,
   correctedOrderValue,
+  findExistingWcOrder,
   amountText,
   toRupees
 };

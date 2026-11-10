@@ -7,7 +7,8 @@ const {
   mapPaymentStatus,
   matchProduct,
   orderValueFromWC,
-  correctedOrderValue
+  correctedOrderValue,
+  findExistingWcOrder
 } = require('./wcOrderMapping');
 const confirmation = require('./orderConfirmation');
 
@@ -77,15 +78,7 @@ async function processWCOrder(wc) {
     return { name: matchProduct(item.name), sku: item.sku || '', price: qty > 0 ? lineTotal / qty : 0, quantity: qty, total: lineTotal, gst: lineTax };
   });
 
-  // Find by wc: note OR by mobile + same orderDate (catches orders synced before note was added)
-  const dayStart = new Date(orderDate); dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(orderDate); dayEnd.setHours(23, 59, 59, 999);
-  const existing = await Order.findOne({
-    $or: [
-      { notes: `wc:${wcOrderId}` },
-      { mobile, orderDate: { $gte: dayStart, $lte: dayEnd }, orderValue }
-    ]
-  });
+  const existing = await findExistingWcOrder(Order, wcOrderId, mobile, orderDate, orderValue);
 
   if (existing) {
     // User manually deleted this order from CRM — never re-import it
@@ -99,10 +92,6 @@ async function processWCOrder(wc) {
     if (email) existing.email = email;
     if (billingAddress) existing.billingAddress = billingAddress;
     if (paymentMethod) existing.paymentMethod = paymentMethod;
-    // Stamp the wc: note so future syncs find it by note directly
-    if (!existing.notes || !existing.notes.startsWith('wc:')) {
-      existing.notes = `wc:${wcOrderId}`;
-    }
     confirmation.applyWcDetails(existing, wc);
     await existing.save();
     await maybeStartConfirmation(existing, wc);

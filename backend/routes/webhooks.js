@@ -8,6 +8,7 @@ const {
   matchProduct,
   orderValueFromWC,
   correctedOrderValue,
+  findExistingWcOrder,
   amountText
 } = require('../services/wcOrderMapping');
 const confirmation = require('../services/orderConfirmation');
@@ -97,9 +98,10 @@ router.post('/woocommerce', async (req, res) => {
     });
 
     // Check if order already exists (avoid duplicates on updates)
-    const existing = await Order.findOne({ 'notes': `wc:${wcOrderId}` });
+    const existing = await findExistingWcOrder(Order, wcOrderId, mobile, orderDate, orderValue);
 
     if (existing) {
+      if (existing.manuallyDeleted) return res.json({ message: 'Order skipped', orderId: existing.orderId });
       existing.orderStatus = mapOrderStatus(wc.status);
       existing.paymentStatus = mapPaymentStatus(wc);
       // Partial COD saved at the deposit amount → correct it to the full order value
@@ -118,7 +120,7 @@ router.post('/woocommerce', async (req, res) => {
       if (!existing.paymentMethod && paymentMethod) existing.paymentMethod = paymentMethod;
       confirmation.applyWcDetails(existing, wc);
       await existing.save();
-      if (!existing.manuallyDeleted) maybeStartConfirmation(existing, wc);
+      maybeStartConfirmation(existing, wc);
       return res.json({ message: 'Order updated', orderId: existing.orderId });
     }
 
@@ -128,7 +130,7 @@ router.post('/woocommerce', async (req, res) => {
 
     const customerType = await upsertCustomer(mobile, customerName, city, orderValue, orderDate);
 
-    const order = await Order.create({
+    const orderData = {
       orderDate,
       customerName,
       mobile,
@@ -148,22 +150,17 @@ router.post('/woocommerce', async (req, res) => {
       followUpDone: false,
       upsellDone: false,
       notes: `wc:${wcOrderId}`
-    });
+    };
+    confirmation.applyWcDetails(orderData, wc);
+    const order = await Order.create(orderData);
 
     console.log(`[WooCommerce] New order synced: ${order.orderId} for ${customerName}`);
-
-    // Order number, part-payment split and address for the confirmation / Delhivery flow
-    const created = await Order.findById(order._id);
-    if (created) {
-      confirmation.applyWcDetails(created, wc);
-      await created.save();
-    }
 
     // ── Paid website orders: new confirmation flow when enabled, else the old one-line confirmation ──
     const isPaid = ['paid', 'processing', 'completed'].includes((wc.status || '').toLowerCase())
       || mapPaymentStatus(wc) === 'Paid';
-    if (created && confirmation.appliesTo(mobile)) {
-      maybeStartConfirmation(created, wc);
+    if (confirmation.appliesTo(mobile)) {
+      maybeStartConfirmation(order, wc);
     } else if (isPaid && mobile) {
       try {
         const { sendWhatsAppMessageDirect } = require('../services/waSender');
